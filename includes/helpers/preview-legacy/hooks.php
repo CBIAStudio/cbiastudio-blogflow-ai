@@ -3,7 +3,7 @@
  * Core hooks (admin notices, AJAX, assets).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_register_core_hooks')) {
     function cbia_register_core_hooks() {
@@ -348,7 +348,8 @@ if (!function_exists('cbia_ajax_preview_article')) {
 
 if (!function_exists('cbia_sse_emit')) {
     function cbia_sse_emit($event, array $payload) {
-        echo 'event: ' . preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)$event) . "\n";
+        $safe_event = preg_replace('/[^a-zA-Z0-9_\-]/', '', (string)$event);
+        echo 'event: ' . esc_html((string)$safe_event) . "\n";
         echo 'data: ' . wp_json_encode($payload) . "\n\n";
         if (function_exists('ob_get_level')) {
             while (ob_get_level() > 0) {

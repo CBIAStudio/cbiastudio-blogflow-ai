@@ -5,7 +5,7 @@
  * Mantiene compatibilidad con el flujo legacy de cron.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_pending_fill_event_handler')) {
     /**

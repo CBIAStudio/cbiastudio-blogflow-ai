@@ -1,5 +1,5 @@
 <?php
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 if (!function_exists('cbia_render_view_diagnostics')) {
     function cbia_render_view_diagnostics() {
         if (!current_user_can('manage_options')) return;

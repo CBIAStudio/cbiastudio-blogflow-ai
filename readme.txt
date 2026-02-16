@@ -1,21 +1,23 @@
-﻿=== CBIAStudio BlogFlow with AI ===
+=== CBIAStudio BlogFlow with AI ===
 Contributors: webgoh
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.1
+Stable tag: 1.1.2
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-CBIAStudio BlogFlow with AI: generacion de entradas con IA (texto + imagen destacada), con reanudacion por checkpoint y flujo de preview.
+Create WordPress blog posts with AI text + featured image, with checkpoint resume, live logs, and preview workflow.
 
 == Description ==
 
-Plugin para crear entradas con IA (texto + imagen destacada) sin bloquear la pantalla. Procesa con reanudacion por checkpoint, asigna categorias/tags por reglas y mantiene un flujo de preview. No requiere otro plugin.
+CBIAStudio BlogFlow with AI creates posts using AI text plus one featured image.  
+Generation runs in resumable batches (checkpoint), applies category/tag rules, and includes a live preview flow.  
+This free plugin is standalone and does not require another plugin.
 
 Key features:
-* 1 featured image (sin imagenes en contenido)
+* 1 featured image (no in-content images)
 * [IMAGE: ...] markers inserted automatically if missing; extra markers are removed
 * Live log and safe STOP
 * Costs: quick estimate and REAL cost per call (optional fixed image price)

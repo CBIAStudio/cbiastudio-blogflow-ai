@@ -3,7 +3,7 @@
  * Sanitization helpers.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_sanitize_textarea_preserve_lines')) {
     function cbia_sanitize_textarea_preserve_lines($value): string {

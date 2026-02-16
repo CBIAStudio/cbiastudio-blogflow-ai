@@ -3,7 +3,7 @@
  * Pending images processing.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /* =========================================================
    =========== RELLENAR IMÃGENES PENDIENTES (POST) ==========

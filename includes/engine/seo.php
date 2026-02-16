@@ -3,7 +3,7 @@
  * SEO helpers.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_strip_document_wrappers')) {
 	function cbia_strip_document_wrappers($html) {

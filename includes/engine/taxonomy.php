@@ -3,7 +3,7 @@
  * Categories and tags helpers.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_normalize_for_match')) {
 	function cbia_normalize_for_match($str) {

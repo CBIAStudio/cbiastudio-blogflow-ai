@@ -3,11 +3,29 @@
  * Post creation pipeline.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /* =========================================================
    ============== CREAR POST (WP) + METAS/SEO ===============
    ========================================================= */
+
+if (!function_exists('cbia_find_post_id_by_exact_title')) {
+	function cbia_find_post_id_by_exact_title($title) {
+		$title = trim((string)$title);
+		if ($title === '') return 0;
+		$q = new WP_Query(array(
+			'post_type'              => 'post',
+			'post_status'            => 'any',
+			'posts_per_page'         => 1,
+			'fields'                 => 'ids',
+			'no_found_rows'          => true,
+			'update_post_term_cache' => false,
+			'update_post_meta_cache' => false,
+			'title'                  => $title,
+		));
+		return !empty($q->posts[0]) ? (int)$q->posts[0] : 0;
+	}
+}
 
 if (!function_exists('cbia_post_exists_by_title')) {
 	function cbia_post_exists_by_title($title) {
@@ -15,12 +33,10 @@ if (!function_exists('cbia_post_exists_by_title')) {
 		$normalized = trim(preg_replace('/\s+/', ' ', $title));
 		$slug = sanitize_title($normalized);
 
-		$existing = get_page_by_title($title, OBJECT, 'post');
-		if ($existing instanceof WP_Post) return true;
+		if (cbia_find_post_id_by_exact_title($title) > 0) return true;
 
 		if ($normalized !== '' && $normalized !== $title) {
-			$existing_norm = get_page_by_title($normalized, OBJECT, 'post');
-			if ($existing_norm instanceof WP_Post) return true;
+			if (cbia_find_post_id_by_exact_title($normalized) > 0) return true;
 		}
 
 		$by_slug = get_posts(array(

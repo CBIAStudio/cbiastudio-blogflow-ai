@@ -3,7 +3,7 @@
  * Encoding helpers.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_mojibake_score')) {
     function cbia_mojibake_score(string $text): int {

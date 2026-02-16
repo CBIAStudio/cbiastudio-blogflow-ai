@@ -3,7 +3,7 @@
  * OpenAI integration (wrapper around legacy helpers).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_OpenAI_Client')) {
     class CBIA_OpenAI_Client {

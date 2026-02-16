@@ -1,6 +1,6 @@
 <?php
 // File: includes/engine/blog.php
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /**
  * TAB BLOG (v9.2 FIX)

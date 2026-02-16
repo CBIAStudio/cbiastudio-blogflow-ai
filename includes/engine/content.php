@@ -3,7 +3,7 @@
  * Content helpers: markers, cleanup, FAQ heading.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /* =========================================================
    ================== MARCADORES DE IMAGEN ==================

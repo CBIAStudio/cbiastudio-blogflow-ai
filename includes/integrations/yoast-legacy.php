@@ -1,6 +1,6 @@
 <?php
 // File: includes/integrations/yoast-legacy.php
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /**
  * CBIA - YOAST (v9+ combinado)

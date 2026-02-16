@@ -3,7 +3,7 @@
  * Log service (scoped access).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Log_Service')) {
     class CBIA_Log_Service {

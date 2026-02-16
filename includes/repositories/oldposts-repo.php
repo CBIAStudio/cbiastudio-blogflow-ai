@@ -3,7 +3,7 @@
  * Oldposts repository (options/meta/log storage).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Oldposts_Repo')) {
     class CBIA_Oldposts_Repo {

@@ -3,7 +3,7 @@
  * Base helpers for engine.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_get_settings')) {
     function cbia_get_settings() {

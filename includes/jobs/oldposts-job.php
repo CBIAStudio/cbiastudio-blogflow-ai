@@ -3,7 +3,7 @@
  * Oldposts job runner (wrapper).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Oldposts_Job')) {
     class CBIA_Oldposts_Job {

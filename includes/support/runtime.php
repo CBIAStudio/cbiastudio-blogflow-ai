@@ -5,7 +5,7 @@
  * Keep execution time generous for long tasks.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_try_unlimited_runtime')) {
     /**

@@ -18,7 +18,7 @@
  * - Este archivo NO â€œadivinaâ€ tokens reales de imÃ¡genes si no se registran. Solo estima si faltan.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /* =========================================================
    ===================== SETTINGS (COSTES) ==================

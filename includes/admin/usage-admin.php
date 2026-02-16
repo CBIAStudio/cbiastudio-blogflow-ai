@@ -3,7 +3,7 @@
  * Admin UI for Usage tab (wrapper).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Usage_Admin')) {
     class CBIA_Usage_Admin implements CBIA_Admin_Tab {

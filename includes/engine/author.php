@@ -3,7 +3,7 @@
  * Author selection for posts.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_pick_post_author_id')) {
     function cbia_pick_post_author_id() {

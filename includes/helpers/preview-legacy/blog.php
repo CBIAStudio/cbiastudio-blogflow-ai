@@ -1,5 +1,5 @@
 <?php
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!current_user_can('manage_options')) return;
 // phpcs:disable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound
@@ -192,7 +192,7 @@ wp_dropdown_users($author_args);
 $dd = ob_get_clean();
 $dd = str_replace('class=\'', 'style="width:420px;" class=\'', $dd);
 $dd = str_replace('class="', 'style="width:420px;" class="', $dd);
-echo $dd;
+echo wp_kses_post($dd);
 ?>
 </td>
 </tr>

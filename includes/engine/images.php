@@ -3,7 +3,7 @@
  * Image helpers.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_image_model_chain')) {
     // CAMBIO: cadena de modelos por proveedor con preferido al inicio

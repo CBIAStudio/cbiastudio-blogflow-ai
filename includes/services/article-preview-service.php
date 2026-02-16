@@ -3,7 +3,7 @@
  * Article preview service (no post creation).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Article_Preview_Service')) {
     class CBIA_Article_Preview_Service {
@@ -368,8 +368,17 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $title = trim((string)$title);
             if ($title === '') return 0;
 
-            $post = get_page_by_title($title, OBJECT, 'post');
-            if ($post && !empty($post->ID)) return (int)$post->ID;
+            $query = new WP_Query(array(
+                'post_type'              => 'post',
+                'post_status'            => 'any',
+                'posts_per_page'         => 1,
+                'fields'                 => 'ids',
+                'no_found_rows'          => true,
+                'update_post_term_cache' => false,
+                'update_post_meta_cache' => false,
+                'title'                  => $title,
+            ));
+            if (!empty($query->posts[0])) return (int)$query->posts[0];
 
             $slug = sanitize_title($title);
             if ($slug === '') return 0;

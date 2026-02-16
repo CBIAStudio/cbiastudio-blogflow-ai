@@ -3,7 +3,7 @@
  * Usage parsing and accumulation.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /* =========================================================
    ===================== EXTRACTOR TEXT =====================

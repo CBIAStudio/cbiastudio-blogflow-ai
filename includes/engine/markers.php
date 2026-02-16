@@ -3,7 +3,7 @@
  * Image marker helpers.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 // AÃ±adir la funciÃ³n cbia_force_insert_markers en el lugar correcto
 if (!function_exists('cbia_force_insert_markers')) {

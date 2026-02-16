@@ -3,7 +3,7 @@
  * Admin UI for Yoast tab (wrapper).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Yoast_Admin')) {
     class CBIA_Yoast_Admin implements CBIA_Admin_Tab {

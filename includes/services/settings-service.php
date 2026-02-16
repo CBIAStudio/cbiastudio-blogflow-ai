@@ -3,7 +3,7 @@
  * Settings service.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Settings_Service')) {
     class CBIA_Settings_Service {

@@ -3,7 +3,7 @@
  * Admin UI for Old Posts tab.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Oldposts_Admin')) {
     class CBIA_Oldposts_Admin implements CBIA_Admin_Tab {

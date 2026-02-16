@@ -3,7 +3,7 @@
  * Yoast service (wrapper around legacy helpers).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Yoast_Service')) {
     class CBIA_Yoast_Service {

@@ -6,7 +6,7 @@
  * Keep this light; real logic lives in services/admin classes.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Loader')) {
     class CBIA_Loader {

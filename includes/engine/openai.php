@@ -3,7 +3,7 @@
  * OpenAI calls (Responses + Images).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_get_current_provider_key')) {
 	function cbia_get_current_provider_key(): string {

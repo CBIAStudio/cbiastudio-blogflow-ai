@@ -3,7 +3,7 @@
  * Simple container to share instances.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Container')) {
     class CBIA_Container {

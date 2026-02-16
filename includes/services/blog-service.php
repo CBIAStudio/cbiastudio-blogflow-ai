@@ -3,7 +3,7 @@
  * Blog generation service (wrapper around legacy helpers).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Blog_Service')) {
     class CBIA_Blog_Service {

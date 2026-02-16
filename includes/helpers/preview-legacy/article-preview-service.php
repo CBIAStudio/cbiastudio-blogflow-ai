@@ -3,7 +3,7 @@
  * Article preview service (no post creation).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Article_Preview_Service')) {
     class CBIA_Article_Preview_Service {

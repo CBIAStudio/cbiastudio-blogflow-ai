@@ -3,7 +3,7 @@
  * Admin UI for Blog tab (wrapper).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Blog_Admin')) {
     class CBIA_Blog_Admin implements CBIA_Admin_Tab {

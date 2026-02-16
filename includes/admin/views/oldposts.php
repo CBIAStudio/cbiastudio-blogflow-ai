@@ -1,5 +1,5 @@
 <?php
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 // Oldposts tab view (extracted from legacy cbia-oldposts.php)
 

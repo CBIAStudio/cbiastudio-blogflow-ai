@@ -3,7 +3,7 @@
  * Config catalogs and helpers.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_get_allowed_models_for_ui')) {
     /**

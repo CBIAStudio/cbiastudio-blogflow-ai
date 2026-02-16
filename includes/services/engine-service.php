@@ -3,7 +3,7 @@
  * Engine service (post generation pipeline).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Engine_Service')) {
     class CBIA_Engine_Service {

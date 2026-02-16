@@ -3,7 +3,7 @@
  * Settings repository (wrapper around legacy options).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Settings_Repository')) {
     class CBIA_Settings_Repository {

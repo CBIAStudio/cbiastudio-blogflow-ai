@@ -4,7 +4,7 @@
  *
  * Order matters: low-level helpers first, higher-level workflows last.
  */
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 require_once __DIR__ . '/markers.php';
 require_once __DIR__ . '/author.php';

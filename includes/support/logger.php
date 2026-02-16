@@ -3,7 +3,7 @@
  * Central logger.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Logger')) {
     class CBIA_Logger {

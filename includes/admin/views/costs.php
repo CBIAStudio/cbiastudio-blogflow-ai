@@ -1,5 +1,5 @@
 <?php
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 // Costs tab view (extracted from legacy cbia-costes.php)
 

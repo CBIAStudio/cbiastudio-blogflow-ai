@@ -1,5 +1,5 @@
 <?php
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_render_view_config')) {
     function cbia_render_view_config() {
@@ -55,7 +55,8 @@ if (trim((string)$s['prompt_img_global']) === '') $s['prompt_img_global'] = $def
 if (trim((string)$s['prompt_img_featured']) === '') $s['prompt_img_featured'] = $s['prompt_img_global'];
 
 echo '<div class="cbia-view-container">';
-if (isset($_GET['saved'])) {
+$saved_flag = (string) filter_input(INPUT_GET, 'saved', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+if ($saved_flag !== '') {
     echo '<div class="notice notice-success is-dismissible" style="background: rgba(34, 211, 238, 0.1); border-color: var(--abb-cyan); color: var(--abb-cyan);"><p>' . esc_html('Configuracion guardada con exito.') . '</p></div>';
 }
 // CAMBIO: avisos por API key faltante

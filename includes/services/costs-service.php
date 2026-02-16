@@ -3,7 +3,7 @@
  * Costs service (business logic).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Costs_Service')) {
     class CBIA_Costs_Service {

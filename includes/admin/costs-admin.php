@@ -3,7 +3,7 @@
  * Admin UI for Costs tab.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Costs_Admin')) {
     class CBIA_Costs_Admin implements CBIA_Admin_Tab {

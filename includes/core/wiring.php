@@ -3,7 +3,7 @@
  * Wiring for the 2.3 structure (safe, no behavior change yet).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_container')) {
     function cbia_container() {

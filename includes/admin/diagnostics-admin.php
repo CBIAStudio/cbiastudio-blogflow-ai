@@ -3,7 +3,7 @@
  * Admin UI for Diagnostics tab.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Diagnostics_Admin')) {
     class CBIA_Diagnostics_Admin implements CBIA_Admin_Tab {

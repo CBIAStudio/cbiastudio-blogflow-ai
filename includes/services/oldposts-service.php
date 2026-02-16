@@ -3,7 +3,7 @@
  * Old Posts service (batch actions, AI, images).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Oldposts_Service')) {
     class CBIA_Oldposts_Service {

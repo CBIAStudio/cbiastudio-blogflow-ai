@@ -3,7 +3,7 @@
  * Bootstrap for the 3.0 structure.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 $cbia_new_files = array(
     CBIA_INCLUDES_DIR . 'core/loader.php',

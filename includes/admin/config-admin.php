@@ -3,7 +3,7 @@
  * Admin UI for Config tab (wrapper).
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Config_Admin')) {
     class CBIA_Config_Admin implements CBIA_Admin_Tab {

@@ -1,5 +1,5 @@
 <?php
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_render_view_blog')) {
     function cbia_render_view_blog() {
@@ -193,7 +193,7 @@ wp_dropdown_users($author_args);
 $dd = ob_get_clean();
 $dd = str_replace('class=\'', 'style="width:420px;" class=\'', $dd);
 $dd = str_replace('class="', 'style="width:420px;" class="', $dd);
-echo $dd;
+echo wp_kses_post($dd);
 ?>
 </td>
 </tr>

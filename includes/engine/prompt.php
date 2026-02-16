@@ -3,7 +3,7 @@
  * Prompt builder.
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 // CAMBIO: bloques fijos (no editables) del prompt recomendado.
 if (!function_exists('cbia_prompt_recommended_header_template')) {

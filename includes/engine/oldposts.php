@@ -25,7 +25,7 @@
  * Archivo: includes/engine/oldposts.php
  */
 
-if (!defined('ABSPATH')) exit;
+if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 /* =========================================================
    ===================== LOG INDEPENDIENTE ==================
