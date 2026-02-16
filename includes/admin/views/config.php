@@ -23,7 +23,9 @@ $provider_key_urls = array(
 );
 
 // Defaults seguros
-$recommended = cbia_get_recommended_text_model();
+$recommended = function_exists('cbia_providers_get_recommended_text_model')
+    ? cbia_providers_get_recommended_text_model($provider_current)
+    : 'gpt-4.1-mini';
 $s['openai_model'] = cbia_config_safe_model($s['openai_model'] ?? $recommended);
 if (!isset($s['openai_temperature'])) $s['openai_temperature'] = 0.7;
 if (!isset($s['post_length_variant'])) $s['post_length_variant'] = 'medium';

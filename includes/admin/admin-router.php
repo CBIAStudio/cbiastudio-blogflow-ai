@@ -49,8 +49,8 @@ if (!class_exists('CBIA_Admin_Router')) {
         public function on_admin_menu()
         {
             add_menu_page(
-                'AI Blog Builder',
-                'AI Blog Builder',
+                'CBIAStudio BlogFlow with AI',
+                'CBIAStudio BlogFlow',
                 'manage_options',
                 'cbia',
                 array($this, 'render_page'),
@@ -124,15 +124,15 @@ if (!class_exists('CBIA_Admin_Router')) {
             echo '<div class="wrap cbia-shell">';
             echo '<div class="cbia-header">';
             echo '<div class="cbia-brand">';
-            echo '<img class="cbia-logo" src="' . esc_url($logo_header) . '" alt="AI Blog Builder" />';
-            echo '<div class="cbia-title"><span class="ai-part">AI</span> <span class="brand-part">BLOG BUILDER</span> <span class="cbia-badge-pro">PRO</span> <span class="cbia-badge-pro">MULTI-PROVIDER COMING SOON</span></div>';
+            echo '<img class="cbia-logo" src="' . esc_url($logo_header) . '" alt="CBIAStudio BlogFlow with AI" />';
+            echo '<div class="cbia-title"><span class="ai-part">CBIAStudio</span> <span class="brand-part">BLOGFLOW</span> <span class="cbia-badge-pro">AI</span></div>';
             echo '</div>';
             echo '<div class="cbia-version">v' . esc_html(defined('CBIA_VERSION') ? CBIA_VERSION : '3.0.2') . '</div>';
             echo '</div>';
 
             echo '<div class="cbia-layout">';
             echo '<aside class="cbia-sidebar">';
-            echo '<div class="cbia-sidebar-logo"><img src="' . esc_url($logo_sidebar) . '" alt="AI Blog Builder" /></div>';
+            echo '<div class="cbia-sidebar-logo"><img src="' . esc_url($logo_sidebar) . '" alt="CBIAStudio BlogFlow with AI" /></div>';
             echo '<ul class="cbia-sidebar-nav">';
 
 

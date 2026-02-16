@@ -1,4 +1,4 @@
-﻿# AI Blog Builder (WordPress) v1.1.1
+﻿# CBIAStudio BlogFlow with AI (WordPress) v1.1.1
 
 Genera entradas con IA (texto + imagen destacada) con reanudacion por checkpoint y preview en vivo.
 

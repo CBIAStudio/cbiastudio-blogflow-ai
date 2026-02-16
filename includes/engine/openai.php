@@ -7,6 +7,10 @@ if (!defined('ABSPATH')) exit;
 
 if (!function_exists('cbia_get_current_provider_key')) {
 	function cbia_get_current_provider_key(): string {
+		if (!empty($GLOBALS['cbia_force_text_provider'])) {
+			$p = sanitize_key((string)$GLOBALS['cbia_force_text_provider']);
+			if ($p !== '') return $p;
+		}
 		// CAMBIO: usa proveedor de texto (no imagen)
 		if (function_exists('cbia_get_text_provider')) {
 			$p = cbia_get_text_provider();
@@ -288,7 +292,37 @@ if (!function_exists('cbia_openai_responses_call')) {
 			return cbia_google_generate_content_call($prompt, $system, $tries);
 		}
 		if ($provider === 'deepseek') {
-			return cbia_deepseek_chat_call($prompt, $system, $tries);
+			$deepseek_result = cbia_deepseek_chat_call($prompt, $system, $tries);
+			if (!empty($deepseek_result[0])) {
+				return $deepseek_result;
+			}
+
+			$last_err = (string)($deepseek_result[4] ?? 'No se pudo obtener respuesta');
+			$prev_forced = isset($GLOBALS['cbia_force_text_provider']) ? (string)$GLOBALS['cbia_force_text_provider'] : '';
+
+			$google_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : '';
+			if ($google_key !== '') {
+				cbia_log("DeepSeek fallo ({$last_err}). Fallback de texto -> Google Gemini.", 'WARN');
+				$GLOBALS['cbia_force_text_provider'] = 'google';
+				$google_result = cbia_openai_responses_call($prompt, $title_for_log, $tries);
+				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
+				else unset($GLOBALS['cbia_force_text_provider']);
+				if (!empty($google_result[0])) return $google_result;
+				$last_err = (string)($google_result[4] ?? $last_err);
+			}
+
+			$openai_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : '';
+			if ($openai_key !== '') {
+				cbia_log("Fallback Google no disponible/fallo. Fallback de texto -> OpenAI.", 'WARN');
+				$GLOBALS['cbia_force_text_provider'] = 'openai';
+				$openai_result = cbia_openai_responses_call($prompt, $title_for_log, $tries);
+				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
+				else unset($GLOBALS['cbia_force_text_provider']);
+				if (!empty($openai_result[0])) return $openai_result;
+				$last_err = (string)($openai_result[4] ?? $last_err);
+			}
+
+			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], 'deepseek-chat', $last_err, []];
 		}
 		// CAMBIO: key OpenAI desde settings por proveedor
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();

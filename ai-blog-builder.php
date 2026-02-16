@@ -1,7 +1,7 @@
 <?php
 /**
- * Plugin Name: AI Blog Builder
- * Description: Version normal de AI Blog Builder.
+ * Plugin Name: CBIAStudio BlogFlow with AI
+ * Description: Version normal de CBIAStudio BlogFlow with AI.
  * Version: 1.1.1
  *
  * Author: CBIA Studio
@@ -9,6 +9,8 @@
  * Requires PHP: 8.2
  * License: GPLv2 or later
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
+ * Text Domain: cbiastudio-blogflow-ai
+ * Domain Path: /languages
  */
 
 if (!defined('ABSPATH')) exit;
@@ -18,6 +20,7 @@ if (!defined('CBIA_PLUGIN_FILE')) define('CBIA_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_PLUGIN_DIR')) define('CBIA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_PLUGIN_URL')) define('CBIA_PLUGIN_URL', plugin_dir_url(__FILE__));
 if (!defined('CBIA_INCLUDES_DIR')) define('CBIA_INCLUDES_DIR', CBIA_PLUGIN_DIR . 'includes/');
+if (!defined('CBIA_TEXT_DOMAIN')) define('CBIA_TEXT_DOMAIN', 'cbiastudio-blogflow-ai');
 if (!defined('CBIA_OPTION_SETTINGS')) define('CBIA_OPTION_SETTINGS', 'cbia_settings');
 if (!defined('CBIA_OPTION_LOG')) define('CBIA_OPTION_LOG', 'cbia_activity_log');
 if (!defined('CBIA_OPTION_LOG_COUNTER')) define('CBIA_OPTION_LOG_COUNTER', 'cbia_log_counter');
@@ -262,8 +265,8 @@ add_action('admin_menu', function () {
 		return;
 	}
 	add_menu_page(
-		'Creador Blog IA',
-		'Creador Blog IA',
+		'CBIAStudio BlogFlow with AI',
+		'CBIAStudio BlogFlow',
 		'manage_options',
 		'cbia',
 		'cbia_render_admin_page',
@@ -304,7 +307,7 @@ if (!function_exists('cbia_render_admin_page')) {
 		$current_tab = $tabs[$current] ?? null;
 
 		echo '<div class="wrap">';
-		echo '<h1>Creador Blog IA <small style="font-weight:normal;opacity:.7;">v' . esc_html(CBIA_VERSION) . '</small></h1>';
+		echo '<h1>CBIAStudio BlogFlow with AI <small style="font-weight:normal;opacity:.7;">v' . esc_html(CBIA_VERSION) . '</small></h1>';
 		echo '<h2 class="nav-tab-wrapper">';
 
 		foreach ($tabs as $tab_key => $tab_data) {
