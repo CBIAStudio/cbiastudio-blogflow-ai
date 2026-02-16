@@ -49,3 +49,5 @@ gpt3-ai-content-generator.2.3.67/
 
 # Archivos temporales
 *.tmp
+
+tmp-write-test.txt
