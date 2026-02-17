@@ -62,18 +62,18 @@ if (!function_exists('cbia_get_image_format_for_section')) {
         if ($section === 'intro') return 'panoramic_1536x1024';
 
         $s = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
-        if ($section === 'conclusion') {
-            return (string)($s['image_format_conclusion'] ?? 'banner_1536x1024');
-        }
-        if ($section === 'faq') {
-            return (string)($s['image_format_faq'] ?? 'banner_1536x1024');
-        }
-
+        // Si viene indice de interna, ese selector manda siempre.
         if ($idx >= 1) {
             $key = 'image_format_internal_' . $idx;
             if (!empty($s[$key])) {
                 return (string)$s[$key];
             }
+        }
+        if ($section === 'conclusion') {
+            return (string)($s['image_format_conclusion'] ?? 'banner_1536x1024');
+        }
+        if ($section === 'faq') {
+            return (string)($s['image_format_faq'] ?? 'banner_1536x1024');
         }
         return (string)($s['image_format_body'] ?? 'banner_1536x1024');
     }
@@ -475,4 +475,3 @@ if (!function_exists('cbia_upload_image_to_media')) {
         return [$attach_id, ''];
     }
 }
-

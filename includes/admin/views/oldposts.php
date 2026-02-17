@@ -28,7 +28,7 @@ $defaults = array(
     'author_id'          => 0,
     'dry_run'            => 0,
 
-    // BÃ¡sico recomendado (lo que dices que casi siempre usarÃ¡s)
+    // Recommended baseline (the setup you will usually use)
     'do_note'            => 1,
     'force_note'         => 0,
 
@@ -64,7 +64,7 @@ $defaults = array(
 );
 $settings = array_merge($defaults, is_array($settings) ? $settings : array());
 
-// MigraciÃ³n suave desde v2 si existÃ­an keys antiguas
+// Soft migration from v2 when old keys exist
 if (isset($settings['do_yoast_metas']) && !isset($settings['do_yoast_metadesc'])) {
     $val = !empty($settings['do_yoast_metas']) ? 1 : 0;
     $settings['do_yoast_metadesc'] = $val;
@@ -88,9 +88,9 @@ $log = $service && method_exists($service, 'get_log')
     : cbia_oldposts_get_log();
 $fm = $settings['filter_mode'];
 
-// Summary defaults (para UX)
+// Default actions summary (UX helper)
 $defaults_summary = array();
-if (!empty($settings['do_note'])) $defaults_summary[] = 'Nota actualizado';
+if (!empty($settings['do_note'])) $defaults_summary[] = 'Updated note';
 if (!empty($settings['do_yoast_metadesc']) || !empty($settings['do_yoast_focuskw']) || !empty($settings['do_yoast_title'])) {
     $ys = array();
     if (!empty($settings['do_yoast_metadesc'])) $ys[] = 'metadesc';
@@ -99,25 +99,25 @@ if (!empty($settings['do_yoast_metadesc']) || !empty($settings['do_yoast_focuskw
     $defaults_summary[] = 'Yoast: '.implode(', ', $ys);
 }
 if (!empty($settings['do_yoast_reindex'])) $defaults_summary[] = 'Yoast reindex';
-if (!empty($settings['do_content'])) $defaults_summary[] = 'Contenido IA';
-if (!empty($settings['do_content_no_images'])) $defaults_summary[] = 'Contenido IA (sin imÃ¡genes)';
-if (!empty($settings['do_images_reset'])) $defaults_summary[] = 'ImÃ¡genes pendientes';
-if (!empty($settings['do_images_content_only'])) $defaults_summary[] = 'ImÃ¡genes contenido';
-if (!empty($settings['do_featured_only'])) $defaults_summary[] = 'Solo destacada';
-if (!empty($settings['do_categories'])) $defaults_summary[] = 'CategorÃ­as';
-if (!empty($settings['do_tags'])) $defaults_summary[] = 'Etiquetas';
-if (!empty($settings['do_title'])) $defaults_summary[] = 'TÃ­tulo IA';
+if (!empty($settings['do_content'])) $defaults_summary[] = 'AI content';
+if (!empty($settings['do_content_no_images'])) $defaults_summary[] = 'AI content (without images)';
+if (!empty($settings['do_images_reset'])) $defaults_summary[] = 'Images pending';
+if (!empty($settings['do_images_content_only'])) $defaults_summary[] = 'Content images';
+if (!empty($settings['do_featured_only'])) $defaults_summary[] = 'Featured only';
+if (!empty($settings['do_categories'])) $defaults_summary[] = 'Categories';
+if (!empty($settings['do_tags'])) $defaults_summary[] = 'Tags';
+if (!empty($settings['do_title'])) $defaults_summary[] = 'AI title';
 
-$defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults_summary) : 'Sin acciones por defecto';
+$defaults_summary_text = !empty($defaults_summary) ? implode(' - ', $defaults_summary) : 'No default actions';
 
 ?>
 <div class="wrap" style="padding-left:0;">
-    <h2>Actualizar antiguos</h2>
+    <h2><?php echo esc_html__('Update old posts', 'cbiastudio-blogflow-ai'); ?></h2>
 
-    <h3>ConfiguraciÃ³n (preselecciÃ³n)</h3>
+    <h3><?php echo esc_html__('Configuration (defaults)', 'cbiastudio-blogflow-ai'); ?></h3>
     <p class="description" style="max-width:980px;">
-        Esto define lo que normalmente harÃ¡s â€œcasi siempreâ€. En ejecuciÃ³n puedes usar esto tal cual o personalizar solo esa vez.
-        <br><strong>QuÃ© significa â€œForzarâ€:</strong> rehace la acciÃ³n aunque ya exista / estÃ© marcada como hecha.
+        <?php echo esc_html__('This defines your usual setup. During execution, you can use it as-is or customize only this run.', 'cbiastudio-blogflow-ai'); ?>
+        <br><strong><?php echo esc_html__('What "Force" means:', 'cbiastudio-blogflow-ai'); ?></strong> <?php echo esc_html__('rerun the action even if it already exists / is marked as done.', 'cbiastudio-blogflow-ai'); ?>
     </p>
 
     <form method="post" action="" autocomplete="off">
@@ -126,73 +126,73 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
 
         <table class="form-table" style="max-width:980px;">
             <tr>
-                <th>Ãmbito</th>
+                <th><?php echo esc_html__('Scope', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <label style="margin-right:18px;">
                         <input type="radio" name="scope" value="all" <?php checked($settings['scope'], 'all'); ?> />
-                        Todos los posts
+                        <?php echo esc_html__('All posts', 'cbiastudio-blogflow-ai'); ?>
                     </label>
                     <label>
                         <input type="radio" name="scope" value="plugin" <?php checked($settings['scope'], 'plugin'); ?> />
-                        Solo posts del plugin (<code>_cbia_created=1</code>)
+                        <?php echo esc_html__('Plugin posts only', 'cbiastudio-blogflow-ai'); ?> (<code>_cbia_created=1</code>)
                     </label>
                 </td>
             </tr>
 
             <tr>
-                <th>TamaÃ±o de lote</th>
+                <th><?php echo esc_html__('Batch size', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <input type="number" name="batch_size" min="1" max="200" value="<?php echo esc_attr((int)$settings['batch_size']); ?>" style="width:120px;" />
                 </td>
             </tr>
 
             <tr>
-                <th>Filtro por fechas</th>
+                <th><?php echo esc_html__('Date filter', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <label style="margin-right:18px;">
                         <input type="radio" name="filter_mode" value="older" <?php checked($fm, 'older'); ?> />
-                        MÃ¡s antiguos que (dÃ­as)
+                        <?php echo esc_html__('Older than (days)', 'cbiastudio-blogflow-ai'); ?>
                     </label>
                     <label>
                         <input type="radio" name="filter_mode" value="range" <?php checked($fm, 'range'); ?> />
-                        Rango (desde / hasta)
+                        <?php echo esc_html__('Range (from / to)', 'cbiastudio-blogflow-ai'); ?>
                     </label>
 
                     <div style="margin-top:10px;">
                         <div id="cbia_old_filter_older" style="<?php echo ($fm==='older'?'':'display:none;'); ?>">
                             <input type="number" name="older_than_days" min="1" value="<?php echo esc_attr((int)$settings['older_than_days']); ?>" style="width:120px;" />
-                            <span class="description">Ej: 180</span>
+                            <span class="description"><?php echo esc_html__('Example: 180', 'cbiastudio-blogflow-ai'); ?></span>
                         </div>
 
                         <div id="cbia_old_filter_range" style="<?php echo ($fm==='range'?'':'display:none;'); ?>">
                             <label style="margin-right:10px;">
-                                Desde:
+                                <?php echo esc_html__('From:', 'cbiastudio-blogflow-ai'); ?>
                                 <input type="date" name="date_from" value="<?php echo esc_attr((string)$settings['date_from']); ?>" />
                             </label>
                             <label>
-                                Hasta:
+                                <?php echo esc_html__('To:', 'cbiastudio-blogflow-ai'); ?>
                                 <input type="date" name="date_to" value="<?php echo esc_attr((string)$settings['date_to']); ?>" />
                             </label>
-                            <p class="description">Se usa <code>post_date_gmt</code>. Si dejas vacÃ­o desde/hasta, se aplica solo el otro lÃ­mite.</p>
+                            <p class="description"><?php echo esc_html__('Uses post_date_gmt. If one side is empty, only the other limit is applied.', 'cbiastudio-blogflow-ai'); ?></p>
                         </div>
                     </div>
                 </td>
             </tr>
 
             <tr>
-                <th>ImÃ¡genes (lÃ­mite)</th>
+                <th><?php echo esc_html__('Images (limit)', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <input type="number" name="images_limit" min="1" max="10" value="<?php echo esc_attr((int)$settings['images_limit']); ?>" style="width:120px;" />
-                    <p class="description">Se usa en regeneraciÃ³n de contenido y/o reset de pendientes.</p>
+                    <p class="description"><?php echo esc_html__('Used for content regeneration and/or pending images reset.', 'cbiastudio-blogflow-ai'); ?></p>
                 </td>
             </tr>
 
             <tr>
-                <th>Filtros avanzados</th>
+                <th><?php echo esc_html__('Advanced filters', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <div style="margin-bottom:8px;">
                         <label>
-                            IDs concretos (opcional):
+                            <?php echo esc_html__('Specific IDs (optional):', 'cbiastudio-blogflow-ai'); ?>
                             <input
                                 type="text"
                                 name="run_post_ids"
@@ -202,13 +202,13 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
                             />
                         </label>
                         <p class="description" style="margin:4px 0 0;">
-                            Si indicas IDs, se ignoran los filtros por fecha.
+                            <?php echo esc_html__('If IDs are provided, date filters are ignored.', 'cbiastudio-blogflow-ai'); ?>
                         </p>
                     </div>
 
                     <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
                         <label>
-                            CategorÃ­a:
+                            <?php echo esc_html__('Category:', 'cbiastudio-blogflow-ai'); ?>
                             <?php
                             wp_dropdown_categories(array(
                                 'taxonomy' => 'category',
@@ -216,26 +216,26 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
                                 'name' => 'category_id',
                                 'id' => 'cbia_category_id',
                                 'selected' => (int)($settings['category_id'] ?? 0),
-                                'show_option_all' => 'Todas',
+                                'show_option_all' => __('All', 'cbiastudio-blogflow-ai'),
                             ));
                             ?>
                         </label>
 
                         <label>
-                            Autor:
+                            <?php echo esc_html__('Author:', 'cbiastudio-blogflow-ai'); ?>
                             <?php
                             wp_dropdown_users(array(
                                 'name' => 'author_id',
                                 'id' => 'cbia_author_id',
                                 'selected' => (int)($settings['author_id'] ?? 0),
-                                'show_option_all' => 'Todos',
+                                'show_option_all' => __('All', 'cbiastudio-blogflow-ai'),
                             ));
                             ?>
                         </label>
 
                         <label>
                             <input type="checkbox" name="dry_run" value="1" <?php checked((int)($settings['dry_run'] ?? 0), 1); ?> />
-                            Dry run por defecto (solo listar)
+                            <?php echo esc_html__('Default dry run (list only)', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                     </div>
                 </td>
@@ -243,147 +243,147 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
 
 
             <tr>
-                <th>Acciones por defecto</th>
+                <th><?php echo esc_html__('Default actions', 'cbiastudio-blogflow-ai'); ?></th>
                 <td style="padding-top:12px;">
                     <div style="padding:12px;border:1px solid #ddd;border-radius:8px;background:#fff;">
-                        <div style="font-weight:600;margin-bottom:8px;">BÃ¡sico</div>
+                        <div style="font-weight:600;margin-bottom:8px;"><?php echo esc_html__('Basic', 'cbiastudio-blogflow-ai'); ?></div>
 
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_note" value="1" <?php checked((int)$settings['do_note'], 1); ?> />
-                            AÃ±adir nota â€œActualizado el â€¦â€
+                            <?php echo esc_html__('Add note "Updated on ..."', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="force_note" value="1" <?php checked((int)$settings['force_note'], 1); ?> />
-                                    Forzar (reemplazar fecha si ya existe)
+                                    <?php echo esc_html__('Force (replace date if it already exists)', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
-                        <div style="font-weight:600;margin:12px 0 8px;">Yoast SEO</div>
+                        <div style="font-weight:600;margin:12px 0 8px;"><?php echo esc_html__('Yoast SEO', 'cbiastudio-blogflow-ai'); ?></div>
                         <label style="display:block;margin-bottom:6px;">
                             <input type="checkbox" name="do_yoast_metadesc" value="1" <?php checked((int)$settings['do_yoast_metadesc'], 1); ?> />
-                            Meta description
+                            <?php echo esc_html__('Meta description', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                         <label style="display:block;margin-bottom:6px;">
                             <input type="checkbox" name="do_yoast_focuskw" value="1" <?php checked((int)$settings['do_yoast_focuskw'], 1); ?> />
-                            Keyphrase (focus keyword)
+                            <?php echo esc_html__('Keyphrase (focus keyword)', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                         <label style="display:block;margin-bottom:6px;">
                             <input type="checkbox" name="do_yoast_title" value="1" <?php checked((int)$settings['do_yoast_title'], 1); ?> />
-                            SEO title (tÃ­tulo Yoast)
+                            <?php echo esc_html__('SEO title (Yoast title)', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                         <label style="display:block;margin:8px 0;">
                             <input type="checkbox" name="force_yoast" value="1" <?php checked((int)$settings['force_yoast'], 1); ?> />
-                            Forzar Yoast (sobrescribir aunque existan)
+                            <?php echo esc_html__('Force Yoast (overwrite even if values exist)', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_yoast_reindex" value="1" <?php checked((int)$settings['do_yoast_reindex'], 1); ?> />
-                            Reindex / semÃ¡foro (best effort)
+                            <?php echo esc_html__('Reindex / traffic lights (best effort)', 'cbiastudio-blogflow-ai'); ?>
                         </label>
 
-                        <div style="font-weight:600;margin:12px 0 8px;">Contenido e imÃ¡genes</div>
+                        <div style="font-weight:600;margin:12px 0 8px;"><?php echo esc_html__('Content and images', 'cbiastudio-blogflow-ai'); ?></div>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_content" value="1" <?php checked((int)$settings['do_content'], 1); ?> />
-                            Regenerar contenido con IA
+                            <?php echo esc_html__('Regenerate content with AI', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="force_content" value="1" <?php checked((int)$settings['force_content'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_content_no_images" value="1" <?php checked((int)$settings['do_content_no_images'], 1); ?> />
-                            Regenerar contenido con IA (sin imÃ¡genes)
+                            <?php echo esc_html__('Regenerate content with AI (without images)', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="force_content_no_images" value="1" <?php checked((int)$settings['force_content_no_images'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_images_reset" value="1" <?php checked((int)$settings['do_images_reset'], 1); ?> />
-                            ImÃ¡genes: marcar como pendientes (reset)
+                            <?php echo esc_html__('Images: mark as pending (reset)', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="force_images_reset" value="1" <?php checked((int)$settings['force_images_reset'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="clear_featured" value="1" <?php checked((int)$settings['clear_featured'], 1); ?> />
-                                    Quitar imagen destacada (no habitual)
+                                    <?php echo esc_html__('Remove featured image (not common)', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_images_content_only" value="1" <?php checked((int)$settings['do_images_content_only'], 1); ?> />
-                            ImÃ¡genes: regenerar solo las del contenido
+                            <?php echo esc_html__('Images: regenerate content images only', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="force_images_content_only" value="1" <?php checked((int)$settings['force_images_content_only'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_featured_only" value="1" <?php checked((int)$settings['do_featured_only'], 1); ?> />
-                            Imagen destacada: regenerar solo destacada
+                            <?php echo esc_html__('Featured image: regenerate featured only', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="force_featured_only" value="1" <?php checked((int)$settings['force_featured_only'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="featured_remove_old" value="1" <?php checked((int)$settings['featured_remove_old'], 1); ?> />
-                                    Quitar destacada anterior
+                                    <?php echo esc_html__('Remove previous featured image', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
-                        <div style="font-weight:600;margin:12px 0 8px;">TaxonomÃ­as</div>
+                        <div style="font-weight:600;margin:12px 0 8px;"><?php echo esc_html__('Taxonomies', 'cbiastudio-blogflow-ai'); ?></div>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_categories" value="1" <?php checked((int)$settings['do_categories'], 1); ?> />
-                            Recalcular categorÃ­as
+                            <?php echo esc_html__('Recalculate categories', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="force_categories" value="1" <?php checked((int)$settings['force_categories'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_tags" value="1" <?php checked((int)$settings['do_tags'], 1); ?> />
-                            Recalcular etiquetas
+                            <?php echo esc_html__('Recalculate tags', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="force_tags" value="1" <?php checked((int)$settings['force_tags'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
-                        <div style="font-weight:600;margin:12px 0 8px;">Opcional</div>
+                        <div style="font-weight:600;margin:12px 0 8px;"><?php echo esc_html__('Optional', 'cbiastudio-blogflow-ai'); ?></div>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="do_title" value="1" <?php checked((int)$settings['do_title'], 1); ?> />
-                            Optimizar tÃ­tulo con IA
+                            <?php echo esc_html__('Optimize title with AI', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="force_title" value="1" <?php checked((int)$settings['force_title'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
                         <p class="description" style="margin-top:10px;">
-                            Consejo: si regeneras contenido, normalmente querrÃ¡s tambiÃ©n categorÃ­as/etiquetas + Yoast.
+                            <?php echo esc_html__('Tip: if you regenerate content, you will usually also want categories/tags + Yoast.', 'cbiastudio-blogflow-ai'); ?>
                         </p>
                     </div>
                 </td>
@@ -391,15 +391,15 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
         </table>
 
         <p>
-            <button type="submit" class="button button-primary">Guardar configuraciÃ³n</button>
+            <button type="submit" class="button button-primary"><?php echo esc_html__('Save configuration', 'cbiastudio-blogflow-ai'); ?></button>
         </p>
     </form>
 
     <hr />
 
-    <h3>EjecuciÃ³n</h3>
+    <h3><?php echo esc_html__('Execution', 'cbiastudio-blogflow-ai'); ?></h3>
     <p class="description" style="max-width:980px;">
-        Por defecto se ejecuta con tu preselecciÃ³n guardada:
+        <?php echo esc_html__('By default, this runs with your saved default selection:', 'cbiastudio-blogflow-ai'); ?>
         <strong><?php echo esc_html($defaults_summary_text); ?></strong>
     </p>
 
@@ -409,32 +409,32 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
 
         <table class="form-table" style="max-width:980px;">
             <tr>
-                <th>Lote</th>
+                <th><?php echo esc_html__('Batch', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <input type="number" name="run_batch_size" min="1" max="200" value="<?php echo esc_attr((int)$settings['batch_size']); ?>" style="width:120px;" />
                 </td>
             </tr>
 
             <tr>
-                <th>Ãmbito</th>
+                <th><?php echo esc_html__('Scope', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <label>
                         <input type="checkbox" name="run_scope_plugin" value="1" <?php checked($settings['scope'], 'plugin'); ?> />
-                        Procesar solo <code>_cbia_created=1</code>
+                        <?php echo esc_html__('Process only', 'cbiastudio-blogflow-ai'); ?> <code>_cbia_created=1</code>
                     </label>
                 </td>
             </tr>
 
             <tr>
-                <th>Filtro</th>
+                <th><?php echo esc_html__('Filter', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <label style="margin-right:18px;">
                         <input type="radio" name="run_filter_mode" value="older" <?php checked($settings['filter_mode'], 'older'); ?> />
-                        MÃ¡s antiguos que (dÃ­as)
+                        <?php echo esc_html__('Older than (days)', 'cbiastudio-blogflow-ai'); ?>
                     </label>
                     <label>
                         <input type="radio" name="run_filter_mode" value="range" <?php checked($settings['filter_mode'], 'range'); ?> />
-                        Rango
+                        <?php echo esc_html__('Range', 'cbiastudio-blogflow-ai'); ?>
                     </label>
 
                     <div style="margin-top:10px;">
@@ -444,11 +444,11 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
 
                         <div id="cbia_run_filter_range" style="<?php echo ($settings['filter_mode']==='range'?'':'display:none;'); ?>">
                             <label style="margin-right:10px;">
-                                Desde:
+                                <?php echo esc_html__('From:', 'cbiastudio-blogflow-ai'); ?>
                                 <input type="date" name="run_date_from" value="<?php echo esc_attr((string)$settings['date_from']); ?>" />
                             </label>
                             <label>
-                                Hasta:
+                                <?php echo esc_html__('To:', 'cbiastudio-blogflow-ai'); ?>
                                 <input type="date" name="run_date_to" value="<?php echo esc_attr((string)$settings['date_to']); ?>" />
                             </label>
                         </div>
@@ -457,18 +457,18 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
             </tr>
 
             <tr>
-                <th>ImÃ¡genes (lÃ­mite)</th>
+                <th><?php echo esc_html__('Images (limit)', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <input type="number" name="run_images_limit" min="1" max="10" value="<?php echo esc_attr((int)$settings['images_limit']); ?>" style="width:120px;" />
                 </td>
             </tr>
 
             <tr>
-                <th>Filtros avanzados</th>
+                <th><?php echo esc_html__('Advanced filters', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <div style="margin-bottom:8px;">
                         <label>
-                            IDs concretos (opcional):
+                            <?php echo esc_html__('Specific IDs (optional):', 'cbiastudio-blogflow-ai'); ?>
                             <input
                                 type="text"
                                 name="post_ids"
@@ -478,13 +478,13 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
                             />
                         </label>
                         <p class="description" style="margin:4px 0 0;">
-                            Si indicas IDs, se ignoran los filtros por fecha.
+                            <?php echo esc_html__('If IDs are provided, date filters are ignored.', 'cbiastudio-blogflow-ai'); ?>
                         </p>
                     </div>
 
                     <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap;">
                         <label>
-                            CategorÃ­a:
+                            <?php echo esc_html__('Category:', 'cbiastudio-blogflow-ai'); ?>
                             <?php
                             wp_dropdown_categories(array(
                                 'taxonomy' => 'category',
@@ -492,139 +492,139 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
                                 'name' => 'run_category_id',
                                 'id' => 'cbia_run_category_id',
                                 'selected' => (int)($settings['category_id'] ?? 0),
-                                'show_option_all' => 'Todas',
+                                'show_option_all' => __('All', 'cbiastudio-blogflow-ai'),
                             ));
                             ?>
                         </label>
 
                         <label>
-                            Autor:
+                            <?php echo esc_html__('Author:', 'cbiastudio-blogflow-ai'); ?>
                             <?php
                             wp_dropdown_users(array(
                                 'name' => 'run_author_id',
                                 'id' => 'cbia_run_author_id',
                                 'selected' => (int)($settings['author_id'] ?? 0),
-                                'show_option_all' => 'Todos',
+                                'show_option_all' => __('All', 'cbiastudio-blogflow-ai'),
                             ));
                             ?>
                         </label>
 
                         <label>
                             <input type="checkbox" name="run_dry_run" value="1" <?php checked((int)($settings['dry_run'] ?? 0), 1); ?> />
-                            Dry run (solo listar)
+                            <?php echo esc_html__('Dry run (list only)', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                     </div>
                 </td>
             </tr>
 
             <tr>
-                <th>Personalizar esta ejecuciÃ³n</th>
+                <th><?php echo esc_html__('Customize this run', 'cbiastudio-blogflow-ai'); ?></th>
                 <td>
                     <label>
                         <input type="checkbox" name="run_custom_actions" id="cbia_run_custom_actions" value="1" />
-                        Quiero elegir acciones distintas a mi preselecciÃ³n (solo para esta vez)
+                        <?php echo esc_html__('I want to choose actions different from my defaults (this run only)', 'cbiastudio-blogflow-ai'); ?>
                     </label>
 
                     <div id="cbia_run_custom_box" style="display:none;margin-top:12px;padding:12px;border:1px solid #ddd;border-radius:8px;background:#fff;">
-                        <div style="font-weight:600;margin-bottom:8px;">Acciones (solo esta ejecuciÃ³n)</div>
+                        <div style="font-weight:600;margin-bottom:8px;"><?php echo esc_html__('Actions (this run only)', 'cbiastudio-blogflow-ai'); ?></div>
 
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="run_do_note" value="1" <?php checked((int)$settings['do_note'], 1); ?> />
-                            Nota â€œActualizado el â€¦â€
+                            <?php echo esc_html__('Note "Updated on ..."', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="run_force_note" value="1" <?php checked((int)$settings['force_note'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
-                        <div style="font-weight:600;margin:12px 0 8px;">Yoast SEO</div>
+                        <div style="font-weight:600;margin:12px 0 8px;"><?php echo esc_html__('Yoast SEO', 'cbiastudio-blogflow-ai'); ?></div>
                         <label style="display:block;margin-bottom:6px;">
                             <input type="checkbox" name="run_do_yoast_metadesc" value="1" <?php checked((int)$settings['do_yoast_metadesc'], 1); ?> />
-                            Meta description
+                            <?php echo esc_html__('Meta description', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                         <label style="display:block;margin-bottom:6px;">
                             <input type="checkbox" name="run_do_yoast_focuskw" value="1" <?php checked((int)$settings['do_yoast_focuskw'], 1); ?> />
-                            Keyphrase (focus keyword)
+                            <?php echo esc_html__('Keyphrase (focus keyword)', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                         <label style="display:block;margin-bottom:6px;">
                             <input type="checkbox" name="run_do_yoast_title" value="1" <?php checked((int)$settings['do_yoast_title'], 1); ?> />
-                            SEO title (tÃ­tulo Yoast)
+                            <?php echo esc_html__('SEO title (Yoast title)', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                         <label style="display:block;margin:8px 0;">
                             <input type="checkbox" name="run_force_yoast" value="1" <?php checked((int)$settings['force_yoast'], 1); ?> />
-                            Forzar Yoast
+                            <?php echo esc_html__('Force Yoast', 'cbiastudio-blogflow-ai'); ?>
                         </label>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="run_do_yoast_reindex" value="1" <?php checked((int)$settings['do_yoast_reindex'], 1); ?> />
-                            Reindex / semÃ¡foro (best effort)
+                            <?php echo esc_html__('Reindex / traffic lights (best effort)', 'cbiastudio-blogflow-ai'); ?>
                         </label>
 
-                        <div style="font-weight:600;margin:12px 0 8px;">Contenido e imÃ¡genes</div>
+                        <div style="font-weight:600;margin:12px 0 8px;"><?php echo esc_html__('Content and images', 'cbiastudio-blogflow-ai'); ?></div>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="run_do_content" value="1" <?php checked((int)$settings['do_content'], 1); ?> />
-                            Contenido (IA)
+                            <?php echo esc_html__('Content (AI)', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="run_force_content" value="1" <?php checked((int)$settings['force_content'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="run_do_images_reset" value="1" <?php checked((int)$settings['do_images_reset'], 1); ?> />
-                            ImÃ¡genes: reset pendientes
+                            <?php echo esc_html__('Images: reset pending', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="run_force_images_reset" value="1" <?php checked((int)$settings['force_images_reset'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="run_clear_featured" value="1" <?php checked((int)$settings['clear_featured'], 1); ?> />
-                                    Quitar destacada
+                                    <?php echo esc_html__('Remove featured image', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
-                        <div style="font-weight:600;margin:12px 0 8px;">TaxonomÃ­as</div>
+                        <div style="font-weight:600;margin:12px 0 8px;"><?php echo esc_html__('Taxonomies', 'cbiastudio-blogflow-ai'); ?></div>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="run_do_categories" value="1" <?php checked((int)$settings['do_categories'], 1); ?> />
-                            CategorÃ­as
+                            <?php echo esc_html__('Categories', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="run_force_categories" value="1" <?php checked((int)$settings['force_categories'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="run_do_tags" value="1" <?php checked((int)$settings['do_tags'], 1); ?> />
-                            Etiquetas
+                            <?php echo esc_html__('Tags', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="run_force_tags" value="1" <?php checked((int)$settings['force_tags'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
-                        <div style="font-weight:600;margin:12px 0 8px;">Opcional</div>
+                        <div style="font-weight:600;margin:12px 0 8px;"><?php echo esc_html__('Optional', 'cbiastudio-blogflow-ai'); ?></div>
                         <label style="display:block;margin-bottom:8px;">
                             <input type="checkbox" name="run_do_title" value="1" <?php checked((int)$settings['do_title'], 1); ?> />
-                            TÃ­tulo (IA)
+                            <?php echo esc_html__('Title (AI)', 'cbiastudio-blogflow-ai'); ?>
                             <span style="margin-left:14px;">
                                 <label>
                                     <input type="checkbox" name="run_force_title" value="1" <?php checked((int)$settings['force_title'], 1); ?> />
-                                    Forzar
+                                    <?php echo esc_html__('Force', 'cbiastudio-blogflow-ai'); ?>
                                 </label>
                             </span>
                         </label>
 
                         <p class="description" style="margin-top:10px;">
-                            Si no marcas â€œPersonalizarâ€, se usarÃ¡n tus acciones por defecto sin mÃ¡s.
+                            <?php echo esc_html__('If you do not enable "Customize", your default actions will be used as-is.', 'cbiastudio-blogflow-ai'); ?>
                         </p>
                     </div>
                 </td>
@@ -644,54 +644,53 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
         ></div>
 
         <div style="margin:6px 0 10px;">
-            <span class="description" style="margin-right:8px;"><strong>Acciones rÃ¡pidas:</strong></span>
-            <button type="submit" class="button" name="cbia_action" value="run_quick_yoast_metas">Solo metas Yoast</button>
-            <button type="submit" class="button" name="cbia_action" value="run_quick_yoast_reindex" style="margin-left:6px;">Solo reindex Yoast</button>
-            <button type="submit" class="button" name="cbia_action" value="run_quick_featured" style="margin-left:6px;">Solo destacada</button>
-            <button type="submit" class="button" name="cbia_action" value="run_quick_images_only" style="margin-left:6px;">Solo imÃ¡genes contenido</button>
-            <button type="submit" class="button" name="cbia_action" value="run_quick_content_only" style="margin-left:6px;">Solo contenido (sin imÃ¡genes)</button>
+            <span class="description" style="margin-right:8px;"><strong><?php echo esc_html__('Quick actions:', 'cbiastudio-blogflow-ai'); ?></strong></span>
+            <button type="submit" class="button" name="cbia_action" value="run_quick_yoast_metas"><?php echo esc_html__('Yoast metas only', 'cbiastudio-blogflow-ai'); ?></button>
+            <button type="submit" class="button" name="cbia_action" value="run_quick_yoast_reindex" style="margin-left:6px;"><?php echo esc_html__('Yoast reindex only', 'cbiastudio-blogflow-ai'); ?></button>
+            <button type="submit" class="button" name="cbia_action" value="run_quick_featured" style="margin-left:6px;"><?php echo esc_html__('Featured only', 'cbiastudio-blogflow-ai'); ?></button>
+            <button type="submit" class="button" name="cbia_action" value="run_quick_images_only" style="margin-left:6px;"><?php echo esc_html__('Content images only', 'cbiastudio-blogflow-ai'); ?></button>
+            <button type="submit" class="button" name="cbia_action" value="run_quick_content_only" style="margin-left:6px;"><?php echo esc_html__('Content only (without images)', 'cbiastudio-blogflow-ai'); ?></button>
 
             <span style="margin-left:12px;">
                 <label style="margin-right:8px;">
                     <input type="checkbox" name="run_featured_remove_old" value="1" />
-                    Quitar destacada anterior
+                    <?php echo esc_html__('Remove previous featured image', 'cbiastudio-blogflow-ai'); ?>
                 </label>
                 <label style="margin-right:8px;">
                     <input type="checkbox" name="run_force_images_content_only" value="1" />
-                    Forzar imÃ¡genes
+                    <?php echo esc_html__('Force images', 'cbiastudio-blogflow-ai'); ?>
                 </label>
                 <label>
                     <input type="checkbox" name="run_force_content_no_images" value="1" />
-                    Forzar contenido
+                    <?php echo esc_html__('Force content', 'cbiastudio-blogflow-ai'); ?>
                 </label>
             </span>
         </div>
 
         <p>
             <button type="submit" class="button button-primary" name="cbia_action" value="run_oldposts">
-                Ejecutar lote
+                <?php echo esc_html__('Run batch', 'cbiastudio-blogflow-ai'); ?>
             </button>
 
             <button type="submit" class="button" name="cbia_action" value="stop" style="margin-left:8px;background:#b70000;color:#fff;">
-                Detener
+                <?php echo esc_html__('Stop', 'cbiastudio-blogflow-ai'); ?>
             </button>
 
             <button type="submit" class="button button-secondary" name="cbia_action" value="clear_log" style="margin-left:8px;">
-                Limpiar log
+                <?php echo esc_html__('Clear log', 'cbiastudio-blogflow-ai'); ?>
             </button>
         </p>
     </form>
 
-    <h3>Log</h3>
+    <h3><?php echo esc_html__('Log', 'cbiastudio-blogflow-ai'); ?></h3>
     <textarea id="cbia-oldposts-log" rows="14" cols="120" readonly style="background:#f9f9f9;width:100%;"><?php echo esc_textarea($log); ?></textarea>
 
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Arreglo defensivo de mojibake (texto mal decodificado).
-        // No toca la lÃ³gica: solo corrige legibilidad en la UI.
+        // Defensive mojibake fix: only improves UI readability.
         function tryDecodeLatin1ToUtf8(str) {
             try {
-                // PatrÃ³n tÃ­pico: UTF-8 leÃ­do como Latin-1.
+                // Typical pattern: UTF-8 interpreted as Latin-1.
                 return decodeURIComponent(escape(str));
             } catch (e) {
                 return str;
@@ -707,7 +706,7 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
                 const original = node.nodeValue;
                 if (!original || !suspicious.test(original)) continue;
                 let fixed = tryDecodeLatin1ToUtf8(original);
-                // Algunos fragmentos estÃ¡n doblemente rotos.
+                // Some fragments are double-broken.
                 if (fixed !== original && suspicious.test(fixed)) {
                     fixed = tryDecodeLatin1ToUtf8(fixed);
                 }
@@ -747,7 +746,7 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
             });
         }
 
-        // Resumen + confirmaciÃ³n antes de ejecutar
+        // Summary + confirmation before execution
         const summary = document.getElementById('cbia-oldposts-summary');
         const actionsForm = summary ? summary.closest('form') : null;
         if (summary && actionsForm) {
@@ -789,13 +788,13 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
             function updateSummary() {
                 const flags = computeFlags();
                 const actions = [];
-                if (flags.doContent) actions.push('contenido IA');
-                if (flags.doContentNoImages) actions.push('contenido IA (sin imÃ¡genes)');
-                if (flags.doTitle) actions.push('tÃ­tulo IA');
-                if (flags.doImagesReset) actions.push('reset imÃ¡genes');
-                if (flags.doImagesContentOnly) actions.push('solo imÃ¡genes contenido');
-                if (flags.doFeaturedOnly) actions.push('solo destacada');
-                if (actions.length === 0) actions.push('sin acciones IA');
+                if (flags.doContent) actions.push('AI content');
+                if (flags.doContentNoImages) actions.push('AI content (without images)');
+                if (flags.doTitle) actions.push('AI title');
+                if (flags.doImagesReset) actions.push('reset images');
+                if (flags.doImagesContentOnly) actions.push('content images only');
+                if (flags.doFeaturedOnly) actions.push('featured only');
+                if (actions.length === 0) actions.push('no AI actions');
 
                 const scopePlugin = isChecked('run_scope_plugin');
                 const ids = getValue('run_post_ids');
@@ -804,15 +803,15 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
                 const dryRun = isChecked('run_dry_run');
 
                 const filters = [];
-                filters.push(scopePlugin ? 'solo plugin' : 'todos los posts');
+                filters.push(scopePlugin ? 'plugin only' : 'all posts');
                 if (ids) filters.push('IDs: ' + ids);
-                if (!ids && cat && cat !== '0') filters.push('categorÃ­a #' + cat);
-                if (!ids && author && author !== '0') filters.push('autor #' + author);
+                if (!ids && cat && cat !== '0') filters.push('category #' + cat);
+                if (!ids && author && author !== '0') filters.push('author #' + author);
                 if (dryRun) filters.push('DRY RUN');
 
                 summary.style.display = '';
                 summary.innerHTML =
-                    '<p style="margin:0;"><strong>Resumen:</strong> ' +
+                    '<p style="margin:0;"><strong>Summary:</strong> ' +
                     actions.join(', ') +
                     ' | ' +
                     filters.join(' Â· ') +
@@ -826,7 +825,7 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' Â· ', $defaults
                 const flags = computeFlags();
                 const aiRisk = flags.doContent || flags.doContentNoImages || flags.doTitle || flags.doImagesReset || flags.doImagesContentOnly || flags.doFeaturedOnly;
                 if (!aiRisk) return;
-                const ok = window.confirm('Se van a ejecutar acciones con IA que pueden consumir crÃ©ditos. Â¿Continuar?');
+                const ok = window.confirm('AI actions that may consume credits will be executed. Continue?');
                 if (!ok) e.preventDefault();
             });
         }

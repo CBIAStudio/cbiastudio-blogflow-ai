@@ -18,26 +18,39 @@ $settings = $service && method_exists($service, 'get_settings')
     ? $service->get_settings()
     : (function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array()));
 
-$mode = $settings['title_input_mode'] ?? 'manual';
+$mode = 'manual';
 $manual_titles = $settings['manual_titles'] ?? '';
 $blog_prompt_mode = function_exists('cbia_prompt_get_mode')
     ? cbia_prompt_get_mode((array)$settings)
     : sanitize_key((string)($settings['blog_prompt_mode'] ?? 'recommended'));
 if (!in_array($blog_prompt_mode, array('recommended', 'legacy'), true)) $blog_prompt_mode = 'recommended';
 $blog_prompt_editable = (string)($settings['blog_prompt_editable'] ?? '');
+$prompt_language = (string)($settings['post_language'] ?? 'Spanish');
 if ($blog_prompt_editable === '' && function_exists('cbia_prompt_recommended_editable_default')) {
-    $blog_prompt_editable = cbia_prompt_recommended_editable_default();
+    $blog_prompt_editable = (function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($prompt_language))
+        ? cbia_prompt_recommended_editable_legacy_default()
+        : cbia_prompt_recommended_editable_default();
+}
+if (function_exists('cbia_prompt_maybe_upgrade_legacy_editable')) {
+    $blog_prompt_editable = cbia_prompt_maybe_upgrade_legacy_editable($blog_prompt_editable, $prompt_language);
 }
 $blog_prompt_editable = function_exists('cbia_prompt_sanitize_editable_block')
     ? cbia_prompt_sanitize_editable_block($blog_prompt_editable)
     : $blog_prompt_editable;
 $legacy_full_prompt = (string)($settings['legacy_full_prompt'] ?? '');
 $legacy_placeholder = (string)($settings['prompt_single_all'] ?? '');
-$csv_url = $settings['csv_url'] ?? '';
+if (function_exists('cbia_fix_mojibake')) {
+    $legacy_full_prompt = cbia_fix_mojibake($legacy_full_prompt);
+    $legacy_placeholder = cbia_fix_mojibake($legacy_placeholder);
+}
+if (function_exists('cbia_prompt_clean_legacy_template')) {
+    $legacy_full_prompt = cbia_prompt_clean_legacy_template($legacy_full_prompt, $prompt_language);
+    $legacy_placeholder = cbia_prompt_clean_legacy_template($legacy_placeholder, $prompt_language);
+}
 
 
-$cp_status = 'inactivo';
-$last_dt = '(sin registros)';
+$cp_status = 'inactive';
+$last_dt = '(no records)';
 if ($service && method_exists($service, 'get_checkpoint_status')) {
     $status_payload = $service->get_checkpoint_status();
     if (is_array($status_payload)) {
@@ -47,118 +60,105 @@ if ($service && method_exists($service, 'get_checkpoint_status')) {
 } else {
     $cp = cbia_checkpoint_get();
     $cp_status = (!empty($cp) && !empty($cp['running']))
-        ? ('EN CURSO | idx ' . intval($cp['idx'] ?? 0) . ' de ' . count((array)($cp['queue'] ?? array())))
-        : 'inactivo';
+        ? ('RUNNING | idx ' . intval($cp['idx'] ?? 0) . ' of ' . count((array)($cp['queue'] ?? array())))
+        : 'inactive';
     $last_dt = $service && method_exists($service, 'get_last_scheduled_at')
-        ? ($service->get_last_scheduled_at() ?: '(sin registros)')
-        : (function_exists('cbia_get_last_scheduled_at') ? (cbia_get_last_scheduled_at() ?: '(sin registros)') : '(sin registros)');
+        ? ($service->get_last_scheduled_at() ?: '(no records)')
+        : (function_exists('cbia_get_last_scheduled_at') ? (cbia_get_last_scheduled_at() ?: '(no records)') : '(no records)');
 }
 
 $log_payload = $service && method_exists($service, 'get_log') ? $service->get_log() : cbia_get_log();
 $log_text = is_array($log_payload) ? (string)($log_payload['log'] ?? '') : '';
 
 if ($saved_notice === 'guardado') {
-    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Configuracion de Blog guardada.', 'cbiastudio-blogflow-ai') . '</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Blog settings saved.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'guardado_warn') {
     $warns = get_transient('cbia_blog_prompt_warnings');
     if (!is_array($warns)) $warns = array();
-    $msg = __('Configuracion de Blog guardada con avisos.', 'cbiastudio-blogflow-ai');
+    $msg = __('Blog settings saved with warnings.', 'cbiastudio-blogflow-ai');
     if (!empty($warns)) {
         $msg .= ' ' . implode(' ', array_map('sanitize_text_field', $warns));
     }
     echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($msg) . '</p></div>';
 } elseif ($saved_notice === 'test') {
-    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Prueba ejecutada. Revisa el log.', 'cbiastudio-blogflow-ai') . '</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Test executed. Review the log.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'stop') {
-    echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Stop activado.', 'cbiastudio-blogflow-ai') . '</p></div>';
+    echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Stop activated.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'pending') {
-    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Relleno de pendientes ejecutado. Revisa el log.', 'cbiastudio-blogflow-ai') . '</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Pending fill executed. Review the log.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'checkpoint') {
-    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Checkpoint limpiado y programacion reseteada.', 'cbiastudio-blogflow-ai') . '</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Checkpoint cleared and schedule reset.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'log') {
-    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Log limpiado.', 'cbiastudio-blogflow-ai') . '</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Log cleared.', 'cbiastudio-blogflow-ai') . '</p></div>';
 }
 
 $ajax_nonce = wp_create_nonce('cbia_ajax_nonce');
 ?>
 
-<h2><?php echo esc_html__('Titulos', 'cbiastudio-blogflow-ai'); ?></h2>
+<h2><?php echo esc_html__('Titles', 'cbiastudio-blogflow-ai'); ?></h2>
 <form method="post">
 <input type="hidden" name="cbia_form" value="blog_save" />
+<input type="hidden" name="title_input_mode" value="manual" />
 <?php wp_nonce_field('cbia_blog_save_nonce'); ?>
 
 <table class="form-table">
-<tr>
-<th><?php echo esc_html__('Modo', 'cbiastudio-blogflow-ai'); ?></th>
-<td>
-<label><input type="radio" name="title_input_mode" value="manual" <?php checked($mode,'manual'); ?> /> <?php echo esc_html__('Manual', 'cbiastudio-blogflow-ai'); ?></label>
-&nbsp;&nbsp;
-<label><input type="radio" name="title_input_mode" value="csv" <?php checked($mode,'csv'); ?> /> <?php echo esc_html__('CSV', 'cbiastudio-blogflow-ai'); ?></label>
-</td>
-</tr>
-<tr id="cbia_row_manual" <?php if($mode!=='manual') echo 'style="display:none;"'; ?>>
-<th><?php echo esc_html__('Titulos manuales', 'cbiastudio-blogflow-ai'); ?></th>
+<tr id="cbia_row_manual">
+<th><?php echo esc_html__('Manual titles', 'cbiastudio-blogflow-ai'); ?></th>
   <td>
   <div class="cbia-single-title-wrap" style="max-width:1100px;">
       <div id="cbia_single_title_card" style="display:none;align-items:center;gap:10px;border:1px solid #d7dce1;border-radius:10px;padding:10px 12px;background:#fff;">
           <span id="cbia_single_title_text" style="flex:1;word-break:break-word;"></span>
           <button type="button" id="cbia_single_title_clear" class="button" style="line-height:1;">×</button>
       </div>
-      <input type="text" id="cbia_single_title_input" class="regular-text" style="width:100%;max-width:1100px;" placeholder="<?php echo esc_attr__('Introduce un titulo...', 'cbiastudio-blogflow-ai'); ?>" />
+      <input type="text" id="cbia_single_title_input" class="regular-text" style="width:100%;max-width:1100px;" placeholder="<?php echo esc_attr__('Enter a title...', 'cbiastudio-blogflow-ai'); ?>" />
       <textarea name="manual_titles" id="cbia_manual_titles" rows="6" style="display:none;"><?php echo esc_textarea($manual_titles); ?></textarea>
   </div>
-  <p class="description"><?php echo esc_html__('Guarda y luego pulsa "Crear blog automatico".', 'cbiastudio-blogflow-ai'); ?></p>
+  <p class="description"><?php echo esc_html__('Save and then click "Create blog automatically".', 'cbiastudio-blogflow-ai'); ?></p>
 
 <p style="margin-top:10px;">
-<button type="submit" class="button button-primary"><?php echo esc_html__('Guardar', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="submit" class="button button-primary"><?php echo esc_html__('Save', 'cbiastudio-blogflow-ai'); ?></button>
 </p>
 </td>
 </tr>
-<tr id="cbia_row_csv" <?php if($mode!=='csv') echo 'style="display:none;"'; ?>>
-<th><?php echo esc_html__('URL CSV', 'cbiastudio-blogflow-ai'); ?></th>
-<td>
-<input type="text" name="csv_url" value="<?php echo esc_attr($csv_url); ?>" style="width:100%;max-width:1100px;" />
-</td>
-</tr>
 <tr>
-<th><?php echo esc_html__('Prompt del contenido del blog', 'cbiastudio-blogflow-ai'); ?></th>
+<th><?php echo esc_html__('Blog content prompt', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <div class="cbia-blog-prompt-panel" style="padding:12px;border:1px solid #dcdcde;border-radius:8px;max-width:1100px;">
-<p class="description" style="margin-top:0;"><?php echo esc_html__('Prompt editorial optimizado para Google Discover e insercion de marcadores de imagen. Puedes ajustar el estilo, pero hay reglas fijas para evitar cortes y mantener compatibilidad.', 'cbiastudio-blogflow-ai'); ?></p>
-<p class="description" style="margin-top:0;"><?php echo esc_html__('El idioma se aplica automaticamente segun el selector de idioma y no se edita desde el prompt.', 'cbiastudio-blogflow-ai'); ?></p>
+<p class="description" style="margin-top:0;"><?php echo esc_html__('Editorial prompt optimized for Google Discover and image marker insertion. You can adjust style, but fixed rules prevent truncation and keep compatibility.', 'cbiastudio-blogflow-ai'); ?></p>
+<p class="description" style="margin-top:0;"><?php echo esc_html__('Language is automatically applied from the language selector and is not edited in this prompt.', 'cbiastudio-blogflow-ai'); ?></p>
 
 <p style="margin:8px 0;">
-<label><input type="radio" name="blog_prompt_mode" value="recommended" <?php checked($blog_prompt_mode, 'recommended'); ?> /> <?php echo esc_html__('Prompt recomendado (seguro)', 'cbiastudio-blogflow-ai'); ?></label>
+<label><input type="radio" name="blog_prompt_mode" value="recommended" <?php checked($blog_prompt_mode, 'recommended'); ?> /> <?php echo esc_html__('Recommended prompt (safe)', 'cbiastudio-blogflow-ai'); ?></label>
 </p>
 <p style="margin:8px 0;">
 <label style="display:inline-flex;align-items:center;gap:6px;">
     <input type="checkbox" id="cbia_toggle_advanced_prompt" <?php checked($blog_prompt_mode, 'legacy'); ?> />
-    <?php echo esc_html__('Mostrar opciones avanzadas (compatibilidad)', 'cbiastudio-blogflow-ai'); ?>
+    <?php echo esc_html__('Show advanced options (compatibility)', 'cbiastudio-blogflow-ai'); ?>
 </label>
 </p>
 <div id="cbia_advanced_prompt_wrap" style="display:none;">
 <p style="margin:8px 0;">
-<label><input type="radio" name="blog_prompt_mode" value="legacy" <?php checked($blog_prompt_mode, 'legacy'); ?> /> <?php echo esc_html__('Prompt avanzado (compatibilidad)', 'cbiastudio-blogflow-ai'); ?></label>
+<label><input type="radio" name="blog_prompt_mode" value="legacy" <?php checked($blog_prompt_mode, 'legacy'); ?> /> <?php echo esc_html__('Advanced prompt (compatibility)', 'cbiastudio-blogflow-ai'); ?></label>
 </p>
-<p class="description" style="margin-top:0;"><?php echo esc_html__('Advertencia: este modo permite control total y puede romper formato, idioma o marcadores de imagen.', 'cbiastudio-blogflow-ai'); ?></p>
+<p class="description" style="margin-top:0;"><?php echo esc_html__('Warning: this mode allows full control and can break format, language, or image markers.', 'cbiastudio-blogflow-ai'); ?></p>
 </div>
 
 <label style="display:inline-flex;align-items:center;gap:6px;">
     <input type="checkbox" id="cbia_toggle_prompt_edit" />
-    <?php echo esc_html__('Editar prompt', 'cbiastudio-blogflow-ai'); ?>
+    <?php echo esc_html__('Edit prompt', 'cbiastudio-blogflow-ai'); ?>
 </label>
 
 <div id="cbia_prompt_edit_wrap" style="display:none;margin-top:10px;">
     <div id="cbia_prompt_edit_recommended" style="display:none;">
         <textarea name="blog_prompt_editable" id="cbia_blog_prompt_editable" rows="12" style="width:100%;"><?php echo esc_textarea($blog_prompt_editable); ?></textarea>
-        <input type="hidden" id="cbia_blog_prompt_default" value="<?php echo esc_attr(function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : ''); ?>" />
+        <input type="hidden" id="cbia_blog_prompt_default" value="<?php echo esc_attr((function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($prompt_language)) ? (function_exists('cbia_prompt_recommended_editable_legacy_default') ? cbia_prompt_recommended_editable_legacy_default() : '') : (function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : '')); ?>" />
         <p style="margin-top:8px;">
-<button type="button" class="button" id="cbia_btn_restore_prompt"><?php echo esc_html__('Restaurar prompt recomendado', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="button" class="button" id="cbia_btn_restore_prompt"><?php echo esc_html__('Restore recommended prompt', 'cbiastudio-blogflow-ai'); ?></button>
         </p>
     </div>
     <div id="cbia_prompt_edit_legacy" style="display:none;">
-        <textarea name="legacy_full_prompt" rows="12" style="width:100%;" placeholder="<?php echo esc_attr__('Prompt legado completo', 'cbiastudio-blogflow-ai'); ?>"><?php echo esc_textarea($legacy_full_prompt !== '' ? $legacy_full_prompt : $legacy_placeholder); ?></textarea>
-        <p class="description"><?php echo esc_html__('Modo avanzado: se usa el prompt completo historico para compatibilidad.', 'cbiastudio-blogflow-ai'); ?></p>
+        <textarea name="legacy_full_prompt" rows="12" style="width:100%;" placeholder="<?php echo esc_attr__('Full legacy prompt', 'cbiastudio-blogflow-ai'); ?>"><?php echo esc_textarea($legacy_full_prompt !== '' ? $legacy_full_prompt : $legacy_placeholder); ?></textarea>
+        <p class="description"><?php echo esc_html__('Advanced mode: uses the full historic prompt for compatibility.', 'cbiastudio-blogflow-ai'); ?></p>
     </div>
 </div>
 </div>
@@ -171,19 +171,19 @@ $ajax_nonce = wp_create_nonce('cbia_ajax_nonce');
 $preview_titles = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$manual_titles))));
 ?>
 
-<h2><?php echo esc_html__('Publicacion y clasificacion', 'cbiastudio-blogflow-ai'); ?></h2>
+<h2><?php echo esc_html__('Publishing and classification', 'cbiastudio-blogflow-ai'); ?></h2>
 <form method="post">
 <input type="hidden" name="cbia_form" value="blog_save" />
 <?php wp_nonce_field('cbia_blog_save_nonce'); ?>
 <table class="form-table">
 <tr>
-<th><?php echo esc_html__('Autor por defecto', 'cbiastudio-blogflow-ai'); ?></th>
+<th><?php echo esc_html__('Default author', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <?php
 $author_args = [
     'name'             => 'default_author_id',
     'selected'         => (int)($settings['default_author_id'] ?? 0),
-    'show_option_none' => __('- Automatico (usuario actual / admin) -', 'cbiastudio-blogflow-ai'),
+    'show_option_none' => __('- Automatic (current user / admin) -', 'cbiastudio-blogflow-ai'),
     'option_none_value'=> 0,
     'capability'       => ['edit_posts'],
     'class'            => 'regular-text',
@@ -199,105 +199,119 @@ echo $dd;
 </td>
 </tr>
 <tr>
-<th><?php echo esc_html__('Idioma del post', 'cbiastudio-blogflow-ai'); ?></th>
+<th><?php echo esc_html__('Post language', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <?php
 $language_options = [
-    'Espanol'   => 'Espanol',
-    'Portugues' => 'Portugues',
-    'Ingles'    => 'Ingles',
-    'Frances'   => 'Frances',
-    'italiano'  => 'Italiano',
-    'Aleman'    => 'Aleman',
-    'Holandes'  => 'Holandes',
-    'sueco'     => 'Sueco',
-    'Danes'     => 'Danes',
-    'noruego'   => 'Noruego',
-    'Fines'     => 'Fines',
-    'polaco'    => 'Polaco',
-    'checo'     => 'Checo',
-    'eslovaco'  => 'Eslovaco',
-    'Hungaro'   => 'Hungaro',
-    'rumano'    => 'Rumano',
-    'Bulgaro'   => 'Bulgaro',
-    'griego'    => 'Griego',
-    'croata'    => 'Croata',
-    'esloveno'  => 'Esloveno',
-    'estonio'   => 'Estonio',
-    'Leton'     => 'Leton',
-    'lituano'   => 'Lituano',
-    'Irlandes'  => 'Irlandes',
-    'Maltes'    => 'Maltes',
-    'romanche'  => 'Romanche',
+    'Spanish'     => __('Spanish', 'cbiastudio-blogflow-ai'),
+    'Portuguese'  => __('Portuguese', 'cbiastudio-blogflow-ai'),
+    'English'     => __('English', 'cbiastudio-blogflow-ai'),
+    'French'      => __('French', 'cbiastudio-blogflow-ai'),
+    'Italian'     => __('Italian', 'cbiastudio-blogflow-ai'),
+    'German'      => __('German', 'cbiastudio-blogflow-ai'),
+    'Dutch'       => __('Dutch', 'cbiastudio-blogflow-ai'),
+    'Swedish'     => __('Swedish', 'cbiastudio-blogflow-ai'),
+    'Danish'      => __('Danish', 'cbiastudio-blogflow-ai'),
+    'Norwegian'   => __('Norwegian', 'cbiastudio-blogflow-ai'),
+    'Finnish'     => __('Finnish', 'cbiastudio-blogflow-ai'),
+    'Polish'      => __('Polish', 'cbiastudio-blogflow-ai'),
+    'Czech'       => __('Czech', 'cbiastudio-blogflow-ai'),
+    'Slovak'      => __('Slovak', 'cbiastudio-blogflow-ai'),
+    'Hungarian'   => __('Hungarian', 'cbiastudio-blogflow-ai'),
+    'Romanian'    => __('Romanian', 'cbiastudio-blogflow-ai'),
+    'Bulgarian'   => __('Bulgarian', 'cbiastudio-blogflow-ai'),
+    'Greek'       => __('Greek', 'cbiastudio-blogflow-ai'),
+    'Croatian'    => __('Croatian', 'cbiastudio-blogflow-ai'),
+    'Slovenian'   => __('Slovenian', 'cbiastudio-blogflow-ai'),
+    'Estonian'    => __('Estonian', 'cbiastudio-blogflow-ai'),
+    'Latvian'     => __('Latvian', 'cbiastudio-blogflow-ai'),
+    'Lithuanian'  => __('Lithuanian', 'cbiastudio-blogflow-ai'),
+    'Irish'       => __('Irish', 'cbiastudio-blogflow-ai'),
+    'Maltese'     => __('Maltese', 'cbiastudio-blogflow-ai'),
+    'Romansh'     => __('Romansh', 'cbiastudio-blogflow-ai'),
 ];
-$current_language = (string)($settings['post_language'] ?? 'Espanol');
+$legacy_language_map = [
+    'Espanol' => 'Spanish', 'espanol' => 'Spanish', 'español' => 'Spanish',
+    'Portugues' => 'Portuguese', 'Ingles' => 'English', 'Frances' => 'French',
+    'italiano' => 'Italian', 'Aleman' => 'German', 'Holandes' => 'Dutch',
+    'sueco' => 'Swedish', 'Danes' => 'Danish', 'noruego' => 'Norwegian',
+    'Fines' => 'Finnish', 'polaco' => 'Polish', 'checo' => 'Czech',
+    'eslovaco' => 'Slovak', 'Hungaro' => 'Hungarian', 'rumano' => 'Romanian',
+    'Bulgaro' => 'Bulgarian', 'griego' => 'Greek', 'croata' => 'Croatian',
+    'esloveno' => 'Slovenian', 'estonio' => 'Estonian', 'Leton' => 'Latvian',
+    'lituano' => 'Lithuanian', 'Irlandes' => 'Irish', 'Maltes' => 'Maltese',
+    'romanche' => 'Romansh',
+];
+$current_language_raw = (string)($settings['post_language'] ?? 'Spanish');
+$current_language = $legacy_language_map[$current_language_raw] ?? $current_language_raw;
+if (!isset($language_options[$current_language])) $current_language = 'Spanish';
 echo '<select name="post_language" class="abb-select" style="width:220px;">';
 foreach ($language_options as $val => $label) {
     echo '<option value="' . esc_attr($val) . '" ' . selected($current_language, $val, false) . '>' . esc_html($label) . '</option>';
 }
 echo '</select>';
 ?>
-<p class="description"><?php echo esc_html__('Se usa para {IDIOMA_POST} y para normalizar el titulo de "Preguntas frecuentes".', 'cbiastudio-blogflow-ai'); ?></p>
+<p class="description"><?php echo esc_html__('Used for {IDIOMA_POST} and to normalize the "Frequently Asked Questions" title.', 'cbiastudio-blogflow-ai'); ?></p>
 </td>
 </tr>
 <tr>
-<th><?php echo esc_html__('Categoria por defecto', 'cbiastudio-blogflow-ai'); ?></th>
+<th><?php echo esc_html__('Default category', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
-<input type="text" name="default_category" value="<?php echo esc_attr((string)($settings['default_category'] ?? 'Noticias')); ?>" style="width:420px;" />
+<input type="text" name="default_category" value="<?php echo esc_attr((string)($settings['default_category'] ?? 'News')); ?>" style="width:420px;" />
 </td>
 </tr>
 <tr>
-<th><?php echo esc_html__('Reglas: keywords - Categorias', 'cbiastudio-blogflow-ai'); ?></th>
+<th><?php echo esc_html__('Rules: keywords - categories', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <textarea name="keywords_to_categories" rows="6" style="width:100%;"><?php echo esc_textarea((string)($settings['keywords_to_categories'] ?? '')); ?></textarea>
-<p class="description"><?php echo esc_html__('Formato por linea: ', 'cbiastudio-blogflow-ai'); ?><code><?php echo esc_html__('Categoria: kw1, kw2, kw3', 'cbiastudio-blogflow-ai'); ?></code><?php echo esc_html__('. Se compara contra (titulo+contenido).', 'cbiastudio-blogflow-ai'); ?></p>
+<p class="description"><?php echo esc_html__('Format per line: ', 'cbiastudio-blogflow-ai'); ?><code><?php echo esc_html__('Category: kw1, kw2, kw3', 'cbiastudio-blogflow-ai'); ?></code><?php echo esc_html__('. Compared against (title+content).', 'cbiastudio-blogflow-ai'); ?></p>
 </td>
 </tr>
 <tr>
-<th><?php echo esc_html__('Tags permitidas', 'cbiastudio-blogflow-ai'); ?></th>
+<th><?php echo esc_html__('Allowed tags', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <input type="text" name="default_tags" value="<?php echo esc_attr((string)($settings['default_tags'] ?? '')); ?>" style="width:100%;" />
-<p class="description"><?php echo esc_html__('Separadas por comas. El engine SOLO podra usar estas tags (max 7 por post).', 'cbiastudio-blogflow-ai'); ?></p>
+<p class="description"><?php echo esc_html__('Comma-separated. The engine can ONLY use these tags (max 7 per post).', 'cbiastudio-blogflow-ai'); ?></p>
 </td>
 </tr>
 </table>
 <p style="margin-top:10px;">
-<button type="submit" class="button button-primary"><?php echo esc_html__('Guardar', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="submit" class="button button-primary"><?php echo esc_html__('Save', 'cbiastudio-blogflow-ai'); ?></button>
 </p>
 </form>
 
   <hr/>
 
-  <h2><?php echo esc_html__('Acciones', 'cbiastudio-blogflow-ai'); ?></h2>
+  <h2><?php echo esc_html__('Actions', 'cbiastudio-blogflow-ai'); ?></h2>
 <form method="post" id="cbia_actions_form">
 <input type="hidden" name="cbia_form" value="blog_actions" />
 <?php wp_nonce_field('cbia_blog_actions_nonce'); ?>
 
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-<button type="submit" class="button" name="cbia_action" value="test_config"><?php echo esc_html__('Probar configuracion', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="submit" class="button" name="cbia_action" value="test_config"><?php echo esc_html__('Test configuration', 'cbiastudio-blogflow-ai'); ?></button>
 
-  <button type="button" class="button button-primary" id="cbia_btn_generate" onclick="if(window.cbiaStartGeneration){window.cbiaStartGeneration();} return false;"><?php echo esc_html__('Crear blog automatico', 'cbiastudio-blogflow-ai'); ?></button>
-<button type="button" class="button" id="cbia_btn_open_preview_modal"><?php echo esc_html__('Generacion con previsualizacion', 'cbiastudio-blogflow-ai'); ?></button>
+  <button type="button" class="button button-primary" id="cbia_btn_generate" onclick="if(window.cbiaStartGeneration){window.cbiaStartGeneration();} return false;"><?php echo esc_html__('Create blog automatically', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="button" class="button" id="cbia_btn_open_preview_modal"><?php echo esc_html__('Generation with preview', 'cbiastudio-blogflow-ai'); ?></button>
 
-<button type="submit" class="button" name="cbia_action" value="stop_generation" style="background:#b70000;color:#fff;border-color:#7a0000;"><?php echo esc_html__('Detener (STOP)', 'cbiastudio-blogflow-ai'); ?></button>
-<button type="submit" class="button" name="cbia_action" value="clear_log"><?php echo esc_html__('Limpiar log', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="submit" class="button" name="cbia_action" value="stop_generation" style="background:#b70000;color:#fff;border-color:#7a0000;"><?php echo esc_html__('Stop (STOP)', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="submit" class="button" name="cbia_action" value="clear_log"><?php echo esc_html__('Clear log', 'cbiastudio-blogflow-ai'); ?></button>
 </p>
 </form>
 
-<h2><?php echo esc_html__('Vista previa del articulo', 'cbiastudio-blogflow-ai'); ?></h2>
+<h2><?php echo esc_html__('Article preview', 'cbiastudio-blogflow-ai'); ?></h2>
 <section id="cbia-preview-panel" class="cbia-preview-card" aria-live="polite" data-open="false">
 <header class="cbia-preview-header">
 <div class="cbia-preview-title-wrap">
 <h3 class="cbia-preview-title"><?php echo esc_html__('ARTICLE PREVIEW', 'cbiastudio-blogflow-ai'); ?></h3>
 <div class="cbia-preview-title-inline">
-<label for="cbia_preview_title" class="screen-reader-text"><?php echo esc_html__('Titulo', 'cbiastudio-blogflow-ai'); ?></label>
+<label for="cbia_preview_title" class="screen-reader-text"><?php echo esc_html__('Title', 'cbiastudio-blogflow-ai'); ?></label>
 <select id="cbia_preview_title" class="abb-select" style="width:420px;">
 <?php if (!empty($preview_titles)): ?>
     <?php foreach ($preview_titles as $pt): ?>
         <option value="<?php echo esc_attr($pt); ?>"><?php echo esc_html($pt); ?></option>
     <?php endforeach; ?>
 <?php else: ?>
-    <option value=""><?php echo esc_html__('(Primero anade titulos manuales y guarda)', 'cbiastudio-blogflow-ai'); ?></option>
+    <option value=""><?php echo esc_html__('(First add manual titles and save)', 'cbiastudio-blogflow-ai'); ?></option>
 <?php endif; ?>
 </select>
 </div>
@@ -305,15 +319,15 @@ echo '</select>';
 <span id="cbia_preview_mode_badge" class="cbia-preview-mode">STREAM</span>
 </div>
 <div class="cbia-preview-head-actions">
-<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_copy" title="<?php echo esc_attr__('Copiar texto', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-admin-page" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_copy" title="<?php echo esc_attr__('Copy text', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-admin-page" aria-hidden="true"></span></button>
 <button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_expand" title="<?php echo esc_attr__('Expandir preview', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-editor-expand" aria-hidden="true"></span></button>
-<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_edit" title="<?php echo esc_attr__('Editar preview', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-edit" aria-hidden="true"></span></button>
-<button type="button" class="button cbia-preview-icon-btn cbia-preview-icon-danger" id="cbia_preview_btn_clear" title="<?php echo esc_attr__('Limpiar output', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-trash" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_edit" title="<?php echo esc_attr__('Edit preview', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-edit" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn cbia-preview-icon-danger" id="cbia_preview_btn_clear" title="<?php echo esc_attr__('Clear output', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-trash" aria-hidden="true"></span></button>
 </div>
 </header>
 
 <div class="cbia-preview-controls">
-<button type="button" class="button button-primary" id="cbia_btn_preview" onclick="if(window.cbiaStartPreview){window.cbiaStartPreview();} return false;"><?php echo esc_html__('Generar preview', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="button" class="button button-primary" id="cbia_btn_preview" onclick="if(window.cbiaStartPreview){window.cbiaStartPreview();} return false;"><?php echo esc_html__('Generate preview', 'cbiastudio-blogflow-ai'); ?></button>
 </div>
 
 <div class="cbia-preview-body">
@@ -325,26 +339,26 @@ echo '</select>';
 <div id="cbia_preview_runtime" class="cbia-preview-runtime" style="display:none;">
 <div id="cbia_preview_phase" class="cbia-preview-phase">
 <span id="cbia_phase_texto" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;"><?php echo esc_html__('Texto', 'cbiastudio-blogflow-ai'); ?></span>
-<span id="cbia_phase_img" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;"><?php echo esc_html__('Imagenes', 'cbiastudio-blogflow-ai'); ?></span>
-<span id="cbia_phase_ready" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;"><?php echo esc_html__('Listo', 'cbiastudio-blogflow-ai'); ?></span>
+<span id="cbia_phase_img" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;"><?php echo esc_html__('Images', 'cbiastudio-blogflow-ai'); ?></span>
+<span id="cbia_phase_ready" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;"><?php echo esc_html__('Ready', 'cbiastudio-blogflow-ai'); ?></span>
 </div>
 </div>
 </aside>
 <main class="cbia-preview-main">
-<div id="cbia-preview-status" class="cbia-status"><?php echo esc_html__('Esperando generacion...', 'cbiastudio-blogflow-ai'); ?></div>
+<div id="cbia-preview-status" class="cbia-status"><?php echo esc_html__('Waiting for generation...', 'cbiastudio-blogflow-ai'); ?></div>
 <article id="cbia-preview-content" class="cbia-preview-content"></article>
 <div id="cbia_preview_edit_panel" style="display:none;">
-<p style="margin:8px 0;"><strong><?php echo esc_html__('Editar antes de crear', 'cbiastudio-blogflow-ai'); ?></strong></p>
+<p style="margin:8px 0;"><strong><?php echo esc_html__('Edit before creating', 'cbiastudio-blogflow-ai'); ?></strong></p>
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;">
-<label for="cbia_preview_edit_title"><?php echo esc_html__('Titulo', 'cbiastudio-blogflow-ai'); ?></label>
+<label for="cbia_preview_edit_title"><?php echo esc_html__('Title', 'cbiastudio-blogflow-ai'); ?></label>
 <input type="text" id="cbia_preview_edit_title" style="width:420px;" />
 </p>
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;">
-<button type="button" class="button" id="cbia_btn_preview_edit_toggle" style="display:none;">&#9998; <?php echo esc_html__('Editar preview', 'cbiastudio-blogflow-ai'); ?></button>
-<button type="button" class="button" id="cbia_btn_preview_edit_save" style="display:none;"><?php echo esc_html__('Guardar cambios', 'cbiastudio-blogflow-ai'); ?></button>
-<button type="button" class="button" id="cbia_btn_preview_edit_cancel" style="display:none;"><?php echo esc_html__('Cancelar', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="button" class="button" id="cbia_btn_preview_edit_toggle" style="display:none;">&#9998; <?php echo esc_html__('Edit preview', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="button" class="button" id="cbia_btn_preview_edit_save" style="display:none;"><?php echo esc_html__('Save changes', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="button" class="button" id="cbia_btn_preview_edit_cancel" style="display:none;"><?php echo esc_html__('Cancel', 'cbiastudio-blogflow-ai'); ?></button>
 </p>
-<p class="description"><?php echo esc_html__('Edita directamente el contenido del preview con el boton de editar. No se muestra HTML crudo.', 'cbiastudio-blogflow-ai'); ?></p>
+<p class="description"><?php echo esc_html__('Edit preview content directly with the edit button. Raw HTML is not shown.', 'cbiastudio-blogflow-ai'); ?></p>
 </div>
 </main>
 </div>
@@ -360,7 +374,7 @@ echo '</select>';
 <textarea id="cbia_preview_meta_excerpt" rows="2" style="width:100%;"></textarea>
 </div>
 <div style="margin-top:8px;">
-<label><strong><?php echo esc_html__('Etiquetas', 'cbiastudio-blogflow-ai'); ?></strong></label>
+<label><strong><?php echo esc_html__('Tags', 'cbiastudio-blogflow-ai'); ?></strong></label>
 <textarea id="cbia_preview_meta_tags" rows="2" style="width:100%;"></textarea>
 </div>
 <div style="margin-top:8px;">
@@ -382,43 +396,47 @@ echo '</select>';
 <script>
 (function(){
     const I18N = <?php echo wp_json_encode(array(
-        'launching' => __('Lanzando...', 'cbiastudio-blogflow-ai'),
-        'runningLog' => __('En marcha (ver log)...', 'cbiastudio-blogflow-ai'),
-        'featuredError' => __('No se pudo generar la imagen destacada.', 'cbiastudio-blogflow-ai'),
-        'featuredPlaceholderFast' => __('Preview rapido: imagen destacada en placeholder.', 'cbiastudio-blogflow-ai'),
-        'featuredPending' => __('Imagen destacada en proceso...', 'cbiastudio-blogflow-ai'),
-        'imageInProcess' => __('Imagen en proceso...', 'cbiastudio-blogflow-ai'),
-        'copyEmpty' => __('No hay contenido para copiar.', 'cbiastudio-blogflow-ai'),
-        'copyOk' => __('Contenido copiado al portapapeles.', 'cbiastudio-blogflow-ai'),
-        'copyFail' => __('No se pudo copiar al portapapeles.', 'cbiastudio-blogflow-ai'),
-        'collapse' => __('Contraer preview', 'cbiastudio-blogflow-ai'),
-        'expand' => __('Expandir preview', 'cbiastudio-blogflow-ai'),
-        'previewCleared' => __('Preview limpiado.', 'cbiastudio-blogflow-ai'),
-        'cancelPreviewFail' => __('No se pudo cancelar el preview.', 'cbiastudio-blogflow-ai'),
-        'previewChangesSaved' => __('Cambios del preview guardados.', 'cbiastudio-blogflow-ai'),
-        'previewEditCancelled' => __('Edicion cancelada.', 'cbiastudio-blogflow-ai'),
-        'noDraftToEdit' => __('No hay borrador del preview para editar.', 'cbiastudio-blogflow-ai'),
-        'hidePreview' => __('Ocultar previsualizacion', 'cbiastudio-blogflow-ai'),
-        'showPreview' => __('Generacion con previsualizacion', 'cbiastudio-blogflow-ai'),
-        'previewFail' => __('No se pudo generar el preview.', 'cbiastudio-blogflow-ai'),
-        'previewOk' => __('Preview generado correctamente.', 'cbiastudio-blogflow-ai'),
-        'streamTimeoutInitial' => __('Timeout inicial de streaming.', 'cbiastudio-blogflow-ai'),
-        'streamTimeout' => __('Timeout de streaming.', 'cbiastudio-blogflow-ai'),
-        'streamStarting' => __('Iniciando preview de: ', 'cbiastudio-blogflow-ai'),
-        'streamIncomplete' => __('Respuesta incompleta de streaming.', 'cbiastudio-blogflow-ai'),
-        'streamFail' => __('Fallo en streaming.', 'cbiastudio-blogflow-ai'),
-        'selectTitleFirst' => __('Selecciona o escribe primero un titulo manual.', 'cbiastudio-blogflow-ai'),
-        'previewGenerating' => __('Generando preview...', 'cbiastudio-blogflow-ai'),
-        'imagePhasePending' => __('Pendiente de fase de imagen...', 'cbiastudio-blogflow-ai'),
-        'previewError' => __('Error al generar preview.', 'cbiastudio-blogflow-ai'),
+        'launching' => __('Launching...', 'cbiastudio-blogflow-ai'),
+        'runningLog' => __('Running (see log)...', 'cbiastudio-blogflow-ai'),
+        'featuredError' => __('Could not generate featured image.', 'cbiastudio-blogflow-ai'),
+        'featuredPlaceholderFast' => __('Fast preview: featured image in placeholder.', 'cbiastudio-blogflow-ai'),
+        'featuredPending' => __('Featured image in progress...', 'cbiastudio-blogflow-ai'),
+        'imageInProcess' => __('Image in progress...', 'cbiastudio-blogflow-ai'),
+        'copyEmpty' => __('There is no content to copy.', 'cbiastudio-blogflow-ai'),
+        'copyOk' => __('Content copied to clipboard.', 'cbiastudio-blogflow-ai'),
+        'copyFail' => __('Could not copy to clipboard.', 'cbiastudio-blogflow-ai'),
+        'collapse' => __('Collapse preview', 'cbiastudio-blogflow-ai'),
+        'expand' => __('Expand preview', 'cbiastudio-blogflow-ai'),
+        'previewCleared' => __('Preview cleared.', 'cbiastudio-blogflow-ai'),
+        'cancelPreviewFail' => __('Could not cancel preview.', 'cbiastudio-blogflow-ai'),
+        'previewChangesSaved' => __('Preview changes saved.', 'cbiastudio-blogflow-ai'),
+        'previewEditCancelled' => __('Editing canceled.', 'cbiastudio-blogflow-ai'),
+        'noDraftToEdit' => __('There is no preview draft to edit.', 'cbiastudio-blogflow-ai'),
+        'hidePreview' => __('Hide preview', 'cbiastudio-blogflow-ai'),
+        'showPreview' => __('Generation with preview', 'cbiastudio-blogflow-ai'),
+        'previewFail' => __('Could not generate preview.', 'cbiastudio-blogflow-ai'),
+        'previewOk' => __('Preview generated successfully.', 'cbiastudio-blogflow-ai'),
+        'streamTimeoutInitial' => __('Initial streaming timeout.', 'cbiastudio-blogflow-ai'),
+        'streamTimeout' => __('Streaming timeout.', 'cbiastudio-blogflow-ai'),
+        'streamStarting' => __('Starting preview for: ', 'cbiastudio-blogflow-ai'),
+        'streamIncomplete' => __('Incomplete streaming response.', 'cbiastudio-blogflow-ai'),
+        'streamFail' => __('Streaming failed.', 'cbiastudio-blogflow-ai'),
+        'selectTitleFirst' => __('Select or type a manual title first.', 'cbiastudio-blogflow-ai'),
+        'previewGenerating' => __('Generating preview...', 'cbiastudio-blogflow-ai'),
+        'imagePhasePending' => __('Waiting for image phase...', 'cbiastudio-blogflow-ai'),
+        'previewError' => __('Error generating preview.', 'cbiastudio-blogflow-ai'),
     )); ?>;
     const manualRow = document.getElementById('cbia_row_manual');
     const csvRow = document.getElementById('cbia_row_csv');
     const radios = document.querySelectorAll('input[name="title_input_mode"]');
-    radios.forEach(r => r.addEventListener('change', function(){
-        if(this.value === 'manual'){ manualRow.style.display=''; csvRow.style.display='none'; }
-        else { manualRow.style.display='none'; csvRow.style.display=''; }
-    }));
+    if (manualRow && csvRow && radios.length > 1) {
+        radios.forEach(r => r.addEventListener('change', function(){
+            if(this.value === 'manual'){ manualRow.style.display=''; csvRow.style.display='none'; }
+            else { manualRow.style.display='none'; csvRow.style.display=''; }
+        }));
+    } else if (manualRow) {
+        manualRow.style.display = '';
+    }
 
     const singleTitleInput = document.getElementById('cbia_single_title_input');
     const singleTitleCard = document.getElementById('cbia_single_title_card');
@@ -750,7 +768,7 @@ echo '</select>';
     }
     function renderInitialImagePlaceholders(){
         if (!previewHtml) return;
-        // En versión normal solo hay imagen destacada.
+        // Free edition only uses the featured image.
         previewHtml.innerHTML = '<div class="cbia-preview-img-ph"><span class="dashicons dashicons-format-image" aria-hidden="true"></span><span class="description">' + I18N.featuredPending + '</span></div>';
     }
     function clearProgressiveQueue(){

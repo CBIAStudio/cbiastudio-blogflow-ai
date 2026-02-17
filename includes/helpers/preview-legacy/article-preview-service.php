@@ -317,7 +317,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
         }
 
         private function build_prompt($title, array $settings) {
-            $idioma_post = trim((string)($settings['post_language'] ?? 'espanol'));
+            $idioma_post = trim((string)($settings['post_language'] ?? 'Spanish'));
             $mode = function_exists('cbia_prompt_get_mode')
                 ? cbia_prompt_get_mode($settings)
                 : sanitize_key((string)($settings['blog_prompt_mode'] ?? 'recommended'));
@@ -500,4 +500,3 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
         }
     }
 }
-

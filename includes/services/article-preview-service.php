@@ -19,29 +19,30 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $prev_ignore_stop = !empty($GLOBALS['cbia_ignore_stop']);
             $prev_skip_images = !empty($GLOBALS['cbia_preview_skip_images']);
             $GLOBALS['cbia_ignore_stop'] = true;
-            // En preview normal SI generamos imagen destacada.
+            // In normal preview we DO generate the featured image.
             $GLOBALS['cbia_preview_skip_images'] = false;
             try {
             $title = trim((string)($payload['title'] ?? ''));
             if ($title === '') {
                 if (function_exists('cbia_log')) {
-                    cbia_log('[PREVIEW] Titulo vacio.', 'WARN');
+                    cbia_log('[PREVIEW] Empty title.', 'WARN');
                 }
-                return new WP_Error('missing_title', 'Debes indicar un titulo para previsualizar.');
+                return new WP_Error('missing_title', __('You must provide a title to preview.', 'cbiastudio-blogflow-ai'));
             }
             if (function_exists('cbia_post_exists_by_title') && cbia_post_exists_by_title($title)) {
                 if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] Titulo duplicado detectado: '{$title}'.", 'WARN');
+                    cbia_log("[PREVIEW] Duplicate title detected: '{$title}'.", 'WARN');
                 }
-                return new WP_Error('duplicate_title', "El post '{$title}' ya existe. Cambia el titulo antes de generar preview.");
+                // translators: %s is the duplicated post title.
+                return new WP_Error('duplicate_title', sprintf(__('Post "%s" already exists. Change the title before generating preview.', 'cbiastudio-blogflow-ai'), $title));
             }
             if (function_exists('cbia_log')) {
-                cbia_log("[PREVIEW] Generando preview para '{$title}'.", 'INFO');
+                cbia_log("[PREVIEW] Generating preview for '{$title}'.", 'INFO');
             }
-            $this->emit($emit, 'cbia_status', array('message' => 'Preparando prompt...'));
+            $this->emit($emit, 'cbia_status', array('message' => __('Preparing prompt...', 'cbiastudio-blogflow-ai')));
 
             $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
-            // Preview siempre con imagenes (modo completo) y usando el mismo flujo base que crear blog.
+            // Preview always includes images (full mode) and uses the same base flow as create blog.
             $preview_mode = 'full';
             $this->emit($emit, 'preview_start', array(
                 'title' => $title,
@@ -72,41 +73,41 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 $settings['legacy_full_prompt'] = sanitize_textarea_field((string)$payload['legacy_full_prompt']);
             }
 
-            $this->emit($emit, 'cbia_status', array('message' => 'Generando contenido...'));
+            $this->emit($emit, 'cbia_status', array('message' => __('Generating content...', 'cbiastudio-blogflow-ai')));
             if (function_exists('cbia_log')) {
-                cbia_log("[PREVIEW] Generando contenido '{$title}'.", 'INFO');
+                cbia_log("[PREVIEW] Generating content '{$title}'.", 'INFO');
             }
 
             if (!function_exists('cbia_create_single_blog_post')) {
                 if (function_exists('cbia_log')) {
-                    cbia_log('[PREVIEW] Motor de creacion no disponible.', 'ERROR');
+                    cbia_log('[PREVIEW] Creation engine unavailable.', 'ERROR');
                 }
-                return new WP_Error('preview_engine_missing', 'Motor de creacion no disponible.');
+                return new WP_Error('preview_engine_missing', __('Creation engine is unavailable.', 'cbiastudio-blogflow-ai'));
             }
 
             $create = cbia_create_single_blog_post($title, '', 'draft');
             if (!is_array($create) || empty($create['ok'])) {
                 $err = is_array($create) ? (string)($create['error'] ?? '') : '';
                 if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] Error generando '{$title}': " . ($err !== '' ? $err : 'desconocido'), 'ERROR');
+                cbia_log("[PREVIEW] Error generating '{$title}': " . ($err !== '' ? $err : 'unknown'), 'ERROR');
                 }
-                return new WP_Error('preview_generation_failed', $err !== '' ? $err : 'No se pudo generar la previsualizacion.');
+                return new WP_Error('preview_generation_failed', $err !== '' ? $err : __('Preview generation failed.', 'cbiastudio-blogflow-ai'));
             }
 
             $draft_id = (int)($create['post_id'] ?? 0);
             if (!$draft_id) {
                 if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] No se pudo crear borrador para '{$title}'.", 'ERROR');
+                    cbia_log("[PREVIEW] Could not create draft for '{$title}'.", 'ERROR');
                 }
-                return new WP_Error('preview_generation_failed', 'No se pudo crear el borrador del preview.');
+                return new WP_Error('preview_generation_failed', __('Could not create preview draft.', 'cbiastudio-blogflow-ai'));
             }
 
             $post = get_post($draft_id);
             if (!$post) {
                 if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] No se pudo recuperar borrador (ID {$draft_id}).", 'ERROR');
+                    cbia_log("[PREVIEW] Could not load draft (ID {$draft_id}).", 'ERROR');
                 }
-                return new WP_Error('preview_generation_failed', 'No se pudo recuperar el borrador generado.');
+                return new WP_Error('preview_generation_failed', __('Could not load generated draft.', 'cbiastudio-blogflow-ai'));
             }
 
             update_post_meta($draft_id, '_cbia_preview_draft', '1');
@@ -119,13 +120,13 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 $this->emit_text_progress($emit, $display_html);
             }
 
-            $this->emit($emit, 'cbia_status', array('message' => 'Renderizando imagenes del preview...'));
+            $this->emit($emit, 'cbia_status', array('message' => __('Rendering preview images...', 'cbiastudio-blogflow-ai')));
             if (function_exists('cbia_log')) {
-                cbia_log("[PREVIEW] Renderizando imagen destacada '{$title}'.", 'INFO');
+                cbia_log("[PREVIEW] Rendering featured image '{$title}'.", 'INFO');
             }
             $this->emit($emit, 'featured_image_status', array(
                 'status' => 'pending',
-                'message' => 'Generando imagen destacada...',
+                'message' => __('Generating featured image...', 'cbiastudio-blogflow-ai'),
             ));
 
             $featured_attach_id = (int)get_post_thumbnail_id($draft_id);
@@ -145,7 +146,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 }
                 $this->emit($emit, 'featured_image_status', array(
                     'status' => 'error',
-                    'message' => 'No se pudo generar imagen destacada.',
+                    'message' => __('Could not generate featured image.', 'cbiastudio-blogflow-ai'),
                 ));
             }
 
@@ -212,7 +213,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             );
             } finally {
                 if (function_exists('cbia_log')) {
-                    cbia_log('[PREVIEW] Fin de proceso de preview.', 'INFO');
+                    cbia_log('[PREVIEW] End of preview process.', 'INFO');
                 }
                 $GLOBALS['cbia_ignore_stop'] = $prev_ignore_stop;
                 $GLOBALS['cbia_preview_skip_images'] = $prev_skip_images;
@@ -222,12 +223,12 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
         public function create_post_from_token($token, array $overrides = array()) {
             $token = trim((string)$token);
             if ($token === '') {
-                return new WP_Error('missing_preview_token', 'Falta token de preview.');
+                return new WP_Error('missing_preview_token', __('Missing preview token.', 'cbiastudio-blogflow-ai'));
             }
             $user_id = get_current_user_id();
             $payload = $this->get_preview_payload($user_id, $token);
             if (empty($payload) || !is_array($payload)) {
-                return new WP_Error('invalid_preview_token', 'El preview ya no esta disponible. Genera uno nuevo.');
+                return new WP_Error('invalid_preview_token', __('Preview is no longer available. Generate a new one.', 'cbiastudio-blogflow-ai'));
             }
 
             $title = trim((string)($payload['title'] ?? ''));
@@ -242,7 +243,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 }
             }
             if ($title === '' || $html === '') {
-                return new WP_Error('invalid_preview_payload', 'Preview incompleto para crear post.');
+                return new WP_Error('invalid_preview_payload', __('Incomplete preview payload to create post.', 'cbiastudio-blogflow-ai'));
             }
             $post_status = sanitize_key((string)($overrides['post_status'] ?? 'publish'));
             if (!in_array($post_status, array('publish', 'draft', 'future'), true)) {
@@ -252,7 +253,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             if ($post_status === 'future') {
                 $raw_date = trim((string)($overrides['post_date_local'] ?? ''));
                 if ($raw_date === '') {
-                    return new WP_Error('missing_schedule_date', 'Indica fecha/hora para programar.');
+                    return new WP_Error('missing_schedule_date', __('Provide date/time to schedule.', 'cbiastudio-blogflow-ai'));
                 }
                 $raw_date = str_replace('T', ' ', $raw_date);
                 $dt = date_create_from_format('Y-m-d H:i', $raw_date, wp_timezone());
@@ -260,7 +261,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     $dt = date_create($raw_date, wp_timezone());
                 }
                 if (!$dt) {
-                    return new WP_Error('invalid_schedule_date', 'Fecha/hora de programacion invalida.');
+                    return new WP_Error('invalid_schedule_date', __('Invalid scheduling date/time.', 'cbiastudio-blogflow-ai'));
                 }
                 $post_date_mysql = $dt->format('Y-m-d H:i:s');
             }
@@ -280,21 +281,22 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 $updated_id = wp_update_post($update, true);
                 if (is_wp_error($updated_id) || !$updated_id) {
                     $err = is_wp_error($updated_id) ? $updated_id->get_error_message() : 'wp_update_post_fallo';
-                    return new WP_Error('create_post_failed', $err ?: 'No se pudo actualizar el post desde preview.');
+                    return new WP_Error('create_post_failed', $err ?: __('Could not update post from preview.', 'cbiastudio-blogflow-ai'));
                 }
                 $this->apply_post_meta_tax($post_id, $title, $html, $featured_attach_id, array());
                 delete_post_meta($post_id, '_cbia_preview_draft');
                 delete_post_meta($post_id, '_cbia_preview_token');
             } else {
                 if (!function_exists('cbia_create_post_in_wp_engine')) {
-                    return new WP_Error('missing_create_engine', 'No esta disponible el motor de creacion de posts.');
+                    return new WP_Error('missing_create_engine', __('Post creation engine is unavailable.', 'cbiastudio-blogflow-ai'));
                 }
                 if (function_exists('cbia_post_exists_by_title') && cbia_post_exists_by_title($title)) {
-                    return new WP_Error('duplicate_title', "El post '{$title}' ya existe.");
+                    // translators: %s is the duplicated post title.
+                    return new WP_Error('duplicate_title', sprintf(__('Post "%s" already exists.', 'cbiastudio-blogflow-ai'), $title));
                 }
                 list($ok_post, $created_id, $post_err) = cbia_create_post_in_wp_engine($title, $html, $featured_attach_id, $post_date_mysql);
                 if (!$ok_post || !$created_id) {
-                    return new WP_Error('create_post_failed', $post_err ?: 'No se pudo crear el post desde preview.');
+                    return new WP_Error('create_post_failed', $post_err ?: __('Could not create post from preview.', 'cbiastudio-blogflow-ai'));
                 }
                 $post_id = (int)$created_id;
                 if ($post_status === 'draft') {
@@ -309,22 +311,22 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 'post_id' => (int)$post_id,
                 'edit_url' => get_edit_post_link((int)$post_id, ''),
                 'message' => $post_status === 'future'
-                    ? 'Post programado desde preview correctamente.'
+                    ? __('Post scheduled from preview successfully.', 'cbiastudio-blogflow-ai')
                     : ($post_status === 'draft'
-                        ? 'Borrador creado desde preview correctamente.'
-                        : 'Post creado desde preview correctamente.'),
+                        ? __('Draft created from preview successfully.', 'cbiastudio-blogflow-ai')
+                        : __('Post created from preview successfully.', 'cbiastudio-blogflow-ai')),
             );
         }
 
         public function cancel_preview($token) {
             $token = trim((string)$token);
             if ($token === '') {
-                return new WP_Error('missing_preview_token', 'Falta token de preview.');
+                return new WP_Error('missing_preview_token', __('Missing preview token.', 'cbiastudio-blogflow-ai'));
             }
             $user_id = get_current_user_id();
             $payload = $this->get_preview_payload($user_id, $token);
             if (empty($payload) || !is_array($payload)) {
-                return new WP_Error('invalid_preview_token', 'El preview ya no esta disponible.');
+                return new WP_Error('invalid_preview_token', __('Preview is no longer available.', 'cbiastudio-blogflow-ai'));
             }
             $post_id = (int)($payload['post_id'] ?? 0);
             $this->delete_preview_payload($user_id, $token);
@@ -399,7 +401,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
         private function upsert_preview_draft($title, $final_html, $featured_attach_id, array $seo) {
             $title = trim((string)$title);
             if ($title === '') {
-                return new WP_Error('missing_title', 'Titulo vacio para crear borrador.');
+                return new WP_Error('missing_title', __('Empty title for draft creation.', 'cbiastudio-blogflow-ai'));
             }
 
             $final_html = cbia_strip_document_wrappers((string)$final_html);
@@ -407,7 +409,8 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
             $existing_id = $this->find_existing_post_by_title($title);
             if ($existing_id && !$this->is_preview_draft($existing_id)) {
-                return new WP_Error('duplicate_title', "El post '{$title}' ya existe.");
+                // translators: %s is the duplicated post title.
+                return new WP_Error('duplicate_title', sprintf(__('Post "%s" already exists.', 'cbiastudio-blogflow-ai'), $title));
             }
 
             $postarr = array(
@@ -505,7 +508,8 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 if (get_post_type($attach_id) !== 'attachment') continue;
                 $deleted = wp_delete_attachment($attach_id, true);
                 if (!$deleted) {
-                    $warnings[] = 'No se pudo limpiar adjunto temporal de preview ID ' . $attach_id . '.';
+                    // translators: %d is an attachment ID.
+                    $warnings[] = sprintf(__('Could not remove temporary preview attachment ID %d.', 'cbiastudio-blogflow-ai'), $attach_id);
                 }
             }
             delete_user_meta($user_id, $this->preview_media_meta_key());
@@ -552,7 +556,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
         }
 
         private function build_prompt($title, array $settings) {
-            $idioma_post = trim((string)($settings['post_language'] ?? 'espanol'));
+            $idioma_post = trim((string)($settings['post_language'] ?? 'Spanish'));
             $mode = function_exists('cbia_prompt_get_mode')
                 ? cbia_prompt_get_mode($settings)
                 : sanitize_key((string)($settings['blog_prompt_mode'] ?? 'recommended'));
@@ -563,11 +567,18 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     : (string)($settings['legacy_full_prompt'] ?? ($settings['prompt_single_all'] ?? ''));
             } else {
                 $editable = (string)($settings['blog_prompt_editable'] ?? '');
-                if ($editable === '' && function_exists('cbia_prompt_recommended_editable_default')) {
-                    $editable = cbia_prompt_recommended_editable_default();
+                if ($editable === '') {
+                    if (function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($idioma_post) && function_exists('cbia_prompt_recommended_editable_legacy_default')) {
+                        $editable = cbia_prompt_recommended_editable_legacy_default();
+                    } elseif (function_exists('cbia_prompt_recommended_editable_default')) {
+                        $editable = cbia_prompt_recommended_editable_default();
+                    }
+                }
+                if (function_exists('cbia_prompt_maybe_upgrade_legacy_editable')) {
+                    $editable = cbia_prompt_maybe_upgrade_legacy_editable($editable, $idioma_post);
                 }
                 $template = function_exists('cbia_prompt_build_recommended_template')
-                    ? cbia_prompt_build_recommended_template($editable)
+                    ? cbia_prompt_build_recommended_template($editable, $idioma_post)
                     : (string)($settings['prompt_single_all'] ?? '');
             }
 
@@ -649,7 +660,8 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         ));
                         continue;
                     }
-                    $warnings[] = 'No se pudo generar imagen interna ' . $i . ': ' . (string)($img_err ?: 'error desconocido');
+                    // translators: 1: internal image index, 2: error message.
+                    $warnings[] = sprintf(__('Could not generate internal image %1$d: %2$s', 'cbiastudio-blogflow-ai'), $i, (string)($img_err ?: __('unknown error', 'cbiastudio-blogflow-ai')));
                     $images[] = array(
                         'idx' => $i,
                         'section' => $section,
@@ -664,11 +676,12 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'desc' => $desc,
                         'status' => 'error',
                         'ok' => 0,
-                        'error' => (string)($img_err ?: 'error desconocido'),
+                        'error' => (string)($img_err ?: __('unknown error', 'cbiastudio-blogflow-ai')),
                     ));
                 }
 
-                $placeholder = '<div class="cbia-preview-image" data-section="' . esc_attr($section) . '"><strong>[Preview imagen interna ' . $i . ']</strong> ' . esc_html($desc) . '</div>';
+                // translators: %d is the internal image index in preview mode.
+                $placeholder = '<div class="cbia-preview-image" data-section="' . esc_attr($section) . '"><strong>[' . sprintf(__('Preview internal image %d', 'cbiastudio-blogflow-ai'), $i) . ']</strong> ' . esc_html($desc) . '</div>';
                 $html = cbia_replace_first_occurrence($html, $mk['full'], $placeholder);
                 $images[] = array(
                     'idx' => $i,
@@ -735,4 +748,3 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
         }
     }
 }
-

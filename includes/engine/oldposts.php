@@ -326,10 +326,10 @@ if (!function_exists('cbia_oldposts_recalc_yoast_fields')) {
             clean_post_cache($post_id);
 
             // Best-effort hooks Yoast
-            $yoast_hook_postdata = 'wpseo_save_postdata';
-            $yoast_hook_post = 'wpseo_save_post';
-            do_action($yoast_hook_postdata, $post_id);
-            do_action($yoast_hook_post, $post_id);
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External Yoast hook.
+            do_action('wpseo_save_postdata', $post_id);
+            // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External Yoast hook.
+            do_action('wpseo_save_post', $post_id);
         }
 
         return $did;
@@ -1476,5 +1476,3 @@ if (!function_exists('cbia_oldposts_handle_post')) {
 
 
 /* ------------------------- FIN includes/engine/oldposts.php ------------------------- */
-
-

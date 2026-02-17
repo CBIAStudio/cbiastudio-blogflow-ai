@@ -32,6 +32,10 @@ $blog_prompt_editable = function_exists('cbia_prompt_sanitize_editable_block')
     : $blog_prompt_editable;
 $legacy_full_prompt = (string)($settings['legacy_full_prompt'] ?? '');
 $legacy_placeholder = (string)($settings['prompt_single_all'] ?? '');
+if (function_exists('cbia_fix_mojibake')) {
+    $legacy_full_prompt = cbia_fix_mojibake($legacy_full_prompt);
+    $legacy_placeholder = cbia_fix_mojibake($legacy_placeholder);
+}
 $csv_url = $settings['csv_url'] ?? '';
 
 
@@ -202,34 +206,48 @@ echo $dd;
 <td>
 <?php
 $language_options = [
-    'Espanol'   => 'Espanol',
-    'Portugues' => 'Portugues',
-    'Ingles'    => 'Ingles',
-    'Frances'   => 'Frances',
-    'italiano'  => 'Italiano',
-    'Aleman'    => 'Aleman',
-    'Holandes'  => 'Holandes',
-    'sueco'     => 'Sueco',
-    'Danes'     => 'Danes',
-    'noruego'   => 'Noruego',
-    'Fines'     => 'Fines',
-    'polaco'    => 'Polaco',
-    'checo'     => 'Checo',
-    'eslovaco'  => 'Eslovaco',
-    'Hungaro'   => 'Hungaro',
-    'rumano'    => 'Rumano',
-    'Bulgaro'   => 'Bulgaro',
-    'griego'    => 'Griego',
-    'croata'    => 'Croata',
-    'esloveno'  => 'Esloveno',
-    'estonio'   => 'Estonio',
-    'Leton'     => 'Leton',
-    'lituano'   => 'Lituano',
-    'Irlandes'  => 'Irlandes',
-    'Maltes'    => 'Maltes',
-    'romanche'  => 'Romanche',
+    'Spanish'     => __('Spanish', 'cbiastudio-blogflow-ai'),
+    'Portuguese'  => __('Portuguese', 'cbiastudio-blogflow-ai'),
+    'English'     => __('English', 'cbiastudio-blogflow-ai'),
+    'French'      => __('French', 'cbiastudio-blogflow-ai'),
+    'Italian'     => __('Italian', 'cbiastudio-blogflow-ai'),
+    'German'      => __('German', 'cbiastudio-blogflow-ai'),
+    'Dutch'       => __('Dutch', 'cbiastudio-blogflow-ai'),
+    'Swedish'     => __('Swedish', 'cbiastudio-blogflow-ai'),
+    'Danish'      => __('Danish', 'cbiastudio-blogflow-ai'),
+    'Norwegian'   => __('Norwegian', 'cbiastudio-blogflow-ai'),
+    'Finnish'     => __('Finnish', 'cbiastudio-blogflow-ai'),
+    'Polish'      => __('Polish', 'cbiastudio-blogflow-ai'),
+    'Czech'       => __('Czech', 'cbiastudio-blogflow-ai'),
+    'Slovak'      => __('Slovak', 'cbiastudio-blogflow-ai'),
+    'Hungarian'   => __('Hungarian', 'cbiastudio-blogflow-ai'),
+    'Romanian'    => __('Romanian', 'cbiastudio-blogflow-ai'),
+    'Bulgarian'   => __('Bulgarian', 'cbiastudio-blogflow-ai'),
+    'Greek'       => __('Greek', 'cbiastudio-blogflow-ai'),
+    'Croatian'    => __('Croatian', 'cbiastudio-blogflow-ai'),
+    'Slovenian'   => __('Slovenian', 'cbiastudio-blogflow-ai'),
+    'Estonian'    => __('Estonian', 'cbiastudio-blogflow-ai'),
+    'Latvian'     => __('Latvian', 'cbiastudio-blogflow-ai'),
+    'Lithuanian'  => __('Lithuanian', 'cbiastudio-blogflow-ai'),
+    'Irish'       => __('Irish', 'cbiastudio-blogflow-ai'),
+    'Maltese'     => __('Maltese', 'cbiastudio-blogflow-ai'),
+    'Romansh'     => __('Romansh', 'cbiastudio-blogflow-ai'),
 ];
-$current_language = (string)($settings['post_language'] ?? 'Espanol');
+$legacy_language_map = [
+    'Espanol' => 'Spanish', 'espanol' => 'Spanish', 'español' => 'Spanish',
+    'Portugues' => 'Portuguese', 'Ingles' => 'English', 'Frances' => 'French',
+    'italiano' => 'Italian', 'Aleman' => 'German', 'Holandes' => 'Dutch',
+    'sueco' => 'Swedish', 'Danes' => 'Danish', 'noruego' => 'Norwegian',
+    'Fines' => 'Finnish', 'polaco' => 'Polish', 'checo' => 'Czech',
+    'eslovaco' => 'Slovak', 'Hungaro' => 'Hungarian', 'rumano' => 'Romanian',
+    'Bulgaro' => 'Bulgarian', 'griego' => 'Greek', 'croata' => 'Croatian',
+    'esloveno' => 'Slovenian', 'estonio' => 'Estonian', 'Leton' => 'Latvian',
+    'lituano' => 'Lithuanian', 'Irlandes' => 'Irish', 'Maltes' => 'Maltese',
+    'romanche' => 'Romansh',
+];
+$current_language_raw = (string)($settings['post_language'] ?? 'Spanish');
+$current_language = $legacy_language_map[$current_language_raw] ?? $current_language_raw;
+if (!isset($language_options[$current_language])) $current_language = 'Spanish';
 echo '<select name="post_language" class="abb-select" style="width:220px;">';
 foreach ($language_options as $val => $label) {
     echo '<option value="' . esc_attr($val) . '" ' . selected($current_language, $val, false) . '>' . esc_html($label) . '</option>';

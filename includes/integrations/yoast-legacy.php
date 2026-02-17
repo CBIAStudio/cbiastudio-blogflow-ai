@@ -143,16 +143,18 @@ if (!function_exists('cbia_yoast_try_reindex_post')) {
 		$post_id = (int)$post_id;
 		if ($post_id <= 0) return false;
 
-		// Disparos base WP
+		// Disparos base WP.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WP hook.
 		do_action('save_post', $post_id, get_post($post_id), true);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WP hook.
 		do_action('wp_insert_post', $post_id, get_post($post_id), true);
 
 		// Si no hay YoastSEO(), intentamos hooks clÃ¡sicos
 		if (!function_exists('YoastSEO')) {
-			$yoast_hook_postdata = 'wpseo_save_postdata';
-			$yoast_hook_post = 'wpseo_save_post';
-			do_action($yoast_hook_postdata, $post_id);
-			do_action($yoast_hook_post, $post_id);
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External Yoast hook.
+			do_action('wpseo_save_postdata', $post_id);
+			// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External Yoast hook.
+			do_action('wpseo_save_post', $post_id);
 			clean_post_cache($post_id);
 			return false;
 		}
@@ -186,10 +188,10 @@ if (!function_exists('cbia_yoast_try_reindex_post')) {
 		}
 
 		// Fallback final
-		$yoast_hook_postdata = 'wpseo_save_postdata';
-		$yoast_hook_post = 'wpseo_save_post';
-		do_action($yoast_hook_postdata, $post_id);
-		do_action($yoast_hook_post, $post_id);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External Yoast hook.
+		do_action('wpseo_save_postdata', $post_id);
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External Yoast hook.
+		do_action('wpseo_save_post', $post_id);
 		clean_post_cache($post_id);
 		return false;
 	}
@@ -599,6 +601,4 @@ add_action('wp_ajax_cbia_get_yoast_log', function () {
 	}
 	wp_send_json_success(cbia_yoast_log_get());
 });
-
-
 

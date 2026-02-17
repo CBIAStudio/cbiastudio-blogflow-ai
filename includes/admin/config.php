@@ -8,7 +8,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  * - post_length_variant, images_limit
  * - prompt_single_all (+ prompts de imagen por seccion)
  * - default_category, keywords_to_categories, default_tags
- * - default_author_id (autor fijo para posts, útil para cron/evento)
+ * - default_author_id (autor fijo para posts, ÃƒÂºtil para cron/evento)
  *
  * Sanitiza y MERGEA sin borrar campos de otros tabs.
  */
@@ -235,16 +235,16 @@ if (!function_exists('cbia_config_handle_post')) {
 
 		$post_language = isset($post['post_language'])
 			? sanitize_text_field(wp_unslash($post['post_language']))
-			: (string)($settings['post_language'] ?? 'espanol');
-		if ($post_language === '') $post_language = 'espanol';
+			: (string)($settings['post_language'] ?? 'Spanish');
+		if ($post_language === '') $post_language = 'Spanish';
 
-		// Normal: sin imágenes internas
+		// Normal: sin imÃƒÂ¡genes internas
 		$content_images_banner_enabled = 0;
 
-		// Preset rápido de CSS de banner (selector)
+		// Preset rÃƒÂ¡pido de CSS de banner (selector)
 		$banner_preset_key = 'forced';
 
-		// Formato de imagen por seccion (UI) - nota: el engine fuerza intro=panorámica y resto=banner (como en v8.4)
+		// Formato de imagen por seccion (UI) - nota: el engine fuerza intro=panorÃƒÂ¡mica y resto=banner (como en v8.4)
 		$image_format_intro = isset($post['image_format_intro'])
 			? cbia_config_sanitize_image_format(wp_unslash($post['image_format_intro']), 'panoramic_1536x1024')
 			: cbia_config_sanitize_image_format((string)($settings['image_format_intro'] ?? ''), 'panoramic_1536x1024');
@@ -261,7 +261,7 @@ if (!function_exists('cbia_config_handle_post')) {
 			? cbia_config_sanitize_image_format(wp_unslash($post['image_format_faq']), 'banner_1536x1024')
 			: cbia_config_sanitize_image_format((string)($settings['image_format_faq'] ?? ''), 'banner_1536x1024');
 
-		// Normal: sin formatos internos
+		// Free edition: no internal image formats.
 
 		$image_failover = isset($post['image_failover'])
 			? sanitize_key((string) wp_unslash($post['image_failover']))
@@ -270,9 +270,9 @@ if (!function_exists('cbia_config_handle_post')) {
 
 		$default_category = isset($post['default_category'])
 			? sanitize_text_field(wp_unslash($post['default_category']))
-			: (string)($settings['default_category'] ?? 'Noticias');
+			: (string)($settings['default_category'] ?? 'News');
 
-		if ($default_category === '') $default_category = 'Noticias';
+		if ($default_category === '') $default_category = 'News';
 
 		$keywords_to_categories = isset($post['keywords_to_categories'])
 			? cbia_sanitize_textarea_preserve_lines(wp_unslash($post['keywords_to_categories']))
@@ -282,22 +282,22 @@ if (!function_exists('cbia_config_handle_post')) {
 			? cbia_sanitize_csv_tags(sanitize_text_field(wp_unslash($post['default_tags'])))
 			: (string)($settings['default_tags'] ?? '');
 
-		// Autor por defecto (para cron/evento): 0 = automatico (usuario actual o admin)
+		// Default author (cron/event): 0 = automatic (current user or admin)
 		$default_author_id = isset($post['default_author_id']) ? absint(wp_unslash($post['default_author_id'])) : (int)($settings['default_author_id'] ?? 0);
 		if ($default_author_id < 0) $default_author_id = 0;
 
 		$partial = [
-			// CAMBIO: keys por proveedor
+			// Provider-specific API keys
 			'openai_api_key'         => $api_key,
 			'google_api_key'         => $google_api_key,
 			'deepseek_api_key'       => $deepseek_api_key,
 			'openai_consent'         => $openai_consent,
-			// CAMBIO: provider/model texto e imagen
+			// Text/image provider and model
 			'text_provider'          => $text_provider,
 			'text_model'             => $text_model,
 			'image_provider'         => $image_provider,
 			'image_model'            => $image_model,
-			// CAMBIO: compatibilidad legacy OpenAI
+			// Legacy OpenAI compatibility
 			'openai_model'           => $model,
 			'openai_temperature'     => $temp,
 			'post_length_variant'    => $post_length_variant,
@@ -322,7 +322,7 @@ if (!function_exists('cbia_config_handle_post')) {
 			'default_author_id'      => $default_author_id,
 		];
 
-		// CAMBIO: avisos por API key faltante (sin bloquear guardado)
+		// Missing API key warnings (does not block save)
 		$warnings = [];
 		$key_map = [
 			'openai'  => $api_key,
@@ -331,16 +331,16 @@ if (!function_exists('cbia_config_handle_post')) {
 		];
 		if (empty($key_map[$text_provider] ?? '')) {
 			/* translators: %s: provider name */
-				$warnings[] = sprintf('Falta la API key de %s para generar texto. Añádela para poder usar ese proveedor.', ucfirst($text_provider));
+				$warnings[] = sprintf('Missing %s API key for text generation. Add it to use this provider.', ucfirst($text_provider));
 		}
 		if ($image_provider === 'google') {
 			if (empty($google_api_key)) {
-				$warnings[] = 'Falta la API key de Google para generar imágenes con Imagen. Añádela para poder usar ese modelo.';
+				$warnings[] = 'Missing Google API key for Imagen image generation. Add it to use this model.';
 			}
 		} else {
 			if (empty($key_map[$image_provider] ?? '')) {
 				/* translators: 1: provider name, 2: provider name */
-				$warnings[] = sprintf('Falta la API key de %1$s para generar imágenes. Añádela para poder usar modelos de imagen de %2$s.', ucfirst($image_provider), ucfirst($image_provider));
+				$warnings[] = sprintf('Missing %1$s API key for image generation. Add it to use %2$s image models.', ucfirst($image_provider), ucfirst($image_provider));
 			}
 		}
 		if (!empty($warnings)) {
@@ -350,7 +350,7 @@ if (!function_exists('cbia_config_handle_post')) {
 		}
 
 		cbia_update_settings_merge($partial);
-		cbia_log('Configuracion guardada correctamente.', 'INFO');
+		cbia_log('Configuration saved successfully.', 'INFO');
 
 		wp_safe_redirect(admin_url('admin.php?page=cbia&tab=config&saved=1'));
 		exit;

@@ -7,6 +7,24 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!class_exists('CBIA_Blog_Service')) {
     class CBIA_Blog_Service {
+        private function normalize_post_language($value): string {
+            $raw = trim((string)$value);
+            if ($raw === '') return 'Spanish';
+            $legacy = array(
+                'Espanol' => 'Spanish', 'espanol' => 'Spanish', 'español' => 'Spanish',
+                'Portugues' => 'Portuguese', 'Ingles' => 'English', 'Frances' => 'French',
+                'italiano' => 'Italian', 'Aleman' => 'German', 'Holandes' => 'Dutch',
+                'sueco' => 'Swedish', 'Danes' => 'Danish', 'noruego' => 'Norwegian',
+                'Fines' => 'Finnish', 'polaco' => 'Polish', 'checo' => 'Czech',
+                'eslovaco' => 'Slovak', 'Hungaro' => 'Hungarian', 'rumano' => 'Romanian',
+                'Bulgaro' => 'Bulgarian', 'griego' => 'Greek', 'croata' => 'Croatian',
+                'esloveno' => 'Slovenian', 'estonio' => 'Estonian', 'Leton' => 'Latvian',
+                'lituano' => 'Lithuanian', 'Irlandes' => 'Irish', 'Maltes' => 'Maltese',
+                'romanche' => 'Romansh',
+            );
+            return $legacy[$raw] ?? $raw;
+        }
+
         public function get_settings() {
             if (function_exists('cbia_get_settings')) {
                 return cbia_get_settings();
@@ -27,16 +45,13 @@ if (!class_exists('CBIA_Blog_Service')) {
             if (!empty($post_unslashed['cbia_form']) && $post_unslashed['cbia_form'] === 'blog_save' && check_admin_referer('cbia_blog_save_nonce')) {
                 $prompt_warnings = array();
                 if (array_key_exists('title_input_mode', $post_unslashed)) {
-                    $mode = (string)($post_unslashed['title_input_mode'] ?? 'manual');
-                    $settings['title_input_mode'] = in_array($mode, array('manual','csv'), true) ? $mode : 'manual';
+                    $settings['title_input_mode'] = 'manual';
                 }
 
                 if (array_key_exists('manual_titles', $post_unslashed)) {
                     $settings['manual_titles'] = (string)($post_unslashed['manual_titles'] ?? '');
                 }
-                if (array_key_exists('csv_url', $post_unslashed)) {
-                    $settings['csv_url'] = trim((string)($post_unslashed['csv_url'] ?? ''));
-                }
+                $settings['csv_url'] = '';
 
                 if (array_key_exists('first_publication_datetime_local', $post_unslashed)) {
                     $dt_local = trim((string)($post_unslashed['first_publication_datetime_local'] ?? ''));
@@ -59,13 +74,17 @@ if (!class_exists('CBIA_Blog_Service')) {
                     $settings['enable_cron_fill'] = 0;
                 }
 
-                // Publicacion y clasificacion (migrado desde Configuracion)
+                // Publication and classification (migrated from Config)
                 if (array_key_exists('default_author_id', $post_unslashed)) {
                     $settings['default_author_id'] = absint($post_unslashed['default_author_id'] ?? 0);
                 }
+                $previous_language = (string)($settings['post_language'] ?? 'Spanish');
                 if (array_key_exists('post_language', $post_unslashed)) {
-                    $settings['post_language'] = sanitize_text_field((string)($post_unslashed['post_language'] ?? ($settings['post_language'] ?? 'Espanol')));
+                    $settings['post_language'] = $this->normalize_post_language(
+                        sanitize_text_field((string)($post_unslashed['post_language'] ?? ($settings['post_language'] ?? 'Spanish')))
+                    );
                 }
+                $prompt_language = (string)($settings['post_language'] ?? 'Spanish');
                 if (array_key_exists('default_category', $post_unslashed)) {
                     $settings['default_category'] = sanitize_text_field((string)($post_unslashed['default_category'] ?? ($settings['default_category'] ?? 'Noticias')));
                 }
@@ -94,11 +113,37 @@ if (!class_exists('CBIA_Blog_Service')) {
                 }
 
                 if (array_key_exists('blog_prompt_editable', $post_unslashed) || !empty($post_unslashed['blog_prompt_restore'])) {
-                    $editable_raw = (string)($post_unslashed['blog_prompt_editable'] ?? ($settings['blog_prompt_editable'] ?? ''));
+                    $default_editable = function_exists('cbia_prompt_recommended_editable_default_for_language')
+                        ? cbia_prompt_recommended_editable_default_for_language($prompt_language)
+                        : (function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : '');
+                    $editable_raw = (string)($post_unslashed['blog_prompt_editable'] ?? ($settings['blog_prompt_editable'] ?? $default_editable));
                     if (!empty($post_unslashed['blog_prompt_restore'])) {
-                        $editable_raw = function_exists('cbia_prompt_recommended_editable_default')
-                            ? cbia_prompt_recommended_editable_default()
-                            : $editable_raw;
+                        $editable_raw = $default_editable !== '' ? $default_editable : $editable_raw;
+                    }
+                    // If user changed language and still had a default prompt, auto-switch default to new language.
+                    if (
+                        empty($post_unslashed['blog_prompt_restore'])
+                        && array_key_exists('post_language', $post_unslashed)
+                        && function_exists('cbia_prompt_recommended_editable_default_for_language')
+                    ) {
+                        $prev_default = cbia_prompt_recommended_editable_default_for_language($previous_language);
+                        $new_default  = cbia_prompt_recommended_editable_default_for_language($prompt_language);
+                        $en_default   = cbia_prompt_recommended_editable_default();
+                        $es_default   = function_exists('cbia_prompt_recommended_editable_legacy_default') ? cbia_prompt_recommended_editable_legacy_default() : '';
+                        if (
+                            function_exists('cbia_prompt_text_equals')
+                            && (
+                                cbia_prompt_text_equals($editable_raw, $prev_default)
+                                || cbia_prompt_text_equals($editable_raw, $new_default)
+                                || cbia_prompt_text_equals($editable_raw, $en_default)
+                                || ($es_default !== '' && cbia_prompt_text_equals($editable_raw, $es_default))
+                            )
+                        ) {
+                            $editable_raw = $new_default;
+                        }
+                    }
+                    if (function_exists('cbia_prompt_maybe_upgrade_legacy_editable')) {
+                        $editable_raw = cbia_prompt_maybe_upgrade_legacy_editable($editable_raw, $prompt_language);
                     }
                     if (function_exists('cbia_prompt_sanitize_editable_block')) {
                         $editable_raw = cbia_prompt_sanitize_editable_block($editable_raw);
@@ -110,6 +155,11 @@ if (!class_exists('CBIA_Blog_Service')) {
 
                 $legacy_input = (string)($post_unslashed['legacy_full_prompt'] ?? '');
                 if ($legacy_input !== '') {
+                    if (function_exists('cbia_prompt_clean_legacy_template')) {
+                        $legacy_input = cbia_prompt_clean_legacy_template($legacy_input, $prompt_language);
+                    } elseif (function_exists('cbia_fix_mojibake')) {
+                        $legacy_input = (string)cbia_fix_mojibake($legacy_input);
+                    }
                     $settings['legacy_full_prompt'] = sanitize_textarea_field($legacy_input);
                 } elseif (empty($settings['legacy_full_prompt'])) {
                     $settings['legacy_full_prompt'] = '';
@@ -127,14 +177,14 @@ if (!class_exists('CBIA_Blog_Service')) {
                     }
                 } else {
                     if (function_exists('cbia_prompt_build_recommended_template')) {
-                        $settings['prompt_single_all'] = cbia_prompt_build_recommended_template($settings['blog_prompt_editable']);
+                        $settings['prompt_single_all'] = cbia_prompt_build_recommended_template($settings['blog_prompt_editable'], $prompt_language);
                     }
                 }
 
                 update_option('cbia_settings', $settings, false);
 
                 if (function_exists('cbia_log_message')) {
-                    cbia_log_message("[INFO] Blog: configuraciÃ³n guardada (tÃ­tulos + automatizaciÃ³n).");
+                    cbia_log_message('[INFO] Blog: configuration saved (titles + automation).');
                 }
                 if (!empty($prompt_warnings)) {
                     set_transient('cbia_blog_prompt_warnings', $prompt_warnings, 120);
@@ -150,7 +200,7 @@ if (!class_exists('CBIA_Blog_Service')) {
 
                 if ($action === 'test_config') {
                     if (function_exists('cbia_run_test_configuration')) cbia_run_test_configuration();
-                    else if (function_exists('cbia_log_message')) cbia_log_message('[WARN] Falta cbia_run_test_configuration().');
+                    else if (function_exists('cbia_log_message')) cbia_log_message('[WARN] Missing cbia_run_test_configuration().');
                     $saved_notice = 'test';
 
                 } elseif ($action === 'stop_generation') {
@@ -161,7 +211,7 @@ if (!class_exists('CBIA_Blog_Service')) {
                 } elseif ($action === 'fill_pending_imgs') {
                     if (function_exists('cbia_set_stop_flag')) cbia_set_stop_flag(false);
                     if (function_exists('cbia_run_fill_pending_images')) cbia_run_fill_pending_images(10);
-                    else if (function_exists('cbia_log_message')) cbia_log_message('[WARN] Falta cbia_run_fill_pending_images().');
+                    else if (function_exists('cbia_log_message')) cbia_log_message('[WARN] Missing cbia_run_fill_pending_images().');
                     $saved_notice = 'pending';
 
                 } elseif ($action === 'clear_checkpoint') {
@@ -220,16 +270,15 @@ if (!class_exists('CBIA_Blog_Service')) {
 
         public function get_checkpoint_status() {
             if (!function_exists('cbia_checkpoint_get')) {
-                return array('status' => 'inactivo', 'last' => '(sin registros)');
+                return array('status' => 'inactive', 'last' => '(no records)');
             }
             $cp = cbia_checkpoint_get();
             $status = (!empty($cp) && !empty($cp['running']))
                 ? ('EN CURSO | idx ' . intval($cp['idx'] ?? 0) . ' de ' . count((array)($cp['queue'] ?? array())))
-                : 'inactivo';
+                : 'inactive';
             $last = $this->get_last_scheduled_at();
-            $last = $last ?: '(sin registros)';
+            $last = $last ?: '(no records)';
             return array('status' => $status, 'last' => $last);
         }
     }
 }
-
