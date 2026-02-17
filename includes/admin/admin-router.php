@@ -161,9 +161,9 @@ if (!class_exists('CBIA_Admin_Router')) {
             if (is_callable($render)) {
                 call_user_func($render);
             } else {
-                echo '<p>No se pudo cargar esta pestana.</p>';
+                echo '<p>Could not load this tab.</p>';
                 if (function_exists('cbia_log')) {
-                    cbia_log(sprintf('No se pudo cargar la pestaña: %s', (string) $current), 'ERROR');
+                    cbia_log(sprintf('Could not load tab: %s', (string) $current), 'ERROR');
                 }
             }
 

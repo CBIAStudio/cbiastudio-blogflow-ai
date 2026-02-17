@@ -133,7 +133,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $featured_url = $featured_attach_id ? wp_get_attachment_url($featured_attach_id) : '';
             if ($featured_url) {
                 if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] Imagen destacada OK '{$title}'.", 'INFO');
+                    cbia_log("[PREVIEW] Featured image OK '{$title}'.", 'INFO');
                 }
                 $this->emit($emit, 'featured_image_status', array(
                     'status' => 'done',
@@ -142,7 +142,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 ));
             } else {
                 if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] Imagen destacada no disponible '{$title}'.", 'WARN');
+                    cbia_log("[PREVIEW] Featured image unavailable '{$title}'.", 'WARN');
                 }
                 $this->emit($emit, 'featured_image_status', array(
                     'status' => 'error',
@@ -151,9 +151,9 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             }
 
             $this->emit($emit, 'cbia_content', array('html' => $display_html));
-            $this->emit($emit, 'cbia_status', array('message' => 'Calculando metadatos...'));
+            $this->emit($emit, 'cbia_status', array('message' => 'Calculating metadata...'));
             if (function_exists('cbia_log')) {
-                cbia_log("[PREVIEW] Calculando metadatos '{$title}'.", 'INFO');
+                cbia_log("[PREVIEW] Calculating metadata '{$title}'.", 'INFO');
             }
 
             $excerpt = wp_trim_words(wp_strip_all_tags($final_html), 35, '...');

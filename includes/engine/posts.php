@@ -55,8 +55,8 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 	/**
 	 * Crea el post y asigna:
 	 * - featured (si se pasa)
-	 * - yoast metadesc + focuskw (básico)
-	 * - categorías y tags (reglas plugin)
+	 * - yoast metadesc + focuskw (bÃ¡sico)
+	 * - categorÃ­as y tags (reglas plugin)
 	 */
 	function cbia_create_post_in_wp_engine($title, $final_html, $featured_attach_id, $post_date_mysql, $force_status = '') {
 		$s = cbia_get_settings();
@@ -98,7 +98,7 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 
 		$post_id = (int)$post_id;
 
-		// Categorías
+		// CategorÃ­as
 		$cats = cbia_determine_categories_by_mapping($title, $final_html);
 		if (empty($cats)) {
 			$default_cat = trim((string)($s['default_category'] ?? 'Noticias'));
@@ -125,7 +125,7 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 			set_post_thumbnail($post_id, (int)$featured_attach_id);
 		}
 
-		// Yoast básico (luego en módulo Yoast se mejora con hook)
+		// Yoast bÃ¡sico (luego en mÃ³dulo Yoast se mejora con hook)
 		$metad = cbia_generate_meta_description($title, $final_html);
 		$focus = cbia_generate_focus_keyphrase($title, $final_html);
 		update_post_meta($post_id, '_yoast_wpseo_metadesc', $metad);
@@ -151,7 +151,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 	function cbia_create_single_blog_post($title, $post_date_mysql = '', $force_status = '') {
 		cbia_try_unlimited_runtime();
 		$title = trim((string)$title);
-		if ($title === '') return ['ok'=>false,'post_id'=>0,'error'=>'Título vacío'];
+		if ($title === '') return ['ok'=>false,'post_id'=>0,'error'=>'TÃ­tulo vacÃ­o'];
 
 		if (cbia_is_stop_requested()) {
 			return ['ok'=>false,'post_id'=>0,'error'=>'STOP activado'];
@@ -166,7 +166,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		// Normal: only featured image (no in-content)
 		$images_limit = 1;
 
-		// Tracking para costes reales (texto + imágenes)
+		// Tracking para costes reales (texto + imÃ¡genes)
 		$image_calls = array();
 		$text_call = array();
 
@@ -181,17 +181,17 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			'usage'   => is_array($usage) ? $usage : cbia_usage_empty(),
 		);
 		if (!$ok) {
-			cbia_log("Fallo texto '{$title}': " . ($err ?: 'desconocido'), 'ERROR');
-			// Si OpenAI devolvió usage pero no hay post, deja rastro en el log de costes.
+			cbia_log("Text failure '{$title}': " . ($err ?: 'desconocido'), 'ERROR');
+			// Si OpenAI devolviÃ³ usage pero no hay post, deja rastro en el log de costes.
 			if (function_exists('cbia_costes_log')) {
 				$uin  = (int)($usage['input_tokens'] ?? 0);
 				$uout = (int)($usage['output_tokens'] ?? 0);
 				$umod = (string)($model_used ?? '');
 				if ($uin > 0 || $uout > 0) {
-					cbia_costes_log("Uso sin post (fallo texto) title='{$title}' model={$umod} in={$uin} out={$uout} err=" . (string)($err ?: ''));
+					cbia_costes_log("Usage without post (text failure) title='{$title}' model={$umod} in={$uin} out={$uout} err=" . (string)($err ?: ''));
 				}
 			}
-			return ['ok'=>false,'post_id'=>0,'error'=>$err ?: 'Fallo texto'];
+			return ['ok'=>false,'post_id'=>0,'error'=>$err ?: 'Text failure'];
 		}
 
 		$text_html = cbia_strip_document_wrappers($text_html);
@@ -199,9 +199,9 @@ if (!function_exists('cbia_create_single_blog_post')) {
 
 		// Corrige encabezados escritos como [h2]...[/h2] / [h3]...[/h3] a HTML real
 		$text_html = cbia_fix_bracket_headings($text_html);
-		// Normaliza el título de FAQ según idioma/config
+		// Normaliza el tÃ­tulo de FAQ segÃºn idioma/config
 		$text_html = cbia_normalize_faq_heading($text_html);
-		// Si Yoast FAQ Block está disponible, convierte FAQs a bloque
+		// Si Yoast FAQ Block estÃ¡ disponible, convierte FAQs a bloque
 		if (function_exists('cbia_convert_faq_to_yoast_block')) {
 			list($text_html, $faq_block_ok, $faq_block_status) = cbia_convert_faq_to_yoast_block($text_html);
 			if ($faq_block_ok) {
@@ -210,7 +210,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 				cbia_log('FAQ Yoast: ' . (string)$faq_block_status, 'INFO');
 			}
 		}
-		cbia_log("Texto IA OK: generado HTML para '{$title}'", 'INFO');
+		cbia_log("AI text OK: generated HTML for '{$title}'", 'INFO');
         // 3) Sin imagenes internas: limpiar cualquier marcador y seguir.
         if (function_exists('cbia_normalize_image_markers')) {
             $text_html = cbia_normalize_image_markers($text_html);
@@ -234,7 +234,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 
         $skip_images = !empty($GLOBALS['cbia_preview_skip_images']);
         if ($skip_images) {
-            cbia_log("Preview: saltando generacion de imagen destacada para '{$title}'.", 'INFO');
+            cbia_log("Preview: skipping featured image generation para '{$title}'.", 'INFO');
         } else {
             // Destacada siempre
             $featured_desc = $title;
@@ -259,9 +259,9 @@ if (!function_exists('cbia_create_single_blog_post')) {
             if ($ok && $attach_id) {
                 $featured_attach_id = (int)$attach_id;
                 $img_descs['featured']['attach_id'] = (int)$featured_attach_id;
-                cbia_log('Imagen destacada OK: attach_id=' . (int)$featured_attach_id, 'INFO');
+                cbia_log('Featured image OK: attach_id=' . (int)$featured_attach_id, 'INFO');
             } else {
-                cbia_log("No se pudo generar destacada para '{$title}': " . ($e ?: ''), 'ERROR');
+                cbia_log("Could not generate featured image for '{$title}': " . ($e ?: ''), 'ERROR');
             }
         }
 
@@ -271,7 +271,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		// Crear post en WP
 		list($ok_post, $post_id, $post_err) = cbia_create_post_in_wp_engine($title, $text_html, $featured_attach_id, $post_date_mysql, $force_status);
 		if (!$ok_post) {
-			cbia_log("No se pudo crear post '{$title}': {$post_err}", 'ERROR');
+			cbia_log("Could not create post '{$title}': {$post_err}", 'ERROR');
 			return ['ok'=>false,'post_id'=>0,'error'=>$post_err ?: 'Fallo insert'];
 		}
 
@@ -286,7 +286,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
         // Guardar descripciones usadas para prompts (featured + internas)
         update_post_meta($post_id, '_cbia_img_descs', wp_json_encode($img_descs));
 
-		// Guardar uso real (texto + imágenes) en sistema de costes
+		// Guardar uso real (texto + imÃ¡genes) en sistema de costes
 		if (function_exists('cbia_costes_record_usage')) {
 			// Texto
 			cbia_costes_record_usage($post_id, array(
@@ -297,7 +297,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 				'cached_input_tokens' => 0,
 				'ok' => 1,
 			));
-			// Imágenes
+			// ImÃ¡genes
 			foreach ($image_calls as $ic) {
 				cbia_costes_record_usage($post_id, array(
 					'type' => 'image',
@@ -323,7 +323,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			cbia_image_append_call($post_id, (string)($ic['section'] ?? ''), (string)($ic['model'] ?? ''), !empty($ic['ok']), (int)($ic['attach_id'] ?? 0), (string)($ic['error'] ?? ''));
 		}
 
-		cbia_log("Post creado OK: ID {$post_id} | '{$title}'", 'INFO');
+		cbia_log("Post created OK: ID {$post_id} | '{$title}'", 'INFO');
 
 		return ['ok'=>true,'post_id'=>(int)$post_id,'error'=>''];
 	}

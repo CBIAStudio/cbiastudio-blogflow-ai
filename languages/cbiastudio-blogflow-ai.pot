@@ -1,0 +1,1411 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the CBIAStudio BlogFlow with AI package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: CBIAStudio BlogFlow with AI 1.1.3\n"
+"Report-Msgid-Bugs-To: https://github.com/CBIAStudio/cbiastudio-blogflow-ai/"
+"issues\n"
+"POT-Creation-Date: 2026-02-17 16:55+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: includes\services\article-preview-service.php:30
+msgid "You must provide a title to preview."
+msgstr ""
+
+#. translators: %s is the duplicated post title.
+#: includes\services\article-preview-service.php:37
+#, php-format
+msgid "Post \"%s\" already exists. Change the title before generating preview."
+msgstr ""
+
+#: includes\services\article-preview-service.php:42
+msgid "Preparing prompt..."
+msgstr ""
+
+#: includes\services\article-preview-service.php:76
+msgid "Generating content..."
+msgstr ""
+
+#: includes\services\article-preview-service.php:85
+msgid "Creation engine is unavailable."
+msgstr ""
+
+#: includes\services\article-preview-service.php:94
+msgid "Preview generation failed."
+msgstr ""
+
+#: includes\services\article-preview-service.php:102
+msgid "Could not create preview draft."
+msgstr ""
+
+#: includes\services\article-preview-service.php:110
+msgid "Could not load generated draft."
+msgstr ""
+
+#: includes\services\article-preview-service.php:123
+msgid "Rendering preview images..."
+msgstr ""
+
+#: includes\services\article-preview-service.php:129
+msgid "Generating featured image..."
+msgstr ""
+
+#: includes\services\article-preview-service.php:149
+#: includes\admin\views\blog.php:401
+msgid "Could not generate featured image."
+msgstr ""
+
+#: includes\services\article-preview-service.php:226
+#: includes\services\article-preview-service.php:324
+#: includes\core\hooks.php:475 includes\core\hooks.php:532
+msgid "Missing preview token."
+msgstr ""
+
+#: includes\services\article-preview-service.php:231
+msgid "Preview is no longer available. Generate a new one."
+msgstr ""
+
+#: includes\services\article-preview-service.php:246
+msgid "Incomplete preview payload to create post."
+msgstr ""
+
+#: includes\services\article-preview-service.php:256
+msgid "Provide date/time to schedule."
+msgstr ""
+
+#: includes\services\article-preview-service.php:264
+msgid "Invalid scheduling date/time."
+msgstr ""
+
+#: includes\services\article-preview-service.php:284
+msgid "Could not update post from preview."
+msgstr ""
+
+#: includes\services\article-preview-service.php:291
+msgid "Post creation engine is unavailable."
+msgstr ""
+
+#. translators: %s is the duplicated post title.
+#: includes\services\article-preview-service.php:295
+#: includes\services\article-preview-service.php:413
+#, php-format
+msgid "Post \"%s\" already exists."
+msgstr ""
+
+#: includes\services\article-preview-service.php:299
+msgid "Could not create post from preview."
+msgstr ""
+
+#: includes\services\article-preview-service.php:314
+msgid "Post scheduled from preview successfully."
+msgstr ""
+
+#: includes\services\article-preview-service.php:316
+msgid "Draft created from preview successfully."
+msgstr ""
+
+#: includes\services\article-preview-service.php:317
+msgid "Post created from preview successfully."
+msgstr ""
+
+#: includes\services\article-preview-service.php:329
+msgid "Preview is no longer available."
+msgstr ""
+
+#: includes\services\article-preview-service.php:404
+msgid "Empty title for draft creation."
+msgstr ""
+
+#. translators: %d is an attachment ID.
+#: includes\services\article-preview-service.php:512
+#, php-format
+msgid "Could not remove temporary preview attachment ID %d."
+msgstr ""
+
+#. translators: 1: internal image index, 2: error message.
+#: includes\services\article-preview-service.php:664
+#, php-format
+msgid "Could not generate internal image %1$d: %2$s"
+msgstr ""
+
+#: includes\services\article-preview-service.php:664
+#: includes\services\article-preview-service.php:679
+msgid "unknown error"
+msgstr ""
+
+#. translators: %d is the internal image index in preview mode.
+#: includes\services\article-preview-service.php:684
+#, php-format
+msgid "Preview internal image %d"
+msgstr ""
+
+#: includes\core\hooks.php:84 includes\core\hooks.php:397
+#: includes\core\hooks.php:398
+msgid "Not authorized."
+msgstr ""
+
+#: includes\core\hooks.php:158
+msgid "Yoast SEO detected and active."
+msgstr ""
+
+#: includes\core\hooks.php:170 includes\core\hooks.php:175
+msgid "Yoast SEO is installed but inactive."
+msgstr ""
+
+#: includes\core\hooks.php:172
+msgid "Activate now"
+msgstr ""
+
+#: includes\core\hooks.php:188 includes\core\hooks.php:193
+msgid "Yoast SEO is not installed."
+msgstr ""
+
+#: includes\core\hooks.php:190
+msgid "Install Yoast SEO"
+msgstr ""
+
+#: includes\core\hooks.php:315 includes\core\hooks.php:471
+#: includes\core\hooks.php:501 includes\core\hooks.php:527
+#: includes\core\hooks.php:565 includes\core\hooks.php:577
+#: includes\core\hooks.php:593 includes\core\hooks.php:632
+#: includes\core\hooks.php:674 includes\core\hooks.php:698
+#: includes\core\hooks.php:722 includes\core\hooks.php:776
+#: includes\core\hooks.php:822 includes\core\hooks.php:969
+msgid "Not authorized"
+msgstr ""
+
+#: includes\core\hooks.php:341 includes\core\hooks.php:487
+#: includes\core\hooks.php:550
+msgid "Preview service unavailable"
+msgstr ""
+
+#: includes\core\hooks.php:389 includes\core\hooks.php:390
+msgid "Invalid nonce."
+msgstr ""
+
+#: includes\core\hooks.php:426 includes\core\hooks.php:427
+msgid "Preview service unavailable."
+msgstr ""
+
+#: includes\core\hooks.php:635
+msgid "cbia_set_stop_flag unavailable"
+msgstr ""
+
+#: includes\core\hooks.php:647
+msgid "cbia_run_generate_blogs unavailable"
+msgstr ""
+
+#: includes\core\hooks.php:729 includes\core\hooks.php:784
+#: includes\core\hooks.php:829
+msgid "Invalid parameters"
+msgstr ""
+
+#: includes\core\hooks.php:734 includes\core\hooks.php:794
+#: includes\core\hooks.php:811
+msgid "Function unavailable"
+msgstr ""
+
+#: includes\core\hooks.php:870
+msgid "Could not generate image"
+msgstr ""
+
+#: includes\core\hooks.php:978
+msgid "Invalid provider"
+msgstr ""
+
+#: includes\core\hooks.php:982
+msgid "Sync unavailable"
+msgstr ""
+
+#: includes\core\hooks.php:1002
+msgid "Sync failed"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:209
+#: includes\admin\views\blog.php:206
+msgid "Spanish"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:210
+#: includes\admin\views\blog.php:207
+msgid "Portuguese"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:211
+#: includes\admin\views\blog.php:208
+msgid "English"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:212
+#: includes\admin\views\blog.php:209
+msgid "French"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:213
+#: includes\admin\views\blog.php:210
+msgid "Italian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:214
+#: includes\admin\views\blog.php:211
+msgid "German"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:215
+#: includes\admin\views\blog.php:212
+msgid "Dutch"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:216
+#: includes\admin\views\blog.php:213
+msgid "Swedish"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:217
+#: includes\admin\views\blog.php:214
+msgid "Danish"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:218
+#: includes\admin\views\blog.php:215
+msgid "Norwegian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:219
+#: includes\admin\views\blog.php:216
+msgid "Finnish"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:220
+#: includes\admin\views\blog.php:217
+msgid "Polish"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:221
+#: includes\admin\views\blog.php:218
+msgid "Czech"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:222
+#: includes\admin\views\blog.php:219
+msgid "Slovak"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:223
+#: includes\admin\views\blog.php:220
+msgid "Hungarian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:224
+#: includes\admin\views\blog.php:221
+msgid "Romanian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:225
+#: includes\admin\views\blog.php:222
+msgid "Bulgarian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:226
+#: includes\admin\views\blog.php:223
+msgid "Greek"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:227
+#: includes\admin\views\blog.php:224
+msgid "Croatian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:228
+#: includes\admin\views\blog.php:225
+msgid "Slovenian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:229
+#: includes\admin\views\blog.php:226
+msgid "Estonian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:230
+#: includes\admin\views\blog.php:227
+msgid "Latvian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:231
+#: includes\admin\views\blog.php:228
+msgid "Lithuanian"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:232
+#: includes\admin\views\blog.php:229
+msgid "Irish"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:233
+#: includes\admin\views\blog.php:230
+msgid "Maltese"
+msgstr ""
+
+#: includes\helpers\preview-legacy\blog.php:234
+#: includes\admin\views\blog.php:231
+msgid "Romansh"
+msgstr ""
+
+#: includes\admin\views\yoast.php:30
+msgid "Yoast"
+msgstr ""
+
+#: includes\admin\views\yoast.php:44
+msgid "FAQ Schema (Yoast)"
+msgstr ""
+
+#: includes\admin\views\yoast.php:47
+msgid "Yoast is not active."
+msgstr ""
+
+#: includes\admin\views\yoast.php:47
+msgid "Install/activate Yoast SEO to use the FAQ block."
+msgstr ""
+
+#: includes\admin\views\yoast.php:49
+msgid "FAQ block available."
+msgstr ""
+
+#: includes\admin\views\yoast.php:49
+msgid "The FAQ section will be automatically converted to a Yoast block."
+msgstr ""
+
+#: includes\admin\views\yoast.php:51
+msgid "FAQ block NOT available."
+msgstr ""
+
+#: includes\admin\views\yoast.php:51
+msgid "Make sure you use Gutenberg and Yoast blocks are enabled."
+msgstr ""
+
+#: includes\admin\views\yoast.php:57
+msgid "Traffic light"
+msgstr ""
+
+#: includes\admin\views\yoast.php:58
+msgid "here means filling:"
+msgstr ""
+
+#: includes\admin\views\yoast.php:60
+msgid "so it is no longer gray in the post list."
+msgstr ""
+
+#: includes\admin\views\yoast.php:66
+msgid "Batch actions"
+msgstr ""
+
+#: includes\admin\views\yoast.php:70 includes\admin\views\oldposts.php:412
+msgid "Batch"
+msgstr ""
+
+#: includes\admin\views\yoast.php:74
+msgid "Offset"
+msgstr ""
+
+#: includes\admin\views\yoast.php:78
+msgid "Options"
+msgstr ""
+
+#: includes\admin\views\yoast.php:82
+msgid "Force (rewrite meta/scores even if they already exist)"
+msgstr ""
+
+#: includes\admin\views\yoast.php:86
+msgid "Include non-CBIA posts (without _cbia_created)"
+msgstr ""
+
+#: includes\admin\views\yoast.php:93
+msgid "Recalculate meta only"
+msgstr ""
+
+#: includes\admin\views\yoast.php:94
+msgid "Update traffic light only"
+msgstr ""
+
+#: includes\admin\views\yoast.php:95
+msgid "Meta + traffic light"
+msgstr ""
+
+#: includes\admin\views\yoast.php:96 includes\admin\views\oldposts.php:680
+#: includes\admin\views\blog.php:297
+msgid "Clear log"
+msgstr ""
+
+#: includes\admin\views\yoast.php:101 includes\admin\views\yoast.php:125
+msgid "Mark old posts as CBIA"
+msgstr ""
+
+#: includes\admin\views\yoast.php:102
+msgid ""
+"This adds _cbia_created=1 to posts that do not have it, so they are included "
+"in default batches."
+msgstr ""
+
+#: includes\admin\views\yoast.php:106
+msgid "From (optional)"
+msgstr ""
+
+#: includes\admin\views\yoast.php:110
+msgid "To (optional)"
+msgstr ""
+
+#: includes\admin\views\yoast.php:114
+msgid "Only CBIA signals"
+msgstr ""
+
+#: includes\admin\views\yoast.php:118
+msgid ""
+"Mark only if signals are detected (FAQ JSON-LD / pending markers / content "
+"markers)"
+msgstr ""
+
+#: includes\admin\views\yoast.php:130
+msgid "Yoast log"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:115
+msgid "Update old posts"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:117
+msgid "Configuration (defaults)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:119
+msgid ""
+"This defines your usual setup. During execution, you can use it as-is or "
+"customize only this run."
+msgstr ""
+
+#: includes\admin\views\oldposts.php:120
+msgid "What \"Force\" means:"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:120
+msgid "rerun the action even if it already exists / is marked as done."
+msgstr ""
+
+#: includes\admin\views\oldposts.php:129 includes\admin\views\oldposts.php:419
+msgid "Scope"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:133
+msgid "All posts"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:137
+msgid "Plugin posts only"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:143
+msgid "Batch size"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:150
+msgid "Date filter"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:154 includes\admin\views\oldposts.php:433
+msgid "Older than (days)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:158
+msgid "Range (from / to)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:164
+msgid "Example: 180"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:169 includes\admin\views\oldposts.php:447
+msgid "From:"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:173 includes\admin\views\oldposts.php:451
+msgid "To:"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:176
+msgid ""
+"Uses post_date_gmt. If one side is empty, only the other limit is applied."
+msgstr ""
+
+#: includes\admin\views\oldposts.php:183 includes\admin\views\oldposts.php:460
+msgid "Images (limit)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:186
+msgid "Used for content regeneration and/or pending images reset."
+msgstr ""
+
+#: includes\admin\views\oldposts.php:191 includes\admin\views\oldposts.php:467
+msgid "Advanced filters"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:195 includes\admin\views\oldposts.php:471
+msgid "Specific IDs (optional):"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:205 includes\admin\views\oldposts.php:481
+msgid "If IDs are provided, date filters are ignored."
+msgstr ""
+
+#: includes\admin\views\oldposts.php:211 includes\admin\views\oldposts.php:487
+msgid "Category:"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:219 includes\admin\views\oldposts.php:231
+#: includes\admin\views\oldposts.php:495 includes\admin\views\oldposts.php:507
+msgid "All"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:225 includes\admin\views\oldposts.php:501
+msgid "Author:"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:238
+msgid "Default dry run (list only)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:246
+msgid "Default actions"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:249
+msgid "Basic"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:253
+msgid "Add note \"Updated on ...\""
+msgstr ""
+
+#: includes\admin\views\oldposts.php:257
+msgid "Force (replace date if it already exists)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:262 includes\admin\views\oldposts.php:542
+msgid "Yoast SEO"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:265 includes\admin\views\oldposts.php:545
+msgid "Meta description"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:269 includes\admin\views\oldposts.php:549
+msgid "Keyphrase (focus keyword)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:273 includes\admin\views\oldposts.php:553
+msgid "SEO title (Yoast title)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:277
+msgid "Force Yoast (overwrite even if values exist)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:281 includes\admin\views\oldposts.php:561
+msgid "Reindex / traffic lights (best effort)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:284 includes\admin\views\oldposts.php:564
+msgid "Content and images"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:287
+msgid "Regenerate content with AI"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:291 includes\admin\views\oldposts.php:301
+#: includes\admin\views\oldposts.php:312 includes\admin\views\oldposts.php:329
+#: includes\admin\views\oldposts.php:340 includes\admin\views\oldposts.php:358
+#: includes\admin\views\oldposts.php:368 includes\admin\views\oldposts.php:380
+#: includes\admin\views\oldposts.php:537 includes\admin\views\oldposts.php:571
+#: includes\admin\views\oldposts.php:581 includes\admin\views\oldposts.php:599
+#: includes\admin\views\oldposts.php:609 includes\admin\views\oldposts.php:621
+msgid "Force"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:297
+msgid "Regenerate content with AI (without images)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:308
+msgid "Images: mark as pending (reset)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:318
+msgid "Remove featured image (not common)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:325
+msgid "Images: regenerate content images only"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:336
+msgid "Featured image: regenerate featured only"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:346 includes\admin\views\oldposts.php:657
+msgid "Remove previous featured image"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:351 includes\admin\views\oldposts.php:592
+msgid "Taxonomies"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:354
+msgid "Recalculate categories"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:364
+msgid "Recalculate tags"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:373 includes\admin\views\oldposts.php:614
+msgid "Optional"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:376
+msgid "Optimize title with AI"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:386
+msgid ""
+"Tip: if you regenerate content, you will usually also want categories/tags + "
+"Yoast."
+msgstr ""
+
+#: includes\admin\views\oldposts.php:394 includes\admin\views\config.php:344
+msgid "Save configuration"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:400
+msgid "Execution"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:402
+msgid "By default, this runs with your saved default selection:"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:423
+msgid "Process only"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:429
+msgid "Filter"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:437
+msgid "Range"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:514
+msgid "Dry run (list only)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:521
+msgid "Customize this run"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:525
+msgid "I want to choose actions different from my defaults (this run only)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:529
+msgid "Actions (this run only)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:533
+msgid "Note \"Updated on ...\""
+msgstr ""
+
+#: includes\admin\views\oldposts.php:557
+msgid "Force Yoast"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:567
+msgid "Content (AI)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:577
+msgid "Images: reset pending"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:587
+msgid "Remove featured image"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:595
+msgid "Categories"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:605 includes\admin\views\blog.php:377
+msgid "Tags"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:617
+msgid "Title (AI)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:627
+msgid ""
+"If you do not enable \"Customize\", your default actions will be used as-is."
+msgstr ""
+
+#: includes\admin\views\oldposts.php:647
+msgid "Quick actions:"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:648
+msgid "Yoast metas only"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:649
+msgid "Yoast reindex only"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:650
+msgid "Featured only"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:651
+msgid "Content images only"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:652
+msgid "Content only (without images)"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:661
+msgid "Force images"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:665
+msgid "Force content"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:672
+msgid "Run batch"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:676
+msgid "Stop"
+msgstr ""
+
+#: includes\admin\views\oldposts.php:685 includes\admin\views\blog.php:393
+msgid "Log"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:15
+msgid "Plugin version"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:18
+msgid "Memory (PHP)"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:19
+msgid "Max execution time"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:20
+msgid "Upload max"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:21
+msgid "Post max"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:25
+msgid "Timezone"
+msgstr ""
+
+#. translators: %s is a masked API key preview, e.g. "sk-12...9abc".
+#: includes\admin\views\diagnostics.php:27
+msgid "OpenAI API key"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:27
+#, php-format
+msgid "Yes (%s)"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:27
+#: includes\admin\views\diagnostics.php:28
+#: includes\admin\views\diagnostics.php:29
+msgid "No"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:28
+msgid "Plugin dir writable"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:28
+#: includes\admin\views\diagnostics.php:29
+msgid "Yes"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:29
+msgid "WP content writable"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:36
+msgid "Diagnostics"
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:39
+msgid ""
+"Quick environment and plugin status overview. Useful for support and "
+"debugging."
+msgstr ""
+
+#: includes\admin\views\diagnostics.php:53
+msgid "Latest log lines"
+msgstr ""
+
+#: includes\admin\views\costs.php:179
+msgid "Costs settings saved."
+msgstr ""
+
+#: includes\admin\views\costs.php:181 includes\admin\views\blog.php:92
+msgid "Log cleared."
+msgstr ""
+
+#: includes\admin\views\costs.php:183
+msgid "Calculation executed. Review the log."
+msgstr ""
+
+#: includes\admin\views\costs.php:190
+msgid "Calibration applied."
+msgstr ""
+
+#: includes\admin\views\costs.php:197
+msgid "Costs"
+msgstr ""
+
+#: includes\admin\views\costs.php:200
+msgid "Effective REAL multiplier:"
+msgstr ""
+
+#: includes\admin\views\costs.php:209
+msgid "Quick estimate (based on current config)"
+msgstr ""
+
+#: includes\admin\views\costs.php:304
+msgid "Configuration"
+msgstr ""
+
+#: includes\admin\views\costs.php:448
+msgid "Save costs settings"
+msgstr ""
+
+#: includes\admin\views\costs.php:454
+msgid "Actions (post-hoc)"
+msgstr ""
+
+#: includes\admin\views\costs.php:485
+msgid "Calculate REAL only"
+msgstr ""
+
+#: includes\admin\views\costs.php:491
+msgid "Costs log"
+msgstr ""
+
+#: includes\admin\views\config.php:60
+msgid "Configuration saved successfully."
+msgstr ""
+
+#: includes\admin\views\config.php:74
+msgid "Provider and Model"
+msgstr ""
+
+#: includes\admin\views\config.php:75
+msgid "Configure AI engines for text and images."
+msgstr ""
+
+#: includes\admin\views\config.php:101
+msgid "Provider (text)"
+msgstr ""
+
+#: includes\admin\views\config.php:136
+msgid "Provider (image)"
+msgstr ""
+
+#: includes\admin\views\config.php:179
+msgid "Model (text)"
+msgstr ""
+
+#: includes\admin\views\config.php:199
+msgid "Model (image)"
+msgstr ""
+
+#: includes\admin\views\config.php:202
+msgid "No disponible"
+msgstr ""
+
+#: includes\admin\views\config.php:218
+msgid "API key (text)"
+msgstr ""
+
+#: includes\admin\views\config.php:230 includes\admin\views\config.php:251
+msgid "Get API key"
+msgstr ""
+
+#: includes\admin\views\config.php:239
+msgid "API key (image)"
+msgstr ""
+
+#: includes\admin\views\config.php:258
+msgid "You can use different providers for text and image."
+msgstr ""
+
+#: includes\admin\views\config.php:264
+msgid "Preferencias"
+msgstr ""
+
+#: includes\admin\views\config.php:267
+msgid "Temperature"
+msgstr ""
+
+#: includes\admin\views\config.php:269
+msgid "Recommended range: 0.0 to 1.0 (max 2.0)."
+msgstr ""
+
+#: includes\admin\views\config.php:272
+msgid "Max output tokens"
+msgstr ""
+
+#: includes\admin\views\config.php:274
+msgid "Increase this value if content is cut off. Recommended: 6000-8000."
+msgstr ""
+
+#: includes\admin\views\config.php:277
+msgid "Post length"
+msgstr ""
+
+#: includes\admin\views\config.php:291
+msgid "Featured image prompt"
+msgstr ""
+
+#: includes\admin\views\config.php:292
+msgid ""
+"The base prompt is already optimized. It is automatically combined with "
+"[IMAGE: ...] and the post title. Adjust only if you want a different style."
+msgstr ""
+
+#: includes\admin\views\config.php:293
+msgid "Available placeholders: {title}, {desc}, {format}."
+msgstr ""
+
+#: includes\admin\views\config.php:297
+msgid "Edit featured prompt"
+msgstr ""
+
+#: includes\admin\views\config.php:299
+msgid "The post title is automatically inserted into {title}."
+msgstr ""
+
+#: includes\admin\views\config.php:305 includes\admin\views\blog.php:148
+msgid "Edit prompt"
+msgstr ""
+
+#: includes\admin\views\config.php:306
+msgid "Close"
+msgstr ""
+
+#: includes\admin\views\config.php:310
+msgid "Save base prompt"
+msgstr ""
+
+#: includes\admin\views\config.php:320
+msgid "If an image model fails"
+msgstr ""
+
+#: includes\admin\views\config.php:323
+msgid "Continue with the next model"
+msgstr ""
+
+#: includes\admin\views\config.php:324
+msgid "Stop post creation"
+msgstr ""
+
+#: includes\admin\views\config.php:326
+msgid "By default, the next model is tried on error."
+msgstr ""
+
+#: includes\admin\views\config.php:333
+msgid "Integrations"
+msgstr ""
+
+#: includes\admin\views\blog.php:74
+msgid "Blog settings saved."
+msgstr ""
+
+#: includes\admin\views\blog.php:78
+msgid "Blog settings saved with warnings."
+msgstr ""
+
+#: includes\admin\views\blog.php:84
+msgid "Test executed. Review the log."
+msgstr ""
+
+#: includes\admin\views\blog.php:86
+msgid "Stop activated."
+msgstr ""
+
+#: includes\admin\views\blog.php:88
+msgid "Pending fill executed. Review the log."
+msgstr ""
+
+#: includes\admin\views\blog.php:90
+msgid "Checkpoint cleared and schedule reset."
+msgstr ""
+
+#: includes\admin\views\blog.php:98
+msgid "Titles"
+msgstr ""
+
+#: includes\admin\views\blog.php:106
+msgid "Manual titles"
+msgstr ""
+
+#: includes\admin\views\blog.php:113
+msgid "Enter a title..."
+msgstr ""
+
+#: includes\admin\views\blog.php:116
+msgid "Save and then click \"Create blog automatically\"."
+msgstr ""
+
+#: includes\admin\views\blog.php:119 includes\admin\views\blog.php:279
+msgid "Save"
+msgstr ""
+
+#: includes\admin\views\blog.php:124
+msgid "Blog content prompt"
+msgstr ""
+
+#: includes\admin\views\blog.php:127
+msgid ""
+"Editorial prompt optimized for Google Discover and image marker insertion. "
+"You can adjust style, but fixed rules prevent truncation and keep "
+"compatibility."
+msgstr ""
+
+#: includes\admin\views\blog.php:128
+msgid ""
+"Language is automatically applied from the language selector and is not "
+"edited in this prompt."
+msgstr ""
+
+#: includes\admin\views\blog.php:131
+msgid "Recommended prompt (safe)"
+msgstr ""
+
+#: includes\admin\views\blog.php:136
+msgid "Show advanced options (compatibility)"
+msgstr ""
+
+#: includes\admin\views\blog.php:141
+msgid "Advanced prompt (compatibility)"
+msgstr ""
+
+#: includes\admin\views\blog.php:143
+msgid ""
+"Warning: this mode allows full control and can break format, language, or "
+"image markers."
+msgstr ""
+
+#: includes\admin\views\blog.php:156
+msgid "Restore recommended prompt"
+msgstr ""
+
+#: includes\admin\views\blog.php:160
+msgid "Full legacy prompt"
+msgstr ""
+
+#: includes\admin\views\blog.php:161
+msgid "Advanced mode: uses the full historic prompt for compatibility."
+msgstr ""
+
+#: includes\admin\views\blog.php:174
+msgid "Publishing and classification"
+msgstr ""
+
+#: includes\admin\views\blog.php:180
+msgid "Default author"
+msgstr ""
+
+#: includes\admin\views\blog.php:186
+msgid "- Automatic (current user / admin) -"
+msgstr ""
+
+#: includes\admin\views\blog.php:202
+msgid "Post language"
+msgstr ""
+
+#: includes\admin\views\blog.php:254
+msgid ""
+"Used for {IDIOMA_POST} and to normalize the \"Frequently Asked Questions\" "
+"title."
+msgstr ""
+
+#: includes\admin\views\blog.php:258
+msgid "Default category"
+msgstr ""
+
+#: includes\admin\views\blog.php:264
+msgid "Rules: keywords - categories"
+msgstr ""
+
+#: includes\admin\views\blog.php:267
+msgid "Format per line: "
+msgstr ""
+
+#: includes\admin\views\blog.php:267
+msgid "Category: kw1, kw2, kw3"
+msgstr ""
+
+#: includes\admin\views\blog.php:267
+msgid ". Compared against (title+content)."
+msgstr ""
+
+#: includes\admin\views\blog.php:271
+msgid "Allowed tags"
+msgstr ""
+
+#: includes\admin\views\blog.php:274
+msgid "Comma-separated. The engine can ONLY use these tags (max 7 per post)."
+msgstr ""
+
+#: includes\admin\views\blog.php:285
+msgid "Actions"
+msgstr ""
+
+#: includes\admin\views\blog.php:291
+msgid "Test configuration"
+msgstr ""
+
+#: includes\admin\views\blog.php:293
+msgid "Create blog automatically"
+msgstr ""
+
+#: includes\admin\views\blog.php:294 includes\admin\views\blog.php:416
+msgid "Generation with preview"
+msgstr ""
+
+#: includes\admin\views\blog.php:296
+msgid "Stop (STOP)"
+msgstr ""
+
+#: includes\admin\views\blog.php:301
+msgid "Article preview"
+msgstr ""
+
+#: includes\admin\views\blog.php:305
+msgid "ARTICLE PREVIEW"
+msgstr ""
+
+#: includes\admin\views\blog.php:307 includes\admin\views\blog.php:353
+msgid "Title"
+msgstr ""
+
+#: includes\admin\views\blog.php:314
+msgid "(First add manual titles and save)"
+msgstr ""
+
+#: includes\admin\views\blog.php:318
+msgid "0 words"
+msgstr ""
+
+#: includes\admin\views\blog.php:322
+msgid "Copy text"
+msgstr ""
+
+#: includes\admin\views\blog.php:323
+msgid "Expandir preview"
+msgstr ""
+
+#: includes\admin\views\blog.php:324 includes\admin\views\blog.php:357
+msgid "Edit preview"
+msgstr ""
+
+#: includes\admin\views\blog.php:325
+msgid "Clear output"
+msgstr ""
+
+#: includes\admin\views\blog.php:330
+msgid "Generate preview"
+msgstr ""
+
+#: includes\admin\views\blog.php:336
+msgid "Featured image preview"
+msgstr ""
+
+#: includes\admin\views\blog.php:341
+msgid "Texto"
+msgstr ""
+
+#: includes\admin\views\blog.php:342
+msgid "Images"
+msgstr ""
+
+#: includes\admin\views\blog.php:343
+msgid "Ready"
+msgstr ""
+
+#: includes\admin\views\blog.php:348
+msgid "Waiting for generation..."
+msgstr ""
+
+#: includes\admin\views\blog.php:351
+msgid "Edit before creating"
+msgstr ""
+
+#: includes\admin\views\blog.php:358
+msgid "Save changes"
+msgstr ""
+
+#: includes\admin\views\blog.php:359
+msgid "Cancel"
+msgstr ""
+
+#: includes\admin\views\blog.php:361
+msgid ""
+"Edit preview content directly with the edit button. Raw HTML is not shown."
+msgstr ""
+
+#: includes\admin\views\blog.php:373
+msgid "Excerpt"
+msgstr ""
+
+#: includes\admin\views\blog.php:381
+msgid "Focus Keyword"
+msgstr ""
+
+#: includes\admin\views\blog.php:385
+msgid "Meta Description"
+msgstr ""
+
+#: includes\admin\views\blog.php:399
+msgid "Launching..."
+msgstr ""
+
+#: includes\admin\views\blog.php:400
+msgid "Running (see log)..."
+msgstr ""
+
+#: includes\admin\views\blog.php:402
+msgid "Fast preview: featured image in placeholder."
+msgstr ""
+
+#: includes\admin\views\blog.php:403
+msgid "Featured image in progress..."
+msgstr ""
+
+#: includes\admin\views\blog.php:404
+msgid "Image in progress..."
+msgstr ""
+
+#: includes\admin\views\blog.php:405
+msgid "There is no content to copy."
+msgstr ""
+
+#: includes\admin\views\blog.php:406
+msgid "Content copied to clipboard."
+msgstr ""
+
+#: includes\admin\views\blog.php:407
+msgid "Could not copy to clipboard."
+msgstr ""
+
+#: includes\admin\views\blog.php:408
+msgid "Collapse preview"
+msgstr ""
+
+#: includes\admin\views\blog.php:409
+msgid "Expand preview"
+msgstr ""
+
+#: includes\admin\views\blog.php:410
+msgid "Preview cleared."
+msgstr ""
+
+#: includes\admin\views\blog.php:411
+msgid "Could not cancel preview."
+msgstr ""
+
+#: includes\admin\views\blog.php:412
+msgid "Preview changes saved."
+msgstr ""
+
+#: includes\admin\views\blog.php:413
+msgid "Editing canceled."
+msgstr ""
+
+#: includes\admin\views\blog.php:414
+msgid "There is no preview draft to edit."
+msgstr ""
+
+#: includes\admin\views\blog.php:415
+msgid "Hide preview"
+msgstr ""
+
+#: includes\admin\views\blog.php:417
+msgid "Could not generate preview."
+msgstr ""
+
+#: includes\admin\views\blog.php:418
+msgid "Preview generated successfully."
+msgstr ""
+
+#: includes\admin\views\blog.php:419
+msgid "Initial streaming timeout."
+msgstr ""
+
+#: includes\admin\views\blog.php:420
+msgid "Streaming timeout."
+msgstr ""
+
+#: includes\admin\views\blog.php:421
+msgid "Starting preview for: "
+msgstr ""
+
+#: includes\admin\views\blog.php:422
+msgid "Incomplete streaming response."
+msgstr ""
+
+#: includes\admin\views\blog.php:423
+msgid "Streaming failed."
+msgstr ""
+
+#: includes\admin\views\blog.php:424
+msgid "Select or type a manual title first."
+msgstr ""
+
+#: includes\admin\views\blog.php:425
+msgid "Generating preview..."
+msgstr ""
+
+#: includes\admin\views\blog.php:426
+msgid "Waiting for image phase..."
+msgstr ""
+
+#: includes\admin\views\blog.php:427
+msgid "Error generating preview."
+msgstr ""

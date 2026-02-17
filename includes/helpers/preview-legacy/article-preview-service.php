@@ -22,12 +22,12 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $title = trim((string)($payload['title'] ?? ''));
             if ($title === '') {
                 if (function_exists('cbia_log')) {
-                    cbia_log('Preview: titulo vacio.', 'WARN');
+                    cbia_log('Preview: empty title.', 'WARN');
                 }
                 return new WP_Error('missing_title', 'Debes indicar un titulo para previsualizar.');
             }
             if (function_exists('cbia_log')) {
-                cbia_log("Preview: generando '{$title}'.", 'INFO');
+                cbia_log("Preview: generating '{$title}'.", 'INFO');
             }
             $this->emit($emit, 'cbia_status', array('message' => 'Preparando prompt...'));
 
@@ -68,19 +68,19 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
             $prompt = $this->build_prompt($title, $settings);
             if (function_exists('cbia_log')) {
-                cbia_log("Preview: prompt listo para '{$title}'.", 'INFO');
+                cbia_log("Preview: prompt ready for '{$title}'.", 'INFO');
             }
             $this->emit($emit, 'cbia_status', array('message' => 'Generando contenido...'));
             // Nota: el proveedor no streamea token a token. Emitimos progreso por bloques HTML tras recibir el texto completo.
             list($ok, $text_html, $usage, $model_used, $err) = cbia_openai_responses_call($prompt, $title, 2);
             if (!$ok) {
                 if (function_exists('cbia_log')) {
-                    cbia_log("Preview: fallo generacion '{$title}': " . (string)($err ?: 'error desconocido'), 'ERROR');
+                    cbia_log("Preview: generation failed '{$title}': " . (string)($err ?: 'unknown error'), 'ERROR');
                 }
                 return new WP_Error('preview_generation_failed', $err ?: 'No se pudo generar la previsualizacion.');
             }
             if (function_exists('cbia_log')) {
-                cbia_log("Preview: texto OK '{$title}' modelo=" . (string)$model_used, 'INFO');
+                cbia_log("Preview: text OK '{$title}' modelo=" . (string)$model_used, 'INFO');
             }
 
             $text_html = cbia_strip_document_wrappers((string)$text_html);
@@ -98,7 +98,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 'message' => 'Generando imagen destacada...',
             ));
             if (function_exists('cbia_log')) {
-                cbia_log("Preview: renderizando imagenes '{$title}'.", 'INFO');
+                cbia_log("Preview: rendering images '{$title}'.", 'INFO');
             }
             $rendered = $this->render_markers($text_html, $title, $images_limit, $preview_mode, $emit);
             $final_html = cbia_cleanup_post_html($rendered['html']);
@@ -111,7 +111,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     'message' => 'Imagen destacada lista.',
                 ));
                 if (function_exists('cbia_log')) {
-                    cbia_log("Preview: imagen destacada OK '{$title}'.", 'INFO');
+                    cbia_log("Preview: featured image OK '{$title}'.", 'INFO');
                 }
             } else {
                 $this->emit($emit, 'featured_image_status', array(
@@ -121,16 +121,16 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         : 'Preview rapido: imagen destacada en modo placeholder.',
                 ));
                 if (function_exists('cbia_log')) {
-                    cbia_log("Preview: imagen destacada no disponible '{$title}'.", $preview_mode === 'full' ? 'ERROR' : 'INFO');
+                    cbia_log("Preview: featured image unavailable '{$title}'.", $preview_mode === 'full' ? 'ERROR' : 'INFO');
                 }
             }
             if ($preview_mode === 'full') {
                 $this->remember_preview_media($user_id, (array)($rendered['temp_attachment_ids'] ?? array()));
             }
             $this->emit($emit, 'cbia_content', array('html' => $final_html));
-            $this->emit($emit, 'cbia_status', array('message' => 'Calculando metadatos...'));
+            $this->emit($emit, 'cbia_status', array('message' => 'Calculating metadata...'));
             if (function_exists('cbia_log')) {
-                cbia_log("Preview: calculando SEO '{$title}'.", 'INFO');
+                cbia_log("Preview: calculating SEO '{$title}'.", 'INFO');
             }
 
             $excerpt = wp_trim_words(wp_strip_all_tags($final_html), 35, '...');
@@ -231,7 +231,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
             list($ok_post, $post_id, $post_err) = cbia_create_post_in_wp_engine($title, $html, $featured_attach_id, $post_date_mysql);
             if (!$ok_post || !$post_id) {
-                return new WP_Error('create_post_failed', $post_err ?: 'No se pudo crear el post desde preview.');
+                return new WP_Error('create_post_failed', $post_err ?: 'Could not create el post desde preview.');
             }
             if ($post_status === 'draft') {
                 wp_update_post(array(
@@ -414,7 +414,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         ));
                         continue;
                     }
-                    $warnings[] = 'No se pudo generar imagen interna ' . $i . ': ' . (string)($img_err ?: 'error desconocido');
+                    $warnings[] = 'No se pudo generar imagen interna ' . $i . ': ' . (string)($img_err ?: 'unknown error');
                     $images[] = array(
                         'idx' => $i,
                         'section' => $section,
@@ -429,7 +429,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'desc' => $desc,
                         'status' => 'error',
                         'ok' => 0,
-                        'error' => (string)($img_err ?: 'error desconocido'),
+                        'error' => (string)($img_err ?: 'unknown error'),
                     ));
                 }
 

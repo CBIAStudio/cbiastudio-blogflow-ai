@@ -119,7 +119,7 @@ if (!class_exists('CBIA_Costs_Service')) {
                 if ($cost['real_adjust_multiplier'] < 0.5) $cost['real_adjust_multiplier'] = 0.5;
                 if ($cost['real_adjust_multiplier'] > 1.5) $cost['real_adjust_multiplier'] = 1.5;
 
-                // nÂº llamadas texto/imagen
+                // nÃ‚Âº llamadas texto/imagen
                 $cost['text_calls_per_post'] = isset($u['text_calls_per_post']) ? (int)$u['text_calls_per_post'] : (int)$cost['text_calls_per_post'];
                 if ($cost['text_calls_per_post'] < 1) $cost['text_calls_per_post'] = 1;
                 if ($cost['text_calls_per_post'] > 20) $cost['text_calls_per_post'] = 20;
@@ -159,7 +159,7 @@ if (!class_exists('CBIA_Costs_Service')) {
 
                 update_option(cbia_costes_settings_key(), $cost);
                 $notice = 'saved';
-                cbia_costes_log("ConfiguraciÃ³n guardada.");
+                cbia_costes_log("Configuration saved.");
             }
 
             if (!empty($u['cbia_form']) && $u['cbia_form'] === 'costes_actions' && check_admin_referer('cbia_costes_actions_nonce')) {
@@ -167,7 +167,7 @@ if (!class_exists('CBIA_Costs_Service')) {
 
                 if ($action === 'clear_log') {
                     cbia_costes_log_clear();
-                    cbia_costes_log("Log limpiado manualmente.");
+                    cbia_costes_log("Log cleared manually.");
                     $notice = 'log';
                 }
 
@@ -180,10 +180,10 @@ if (!class_exists('CBIA_Costs_Service')) {
 
                     $sum = cbia_costes_calc_last_posts($n, $only_cbia, $use_est_if_missing, $cost, $cbia);
                     if ($sum) {
-                        cbia_costes_log("CÃ¡lculo Ãºltimos {$n}: posts={$sum['posts']} real={$sum['real_posts']} est={$sum['est_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalâ‚¬=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
+                        cbia_costes_log("Calculation last {$n}: posts={$sum['posts']} real={$sum['real_posts']} est={$sum['est_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalEUR=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
                         $calibration_info = $sum;
                     } else {
-                        cbia_costes_log("CÃ¡lculo Ãºltimos {$n}: sin resultados.");
+                        cbia_costes_log("Calculation last {$n}: no results.");
                     }
                     $notice = 'calc';
                 }
@@ -194,10 +194,10 @@ if (!class_exists('CBIA_Costs_Service')) {
                     $only_cbia = !empty($u['calc_only_cbia']) ? true : false;
                     $sum = cbia_costes_calc_last_posts($n, $only_cbia, false, $cost, $cbia);
                     if ($sum) {
-                        cbia_costes_log("CÃ¡lculo SOLO REAL Ãºltimos {$n}: posts={$sum['posts']} real={$sum['real_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalâ‚¬=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
+                        cbia_costes_log("Calculation REAL only last {$n}: posts={$sum['posts']} real={$sum['real_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalEUR=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
                         $calibration_info = $sum;
                     } else {
-                        cbia_costes_log("CÃ¡lculo SOLO REAL Ãºltimos {$n}: sin resultados.");
+                        cbia_costes_log("Calculation REAL only last {$n}: no results.");
                     }
                     $notice = 'calc';
                 }
@@ -207,4 +207,3 @@ if (!class_exists('CBIA_Costs_Service')) {
         }
     }
 }
-

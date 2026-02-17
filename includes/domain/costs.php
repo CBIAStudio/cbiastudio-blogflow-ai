@@ -1,21 +1,21 @@
 <?php
 /**
- * CBIA - Costes (estimaciÃ³n + cÃ¡lculo post-hoc)
- * v12 (FIX: imÃ¡genes con precio fijo + botÃ³n "solo coste real" + tokens reales en log)
+ * CBIA - Costes (estimaciÃƒÂ³n + cÃƒÂ¡lculo post-hoc)
+ * v12 (FIX: imÃƒÂ¡genes con precio fijo + botÃƒÂ³n "solo coste real" + tokens reales en log)
  *
  * Archivo: includes/domain/costs.php
  *
  * OBJETIVO:
- * - EstimaciÃ³n sencilla por post: TEXTO + IMÃGENES + SEO (si hay llamadas de relleno Yoast/SEO)
- * - CÃ¡lculo REAL post-hoc: suma el coste POR CADA LLAMADA guardada en _cbia_usage_rows,
+ * - EstimaciÃƒÂ³n sencilla por post: TEXTO + IMÃƒÂGENES + SEO (si hay llamadas de relleno Yoast/SEO)
+ * - CÃƒÂ¡lculo REAL post-hoc: suma el coste POR CADA LLAMADA guardada en _cbia_usage_rows,
  *   respetando el modelo real usado en cada llamada (texto vs imagen vs seo) y su tabla de precios.
  *
  * IMPORTANTE:
- * - Para que el cÃ¡lculo REAL funcione, el engine/yoast debe llamar a:
+ * - Para que el cÃƒÂ¡lculo REAL funcione, el engine/yoast debe llamar a:
  *   cbia_costes_record_usage($post_id, [...])
  *   en CADA llamada a OpenAI (texto / imagen / seo).
  *
- * - Este archivo NO â€œadivinaâ€ tokens reales de imÃ¡genes si no se registran. Solo estima si faltan.
+ * - Este archivo NO Ã¢â‚¬Å“adivinaÃ¢â‚¬Â tokens reales de imÃƒÂ¡genes si no se registran. Solo estima si faltan.
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
@@ -99,7 +99,7 @@ if (!function_exists('cbia_costes_log_clear')) {
 /* =========================================================
    ===================== TABLA DE PRECIOS ===================
    Valores en USD por 1.000.000 tokens (1M)
-   SOLO modelos usados en el plugin (segÃºn tu Config actual):
+   SOLO modelos usados en el plugin (segÃƒÂºn tu Config actual):
    - Texto/SEO: gpt-4.1*, gpt-5*, gpt-5.1, gpt-5.2
    - Imagen: gpt-image-1, gpt-image-1-mini
    ========================================================= */
@@ -119,7 +119,7 @@ if (!function_exists('cbia_costes_price_table_usd_per_million')) {
             'gpt-5.1'       => array('in'=>1.25,  'cin'=>0.125, 'out'=>10.00),
             'gpt-5.2'       => array('in'=>1.75,  'cin'=>0.175, 'out'=>14.00),
 
-            // IMAGEN (solo para estimaciÃ³n basada en tokens; por defecto usaremos tarifa fija)
+            // IMAGEN (solo para estimaciÃƒÂ³n basada en tokens; por defecto usaremos tarifa fija)
             'gpt-image-1'       => array('in'=>10.00, 'cin'=>2.50, 'out'=>40.00),
             'gpt-image-1-mini'  => array('in'=>2.50,  'cin'=>0.25, 'out'=>8.00),
         );
@@ -127,7 +127,7 @@ if (!function_exists('cbia_costes_price_table_usd_per_million')) {
 }
 
 /* =========================================================
-   ======= PRECIOS FIJOS POR IMAGEN (USD por generaciÃ³n) ===
+   ======= PRECIOS FIJOS POR IMAGEN (USD por generaciÃƒÂ³n) ===
    ========================================================= */
 if (!function_exists('cbia_costes_image_flat_price_usd')) {
     function cbia_costes_image_flat_price_usd($model, $cost_settings) {
@@ -142,7 +142,7 @@ if (!function_exists('cbia_costes_image_flat_price_usd')) {
 }
 
 /* =========================================================
-   ============== ESTIMACIÃ“N: palabras -> tokens ============
+   ============== ESTIMACIÃƒâ€œN: palabras -> tokens ============
    ========================================================= */
 if (!function_exists('cbia_costes_words_for_variant')) {
     function cbia_costes_words_for_variant($variant) {
@@ -212,7 +212,7 @@ if (!function_exists('cbia_costes_estimate_image_prompt_input_tokens_per_call'))
 }
 
 /* =========================================================
-   ===================== CÃLCULO DE COSTE ===================
+   ===================== CÃƒÂLCULO DE COSTE ===================
    ========================================================= */
 if (!function_exists('cbia_costes_calc_cost_eur')) {
     /**
@@ -327,7 +327,7 @@ if (!function_exists('cbia_costes_get_usage_rows_for_post')) {
 }
 
 /* =========================================================
-   ===== AJUSTE AUTOMÃTICO POR MODELO (opcional) ============
+   ===== AJUSTE AUTOMÃƒÂTICO POR MODELO (opcional) ============
    ========================================================= */
 if (!function_exists('cbia_costes_pick_primary_text_model')) {
     function cbia_costes_pick_primary_text_model($rows, $cbia_settings = array()) {
@@ -392,7 +392,7 @@ if (!function_exists('cbia_costes_calc_real_for_post')) {
         $resp_fixed_usd = (float)($cost_settings['responses_fixed_usd_per_call'] ?? 0.0);
         $real_mult = (float)($cost_settings['real_adjust_multiplier'] ?? 1.0);
 
-        // Ajuste automÃ¡tico por modelo (solo si el multiplicador global estÃ¡ en 1.0)
+        // Ajuste automÃƒÂ¡tico por modelo (solo si el multiplicador global estÃƒÂ¡ en 1.0)
         $primary_text_model = cbia_costes_pick_primary_text_model($rows, $cbia_settings);
         $model_mult = cbia_costes_get_model_multiplier($primary_text_model, $cost_settings);
 
@@ -430,7 +430,7 @@ if (!function_exists('cbia_costes_calc_real_for_post')) {
             $sum_in_tokens += (int)$in;
             $sum_out_tokens += (int)$out;
 
-            // IMÃGENES: si estÃ¡ activa la tarifa plana, sumar por generaciÃ³n OK
+            // IMÃƒÂGENES: si estÃƒÂ¡ activa la tarifa plana, sumar por generaciÃƒÂ³n OK
             if ($type === 'image' && $ok && $use_image_flat) {
                 $usd = (float)cbia_costes_image_flat_price_usd($model, $cost_settings);
                 $sum_eur += $usd * $usd_to_eur;
@@ -471,7 +471,7 @@ if (!function_exists('cbia_costes_calc_real_for_post')) {
             $by_model[$model]['calls']++;
         }
 
-        // AÃ±adir sobrecoste fijo por llamada de texto/SEO (en USD)
+        // AÃƒÂ±adir sobrecoste fijo por llamada de texto/SEO (en USD)
         if ($resp_fixed_usd > 0 && $resp_calls_count > 0) {
             $sum_eur += ($resp_fixed_usd * $resp_calls_count) * $usd_to_eur;
         }
@@ -498,7 +498,7 @@ if (!function_exists('cbia_costes_calc_real_for_post')) {
 }
 
 /* =========================================================
-   ===================== ESTIMACIÃ“N POR POST =================
+   ===================== ESTIMACIÃƒâ€œN POR POST =================
    Incluye: TEXTO + IMAGEN + SEO
    ========================================================= */
 if (!function_exists('cbia_costes_estimate_for_post')) {
@@ -590,7 +590,7 @@ if (!function_exists('cbia_costes_estimate_for_post')) {
 }
 
 /* =========================================================
-   ============ CÃLCULO ÃšLTIMOS POSTS (real/estimado) =======
+   ============ CÃƒÂLCULO ÃƒÅ¡LTIMOS POSTS (real/estimado) =======
    ========================================================= */
 if (!function_exists('cbia_costes_calc_last_posts')) {
     function cbia_costes_calc_last_posts($n, $only_cbia, $use_est_if_missing, $cost_settings, $cbia_settings) {
@@ -639,7 +639,7 @@ if (!function_exists('cbia_costes_calc_last_posts')) {
                 continue;
             }
 
-            // 2) ESTIMACIÃ“N
+            // 2) ESTIMACIÃƒâ€œN
             if ($use_est_if_missing) {
                 $est = cbia_costes_estimate_for_post($post_id, $cost_settings, $cbia_settings);
                 if ($est !== null) {
@@ -731,7 +731,7 @@ if (!function_exists('cbia_costes_handle_post')) {
             if ($cost['real_adjust_multiplier'] < 0.5) $cost['real_adjust_multiplier'] = 0.5;
             if ($cost['real_adjust_multiplier'] > 1.5) $cost['real_adjust_multiplier'] = 1.5;
 
-            // nÂº llamadas texto/imagen
+            // nÃ‚Âº llamadas texto/imagen
             $cost['text_calls_per_post'] = isset($u['text_calls_per_post']) ? (int)$u['text_calls_per_post'] : (int)$cost['text_calls_per_post'];
             if ($cost['text_calls_per_post'] < 1) $cost['text_calls_per_post'] = 1;
             if ($cost['text_calls_per_post'] > 20) $cost['text_calls_per_post'] = 20;
@@ -771,7 +771,7 @@ if (!function_exists('cbia_costes_handle_post')) {
 
             update_option(cbia_costes_settings_key(), $cost);
             $notice = 'saved';
-            cbia_costes_log("ConfiguraciÃ³n guardada.");
+            cbia_costes_log("Configuration saved.");
         }
 
         if (!empty($u['cbia_form']) && $u['cbia_form'] === 'costes_actions' && check_admin_referer('cbia_costes_actions_nonce')) {
@@ -779,7 +779,7 @@ if (!function_exists('cbia_costes_handle_post')) {
 
             if ($action === 'clear_log') {
                 cbia_costes_log_clear();
-                cbia_costes_log("Log limpiado manualmente.");
+                cbia_costes_log("Log cleared manually.");
                 $notice = 'log';
             }
 
@@ -792,9 +792,9 @@ if (!function_exists('cbia_costes_handle_post')) {
 
                 $sum = cbia_costes_calc_last_posts($n, $only_cbia, $use_est_if_missing, $cost, $cbia);
                 if ($sum) {
-                    cbia_costes_log("CÃ¡lculo Ãºltimos {$n}: posts={$sum['posts']} real={$sum['real_posts']} est={$sum['est_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalâ‚¬=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
+                    cbia_costes_log("Calculation last {$n}: posts={$sum['posts']} real={$sum['real_posts']} est={$sum['est_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalEUR=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
                 } else {
-                    cbia_costes_log("CÃ¡lculo Ãºltimos {$n}: sin resultados.");
+                    cbia_costes_log("Calculation last {$n}: no results.");
                 }
                 $notice = 'calc';
             }
@@ -805,9 +805,9 @@ if (!function_exists('cbia_costes_handle_post')) {
                 $only_cbia = !empty($u['calc_only_cbia']) ? true : false;
                 $sum = cbia_costes_calc_last_posts($n, $only_cbia, false, $cost, $cbia);
                 if ($sum) {
-                    cbia_costes_log("CÃ¡lculo SOLO REAL Ãºltimos {$n}: posts={$sum['posts']} real={$sum['real_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalâ‚¬=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
+                    cbia_costes_log("Calculation REAL only last {$n}: posts={$sum['posts']} real={$sum['real_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalEUR=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
                 } else {
-                    cbia_costes_log("CÃ¡lculo SOLO REAL Ãºltimos {$n}: sin resultados.");
+                    cbia_costes_log("Calculation REAL only last {$n}: no results.");
                 }
                 $notice = 'calc';
             }
@@ -835,10 +835,10 @@ if (!function_exists('cbia_costes_handle_post')) {
                             'suggested' => $suggested,
                         );
 
-                        cbia_costes_log("CalibraciÃ³n REAL aplicada: billing={$actual_eur}â‚¬, real_calc={$estimated}â‚¬, mult=" . number_format($suggested, 4, ',', '.'));
+                        cbia_costes_log("REAL calibration applied: billing={$actual_eur}EUR, real_calc={$estimated}EUR, mult=" . number_format($suggested, 4, ',', '.'));
                         $notice = 'saved';
                     } else {
-                        cbia_costes_log("CalibraciÃ³n REAL: sin datos suficientes para calcular.");
+                        cbia_costes_log("REAL calibration: insufficient data to calculate.");
                         $notice = 'calc';
                     }
                 }
@@ -867,5 +867,4 @@ if (!function_exists('cbia_render_tab_costes')) {
 }
 
 /* ------------------------- FIN includes/domain/costs.php ------------------------- */
-
 

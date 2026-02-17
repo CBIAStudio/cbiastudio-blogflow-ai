@@ -11,7 +11,7 @@ if (!class_exists('CBIA_Blog_Service')) {
             $raw = trim((string)$value);
             if ($raw === '') return 'Spanish';
             $legacy = array(
-                'Espanol' => 'Spanish', 'espanol' => 'Spanish', 'español' => 'Spanish',
+                'Espanol' => 'Spanish', 'espanol' => 'Spanish', 'espaÃ±ol' => 'Spanish',
                 'Portugues' => 'Portuguese', 'Ingles' => 'English', 'Frances' => 'French',
                 'italiano' => 'Italian', 'Aleman' => 'German', 'Holandes' => 'Dutch',
                 'sueco' => 'Swedish', 'Danes' => 'Danish', 'noruego' => 'Norwegian',
@@ -205,7 +205,7 @@ if (!class_exists('CBIA_Blog_Service')) {
 
                 } elseif ($action === 'stop_generation') {
                     if (function_exists('cbia_set_stop_flag')) cbia_set_stop_flag(true);
-                    if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Stop activado por usuario.");
+                    if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Stop enabled by user.");
                     $saved_notice = 'stop';
 
                 } elseif ($action === 'fill_pending_imgs') {
@@ -217,12 +217,12 @@ if (!class_exists('CBIA_Blog_Service')) {
                 } elseif ($action === 'clear_checkpoint') {
                     if (function_exists('cbia_checkpoint_clear')) cbia_checkpoint_clear();
                     delete_option('_cbia_last_scheduled_at');
-                    if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Checkpoint limpiado + _cbia_last_scheduled_at reseteado.");
+                    if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Checkpoint cleared + _cbia_last_scheduled_at reset.");
                     $saved_notice = 'checkpoint';
 
                 } elseif ($action === 'clear_log') {
                     if (function_exists('cbia_clear_log')) cbia_clear_log();
-                    if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Log limpiado manualmente.");
+                    if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Log cleared manually.");
                     $saved_notice = 'log';
                 }
             }

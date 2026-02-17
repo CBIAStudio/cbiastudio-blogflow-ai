@@ -59,7 +59,7 @@ if (!function_exists('cbia_google_generate_image_gemini')) {
 		$cfg = cbia_get_provider_config('google');
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : (string)($cfg['api_key'] ?? '');
 		if ($api_key === '') {
-			cbia_log(('Falta la API key de Google para generar imagenes (Gemini).'), 'ERROR');
+			cbia_log(('Missing Google API key to generate images (Gemini).'), 'ERROR');
 			return [false, 0, (string)$model, 'No hay API key (Google)'];
 		}
 
@@ -125,14 +125,14 @@ if (!function_exists('cbia_google_generate_image_gemini')) {
 		}
 
 		if ($bytes === '') {
-			cbia_log(('Google Gemini Image: respuesta sin bytes.'), 'ERROR');
+			cbia_log(('Google Gemini Image: response without bytes.'), 'ERROR');
 			return [false, 0, (string)$model, 'Respuesta sin imagen'];
 		}
 
 		$alt = $alt_text !== '' ? (string)$alt_text : cbia_build_img_alt($title, $section, $prompt);
 		list($attach_id, $uerr) = cbia_upload_image_to_media($bytes, $title, $section, $alt);
 		if (!$attach_id) {
-			cbia_log(('Google Gemini Image: fallo subiendo a Media Library: ') . $uerr, 'ERROR');
+			cbia_log(('Google Gemini Image: failed uploading to Media Library: ') . $uerr, 'ERROR');
 			return [false, 0, (string)$model, $uerr];
 		}
 
@@ -149,7 +149,7 @@ if (!function_exists('cbia_google_generate_image_imagen')) {
 		$cfg = cbia_get_provider_config('google');
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : (string)($cfg['api_key'] ?? '');
 		if ($api_key === '') {
-			cbia_log(('Falta la API key de Google para generar imagenes (Imagen).'), 'ERROR');
+			cbia_log(('Missing Google API key to generate images (Imagen).'), 'ERROR');
 			return [false, 0, (string)$model, 'No hay API key (Google)'];
 		}
 
@@ -204,14 +204,14 @@ if (!function_exists('cbia_google_generate_image_imagen')) {
 		}
 
 		if ($bytes === '') {
-			cbia_log(('Google Imagen: respuesta sin bytes.'), 'ERROR');
+			cbia_log(('Google Imagen: response without bytes.'), 'ERROR');
 			return [false, 0, (string)$model, 'Respuesta sin imagen'];
 		}
 
 		$alt = $alt_text !== '' ? (string)$alt_text : cbia_build_img_alt($title, $section, $prompt);
 		list($attach_id, $uerr) = cbia_upload_image_to_media($bytes, $title, $section, $alt);
 		if (!$attach_id) {
-			cbia_log(('Google Imagen: fallo subiendo a Media Library: ') . $uerr, 'ERROR');
+			cbia_log(('Google Imagen: failed uploading to Media Library: ') . $uerr, 'ERROR');
 			return [false, 0, (string)$model, $uerr];
 		}
 
@@ -229,7 +229,7 @@ if (!function_exists('cbia_google_generate_image_with_prompt')) {
 			: 'imagen-3.0-generate-002';
 		$model = cbia_google_imagen_model_id((string)$model);
 
-		// Fallback automático para cuota/disponibilidad.
+		// Fallback automÃ¡tico para cuota/disponibilidad.
 		$chain = array_values(array_unique(array_filter(array(
 			(string)$model,
 			'gemini-2.5-flash-image',
@@ -244,7 +244,7 @@ if (!function_exists('cbia_google_generate_image_with_prompt')) {
 			}
 			if ($ok) return [$ok, $attach_id, $model_used, $err];
 			$last_err = (string)$err;
-			cbia_log(sprintf("Google imagen fallback: fallo en modelo=%s, probando siguiente si existe.", (string)$model_try), 'WARN');
+			cbia_log(sprintf("Google image fallback: model failed=%s, probando siguiente si existe.", (string)$model_try), 'WARN');
 		}
 
 		return [false, 0, '', $last_err !== '' ? $last_err : 'No se pudo generar imagen (Google)'];
@@ -302,7 +302,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 
 			$google_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : '';
 			if ($google_key !== '') {
-				cbia_log("DeepSeek fallo ({$last_err}). Fallback de texto -> Google Gemini.", 'WARN');
+				cbia_log("DeepSeek failed ({$last_err}). Text fallback -> Google Gemini.", 'WARN');
 				$GLOBALS['cbia_force_text_provider'] = 'google';
 				$google_result = cbia_openai_responses_call($prompt, $title_for_log, $tries);
 				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
@@ -313,7 +313,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 
 			$openai_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : '';
 			if ($openai_key !== '') {
-				cbia_log("Fallback Google no disponible/fallo. Fallback de texto -> OpenAI.", 'WARN');
+				cbia_log("Google fallback unavailable/failed. Text fallback -> OpenAI.", 'WARN');
 				$GLOBALS['cbia_force_text_provider'] = 'openai';
 				$openai_result = cbia_openai_responses_call($prompt, $title_for_log, $tries);
 				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
@@ -327,7 +327,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 		// CAMBIO: key OpenAI desde settings por proveedor
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();
 		if (!$api_key) {
-			cbia_log(('Falta la API key de OpenAI para generar texto.'), 'ERROR');
+			cbia_log(('Missing OpenAI API key to generate text.'), 'ERROR');
 			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No hay API key', []];
 		}
 
@@ -386,7 +386,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 				$usage = cbia_usage_from_responses_payload($data);
 
 				if ($text === '') {
-					cbia_log(("Respuesta sin texto (modelo={$model})"), 'ERROR');
+					cbia_log(("Response without text (model={$model})"), 'ERROR');
 					continue;
 				}
 
@@ -422,7 +422,7 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 		$chain = cbia_model_fallback_chain($model_preferred);
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();
 		if (!$api_key) {
-			cbia_log(('Falta la API key de OpenAI para generar texto.'), 'ERROR');
+			cbia_log(('Missing OpenAI API key to generate text.'), 'ERROR');
 			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No hay API key', []];
 		}
 
@@ -529,7 +529,7 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 	}
 }
 /* =========================================================
-   ================== OPENAI: IMÃƒÂGENES ======================
+   ================== OPENAI: IMÃƒÆ’Ã‚ÂGENES ======================
    ========================================================= */
 
 if (!function_exists('cbia_generate_image_openai')) {
@@ -544,7 +544,7 @@ if (!function_exists('cbia_generate_image_openai')) {
 				return cbia_google_generate_image($desc, $section, $title, $idx);
 			}
 			if ($img_provider !== 'openai') {
-				cbia_log(sprintf(('Proveedor de imagen "%s" no soportado.'), (string)$img_provider), 'ERROR');
+				cbia_log(sprintf(('Proveedor de imagen "%s" not supported.'), (string)$img_provider), 'ERROR');
 				return [false, 0, '', 'Proveedor de imagen no soportado'];
 			}
 			// CAMBIO: key OpenAI desde settings por proveedor
@@ -628,7 +628,7 @@ if (!function_exists('cbia_generate_image_openai')) {
 
 				list($attach_id, $uerr) = cbia_upload_image_to_media($bytes, $title, $section, $alt);
 				if (!$attach_id) {
-					cbia_log(("Imagen IA: fallo subiendo a Media Library: {$uerr}"), 'ERROR');
+					cbia_log(("AI image: failed uploading to Media Library: {$uerr}"), 'ERROR');
 					continue;
 				}
 
@@ -636,8 +636,8 @@ if (!function_exists('cbia_generate_image_openai')) {
 				return [true, (int)$attach_id, $model, ''];
 			}
 			if ($image_failover === 'stop') {
-				cbia_log(sprintf(('Imagen IA: modelo=%s fallÃƒÂ³; proceso detenido por configuraciÃƒÂ³n.'), (string)$model), 'ERROR');
-				return [false, 0, (string)$model, 'Detenido por configuraciÃƒÂ³n de fallo'];
+				cbia_log(sprintf(('Imagen IA: modelo=%s fallÃƒÆ’Ã‚Â³; proceso detenido por configuraciÃƒÆ’Ã‚Â³n.'), (string)$model), 'ERROR');
+				return [false, 0, (string)$model, 'Detenido por configuraciÃƒÆ’Ã‚Â³n de fallo'];
 			}
 		}
 
@@ -657,7 +657,7 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 			return cbia_google_generate_image_with_prompt($prompt, $section, $title, $alt_text, $idx);
 		}
 		if ($img_provider !== 'openai') {
-			cbia_log(sprintf(('Proveedor de imagen "%s" no soportado.'), (string)$img_provider), 'ERROR');
+			cbia_log(sprintf(('Proveedor de imagen "%s" not supported.'), (string)$img_provider), 'ERROR');
 			return [false, 0, '', 'Proveedor de imagen no soportado'];
 		}
 		// CAMBIO: key OpenAI desde settings por proveedor
@@ -739,7 +739,7 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 
 				list($attach_id, $uerr) = cbia_upload_image_to_media($bytes, $title, $section, $alt);
 				if (!$attach_id) {
-					cbia_log(("Imagen IA: fallo subiendo a Media Library: {$uerr}"), 'ERROR');
+					cbia_log(("AI image: failed uploading to Media Library: {$uerr}"), 'ERROR');
 					continue;
 				}
 
@@ -747,8 +747,8 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 				return [true, (int)$attach_id, $model, ''];
 			}
 			if ($image_failover === 'stop') {
-				cbia_log(sprintf(('Imagen IA: modelo=%s fallÃƒÂ³; proceso detenido por configuraciÃƒÂ³n.'), (string)$model), 'ERROR');
-				return [false, 0, (string)$model, 'Detenido por configuraciÃƒÂ³n de fallo'];
+				cbia_log(sprintf(('Imagen IA: modelo=%s fallÃƒÆ’Ã‚Â³; proceso detenido por configuraciÃƒÆ’Ã‚Â³n.'), (string)$model), 'ERROR');
+				return [false, 0, (string)$model, 'Detenido por configuraciÃƒÆ’Ã‚Â³n de fallo'];
 			}
 		}
 
@@ -783,7 +783,7 @@ if (!function_exists('cbia_google_generate_content_call')) {
 		// CAMBIO: key y modelo segun settings de texto
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : (string)($cfg['api_key'] ?? '');
 		if ($api_key === '') {
-			cbia_log(('Falta la API key de Google para generar texto.'), 'ERROR');
+			cbia_log(('Missing Google API key to generate text.'), 'ERROR');
 			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No hay API key (Google)', []];
 		}
 
@@ -854,7 +854,7 @@ if (!function_exists('cbia_google_generate_content_call')) {
 			}
 
 			if (!is_array($data)) {
-				cbia_log(("Google Gemini: respuesta invalida"), 'ERROR');
+				cbia_log(("Google Gemini: invalid response"), 'ERROR');
 				continue;
 			}
 
@@ -897,7 +897,7 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 		// CAMBIO: key y modelo segun settings de texto
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('deepseek') : (string)($cfg['api_key'] ?? '');
 		if ($api_key === '') {
-			cbia_log(('Falta la API key de DeepSeek para generar texto.'), 'ERROR');
+			cbia_log(('Missing DeepSeek API key to generate text.'), 'ERROR');
 			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No hay API key (DeepSeek)', []];
 		}
 
@@ -980,4 +980,3 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, 'No se pudo obtener respuesta', []];
 	}
 }
-

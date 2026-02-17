@@ -313,12 +313,12 @@ if (!function_exists('cbia_build_image_prompt_for_post')) {
         if ($short_desc === '') {
             $short_desc = $title;
             if ($short_desc === '') $short_desc = 'general scene';
-            cbia_log('Imagen: SHORT_DESC vacio, usando fallback por titulo', 'INFO');
+            cbia_log('Image: SHORT_DESC empty, using title fallback', 'INFO');
         }
 
         $override = cbia_get_img_prompt_override($post_id, $type, $idx);
         if ($override !== '') {
-            cbia_log(sprintf('Imagen: usando override de prompt (%s%s)', (string)$type, $idx ? '_' . (string)$idx : ''), 'INFO');
+            cbia_log(sprintf('Image: using prompt override (%s%s)', (string)$type, $idx ? '_' . (string)$idx : ''), 'INFO');
             return $override;
         }
 

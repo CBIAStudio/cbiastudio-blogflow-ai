@@ -316,7 +316,7 @@ if (!function_exists('cbia_ajax_preview_article')) {
         }
 
         if (function_exists('cbia_log')) {
-            cbia_log('[PREVIEW] Solicitud de preview recibida (classic).', 'INFO');
+            cbia_log('[PREVIEW] Preview request received (classic).', 'INFO');
         }
 
         $payload = array(
@@ -344,13 +344,13 @@ if (!function_exists('cbia_ajax_preview_article')) {
         $result = $service->generate($payload);
         if (is_wp_error($result)) {
             if (function_exists('cbia_log')) {
-                cbia_log('[PREVIEW] Error generando preview: ' . $result->get_error_message(), 'ERROR');
+                cbia_log('[PREVIEW] Error generating preview: ' . $result->get_error_message(), 'ERROR');
             }
             wp_send_json_error(array('message' => $result->get_error_message()), 400);
         }
 
         if (function_exists('cbia_log')) {
-            cbia_log('[PREVIEW] Preview generado correctamente (classic).', 'INFO');
+            cbia_log('[PREVIEW] Preview generated successfully (classic).', 'INFO');
         }
         wp_send_json_success($result);
     }
@@ -429,7 +429,7 @@ if (!function_exists('cbia_ajax_preview_article_stream')) {
         }
 
         if (function_exists('cbia_log')) {
-            cbia_log('[PREVIEW] Stream: inicio de preview.', 'INFO');
+            cbia_log('[PREVIEW] Stream: preview start.', 'INFO');
         }
         cbia_sse_emit('cbia_status', array('message' => 'Iniciando preview...'));
         cbia_sse_emit('cbia_ping', array('ts' => time()));
@@ -450,7 +450,7 @@ if (!function_exists('cbia_ajax_preview_article_stream')) {
             exit;
         }
         if (function_exists('cbia_log')) {
-            cbia_log('[PREVIEW] Stream: preview finalizado OK.', 'INFO');
+            cbia_log('[PREVIEW] Stream: preview finished OK.', 'INFO');
         }
         cbia_sse_emit('preview_done', array(
             'ok' => 1,

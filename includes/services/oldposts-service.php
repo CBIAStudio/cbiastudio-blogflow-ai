@@ -94,7 +94,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
                         $settings['force_tags']      = !empty($u['force_tags']) ? 1 : 0;
 
                         update_option(cbia_oldposts_settings_key(), $settings);
-                        echo '<div class="notice notice-success is-dismissible"><p>ConfiguraciÃ³n guardada.</p></div>';
+                        echo '<div class="notice notice-success is-dismissible"><p>ConfiguraciÃƒÂ³n guardada.</p></div>';
                     }
                 }
 
@@ -113,7 +113,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
                             'run_quick_content_only',
                         );
 
-                        // Base comÃºn para ejecuciones (normal o rÃ¡pida)
+                        // Base comÃƒÂºn para ejecuciones (normal o rÃƒÂ¡pida)
                         $run_base = $settings;
                         if (in_array($action, $run_actions, true)) {
                             cbia_set_stop_flag(false);
@@ -148,7 +148,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
                             // Base: presets
                             $run = $run_base;
 
-                            // Overrides bÃ¡sicos siempre visibles
+                            // Overrides bÃƒÂ¡sicos siempre visibles
                             $run['batch_size']      = isset($u['run_batch_size']) ? max(1, min(200, (int)$u['run_batch_size'])) : (int)$settings['batch_size'];
                             $run['scope']           = !empty($u['run_scope_plugin']) ? 'plugin' : 'all';
 
@@ -159,7 +159,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
 
                             $run['images_limit']    = isset($u['run_images_limit']) ? max(1, min(10, (int)$u['run_images_limit'])) : (int)$settings['images_limit'];
 
-                            // Si el usuario activa personalizaciÃ³n, entonces sÃ­ aplicamos overrides de acciones.
+                            // Si el usuario activa personalizaciÃƒÂ³n, entonces sÃƒÂ­ aplicamos overrides de acciones.
                             $custom = !empty($u['run_custom_actions']) ? true : false;
 
                             if ($custom) {
@@ -202,7 +202,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
                             echo '<div class="notice notice-success is-dismissible"><p>Lote ejecutado. Revisa el log.</p></div>';
                         }
 
-                        // Acciones rÃ¡pidas (sobrescriben acciones, respetan filtros)
+                        // Acciones rÃƒÂ¡pidas (sobrescriben acciones, respetan filtros)
                         if (in_array($action, $run_actions, true) && $action !== 'run_oldposts') {
                             $run = $run_base;
 
@@ -239,7 +239,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
                             }
 
                             cbia_oldposts_run_batch_v3($run);
-                            echo '<div class="notice notice-success is-dismissible"><p>AcciÃ³n rÃ¡pida ejecutada. Revisa el log.</p></div>';
+                            echo '<div class="notice notice-success is-dismissible"><p>AcciÃƒÂ³n rÃƒÂ¡pida ejecutada. Revisa el log.</p></div>';
                         }
 
                         if ($action === 'stop') {
@@ -249,7 +249,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
 
                         if ($action === 'clear_log') {
                             cbia_oldposts_clear_log();
-                            cbia_oldposts_log_message("Log limpiado manualmente.");
+                            cbia_oldposts_log_message("Log cleared manually.");
                             echo '<div class="notice notice-success is-dismissible"><p>Log limpiado.</p></div>';
                         }
                     }

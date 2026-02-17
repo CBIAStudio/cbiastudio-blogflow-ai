@@ -1,25 +1,25 @@
 <?php
 /**
- * CBIA - Old Posts (ActualizaciÃ³n avanzada de posts antiguos)
+ * CBIA - Old Posts (ActualizaciÃƒÆ’Ã‚Â³n avanzada de posts antiguos)
  * v3 (UI limpia + acciones sin duplicidad + Yoast por campos)
  *
  * UX:
  * - Se guardan "Acciones por defecto" (presets).
- * - En "EjecuciÃ³n", por defecto usa esos presets SIN duplicar checkboxes.
- * - BotÃ³n/checkbox "Personalizar esta ejecuciÃ³n" muestra overrides puntuales.
+ * - En "EjecuciÃƒÆ’Ã‚Â³n", por defecto usa esos presets SIN duplicar checkboxes.
+ * - BotÃƒÆ’Ã‚Â³n/checkbox "Personalizar esta ejecuciÃƒÆ’Ã‚Â³n" muestra overrides puntuales.
  *
  * Acciones soportadas:
  * - Nota "Actualizado el..." (sin tocar post_date)
  * - Yoast: metadesc / focuskw / title (por separado) + forzar
  * - Yoast reindex best-effort (si existe cbia_yoast_try_reindex_post)
- * - TÃ­tulo con IA (SEO/CTR) + forzar
+ * - TÃƒÆ’Ã‚Â­tulo con IA (SEO/CTR) + forzar
  * - Contenido con IA + forzar
- * - ImÃ¡genes: reset pendientes + forzar + opcional quitar destacada
- * - CategorÃ­as (mapping plugin) + forzar
+ * - ImÃƒÆ’Ã‚Â¡genes: reset pendientes + forzar + opcional quitar destacada
+ * - CategorÃƒÆ’Ã‚Â­as (mapping plugin) + forzar
  * - Etiquetas (lista permitida plugin) + forzar
  *
  * Filtrado:
- * - MÃ¡s antiguos que X dÃ­as (post_date_gmt)
+ * - MÃƒÆ’Ã‚Â¡s antiguos que X dÃƒÆ’Ã‚Â­as (post_date_gmt)
  * - Rango de fechas (post_date_gmt)
  *
  * Archivo: includes/engine/oldposts.php
@@ -35,7 +35,7 @@ if (!function_exists('cbia_oldposts_log_key')) {
 }
 if (!function_exists('cbia_oldposts_fix_mojibake')) {
     /**
-     * Corrige mojibake comÃºn en mensajes de log sin tocar la lÃ³gica.
+     * Corrige mojibake comÃƒÆ’Ã‚Âºn en mensajes de log sin tocar la lÃƒÆ’Ã‚Â³gica.
      */
     function cbia_oldposts_fix_mojibake($text) {
         $text = (string)$text;
@@ -46,7 +46,7 @@ if (!function_exists('cbia_oldposts_fix_mojibake')) {
             $fixed = cbia_fix_mojibake($fixed);
         }
 
-        // Intento adicional: UTF-8 leÃ­do como Latin-1/Windows-1252.
+        // Intento adicional: UTF-8 leÃƒÆ’Ã‚Â­do como Latin-1/Windows-1252.
         if (function_exists('mb_convert_encoding') && preg_match('/[\x{00C3}\x{00C2}\x{00E2}]/u', $fixed)) {
             $try = @mb_convert_encoding($fixed, 'UTF-8', 'Windows-1252');
             if (is_string($try) && $try !== '') {
@@ -60,7 +60,7 @@ if (!function_exists('cbia_oldposts_fix_mojibake')) {
 if (!function_exists('cbia_oldposts_log_message')) {
     function cbia_oldposts_log_message($message) {
         $message = cbia_oldposts_fix_mojibake($message);
-        // Evita duplicados consecutivos (muy Ãºtil con mojibake/lineas repetidas).
+        // Evita duplicados consecutivos (muy ÃƒÆ’Ã‚Âºtil con mojibake/lineas repetidas).
         static $last_message = null;
         if ($last_message !== null && (string)$last_message === (string)$message) {
             return;
@@ -243,7 +243,7 @@ if (!function_exists('cbia_oldposts_generate_meta_description_fallback')) {
         $base = cbia_oldposts_first_paragraph_text((string)$content);
         $t = trim(wp_strip_all_tags((string)$title));
         if ($t !== '') {
-            $pattern = '/^' . preg_quote($t, '/') . '\s*[:\-â€“â€”]?\s*/iu';
+            $pattern = '/^' . preg_quote($t, '/') . '\s*[:\-ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â]?\s*/iu';
             $base = preg_replace($pattern, '', $base);
         }
         $desc = trim(mb_substr((string)$base, 0, 155));
@@ -260,7 +260,7 @@ if (!function_exists('cbia_oldposts_generate_focus_keyphrase_fallback')) {
 if (!function_exists('cbia_oldposts_generate_yoast_title_fallback')) {
     function cbia_oldposts_generate_yoast_title_fallback($title) {
         $t = trim(wp_strip_all_tags((string)$title));
-        // Yoast title suele aceptar variables, pero aquÃ­ dejamos un tÃ­tulo simple.
+        // Yoast title suele aceptar variables, pero aquÃƒÆ’Ã‚Â­ dejamos un tÃƒÆ’Ã‚Â­tulo simple.
         return $t;
     }
 }
@@ -310,7 +310,7 @@ if (!function_exists('cbia_oldposts_recalc_yoast_fields')) {
         if ($do_title) {
             $yt = get_post_meta($post_id, '_yoast_wpseo_title', true);
             if ($force || $yt === '' || $yt === null) {
-                // Si tienes una funciÃ³n propia, Ãºsala; si no, fallback
+                // Si tienes una funciÃƒÆ’Ã‚Â³n propia, ÃƒÆ’Ã‚Âºsala; si no, fallback
                 if (function_exists('cbia_generate_yoast_title')) {
                     $new_yt = cbia_generate_yoast_title($title, $content);
                 } else {
@@ -394,14 +394,14 @@ if (!function_exists('cbia_oldposts_add_updated_note')) {
 
         update_post_meta($post_id, '_cbia_updated_note_date', $date_ymd);
         update_post_meta($post_id, '_cbia_oldposts_note_added', current_time('mysql'));
-        cbia_oldposts_log_message("Nota aÃ±adida en post {$post_id} ({$date_ymd}).");
+        cbia_oldposts_log_message("Nota aÃƒÆ’Ã‚Â±adida en post {$post_id} ({$date_ymd}).");
 
         return true;
     }
 }
 
 /* =========================================================
-   ================= CATEGORÃAS / ETIQUETAS =================
+   ================= CATEGORÃƒÆ’Ã‚ÂAS / ETIQUETAS =================
    ========================================================= */
 if (!function_exists('cbia_oldposts_parse_keywords_to_categories')) {
     function cbia_oldposts_parse_keywords_to_categories($raw) {
@@ -444,7 +444,7 @@ if (!function_exists('cbia_oldposts_ensure_category_id')) {
 if (!function_exists('cbia_oldposts_assign_categories_only')) {
     function cbia_oldposts_assign_categories_only($post_id, $title, $content_html, $force=false) {
         if (!function_exists('cbia_get_settings')) {
-            cbia_oldposts_log_message("[WARN] No existe cbia_get_settings(). No se pueden aplicar categorÃ­as dinÃ¡micas.");
+            cbia_oldposts_log_message("[WARN] No existe cbia_get_settings(). No se pueden aplicar categorÃƒÆ’Ã‚Â­as dinÃƒÆ’Ã‚Â¡micas.");
             return false;
         }
 
@@ -498,7 +498,7 @@ if (!function_exists('cbia_oldposts_assign_categories_only')) {
 if (!function_exists('cbia_oldposts_assign_tags_only')) {
     function cbia_oldposts_assign_tags_only($post_id, $title, $content_html, $force=false) {
         if (!function_exists('cbia_get_settings')) {
-            cbia_oldposts_log_message("[WARN] No existe cbia_get_settings(). No se pueden aplicar etiquetas dinÃ¡micas.");
+            cbia_oldposts_log_message("[WARN] No existe cbia_get_settings(). No se pueden aplicar etiquetas dinÃƒÆ’Ã‚Â¡micas.");
             return false;
         }
 
@@ -544,7 +544,7 @@ if (!function_exists('cbia_oldposts_assign_tags_only')) {
 }
 
 /* =========================================================
-   ======================= IA: TÃ­TULO =======================
+   ======================= IA: TÃƒÆ’Ã‚Â­TULO =======================
    ========================================================= */
 if (!function_exists('cbia_oldposts_ai_optimize_title')) {
     function cbia_oldposts_ai_optimize_title($post_id, $force=false) {
@@ -557,23 +557,23 @@ if (!function_exists('cbia_oldposts_ai_optimize_title')) {
         }
 
         if (!function_exists('cbia_openai_responses_call') || !function_exists('cbia_pick_model')) {
-            cbia_oldposts_log_message("[ERROR] Falta motor IA (cbia_openai_responses_call / cbia_pick_model). No puedo optimizar tÃ­tulo.");
+            cbia_oldposts_log_message("[ERROR] Falta motor IA (cbia_openai_responses_call / cbia_pick_model). No puedo optimizar tÃƒÆ’Ã‚Â­tulo.");
             return false;
         }
 
         $old_title = get_the_title($post_id);
         $content   = (string)$post->post_content;
 
-        $prompt = "Optimiza este tÃ­tulo para SEO y CTR manteniendo la misma intenciÃ³n de bÃºsqueda y el tema.\n".
-                  "Devuelve SOLO el tÃ­tulo final, sin comillas, sin listas, sin explicaciones.\n\n".
-                  "TÃ­tulo actual: {$old_title}\n\n".
+        $prompt = "Optimiza este tÃƒÆ’Ã‚Â­tulo para SEO y CTR manteniendo la misma intenciÃƒÆ’Ã‚Â³n de bÃƒÆ’Ã‚Âºsqueda y el tema.\n".
+                  "Devuelve SOLO el tÃƒÆ’Ã‚Â­tulo final, sin comillas, sin listas, sin explicaciones.\n\n".
+                  "TÃƒÆ’Ã‚Â­tulo actual: {$old_title}\n\n".
                   "Contexto (extracto): ".mb_substr(wp_strip_all_tags($content), 0, 600);
 
         $model = cbia_pick_model();
         list($ok, $text, $usage, $model_used, $err) = cbia_openai_responses_call($prompt, 'OLDPOSTS_TITLE', 1);
 
         if (!$ok) {
-            cbia_oldposts_log_message("[ERROR] IA tÃ­tulo fallo post {$post_id}: {$err}");
+            cbia_oldposts_log_message("[ERROR] AI title failed post {$post_id}: {$err}");
             return false;
         }
 
@@ -581,13 +581,13 @@ if (!function_exists('cbia_oldposts_ai_optimize_title')) {
         $new_title = preg_replace('/\s+/', ' ', $new_title);
 
         if ($new_title === '' || mb_strlen($new_title) < 12) {
-            cbia_oldposts_log_message("[WARN] IA devolviÃ³ tÃ­tulo invÃ¡lido en post {$post_id}. Se omite.");
+            cbia_oldposts_log_message("[WARN] IA devolviÃƒÆ’Ã‚Â³ tÃƒÆ’Ã‚Â­tulo invÃƒÆ’Ã‚Â¡lido en post {$post_id}. Se omite.");
             return false;
         }
 
         if (mb_strtolower($new_title) === mb_strtolower($old_title)) {
             update_post_meta($post_id, '_cbia_oldposts_title_done', current_time('mysql'));
-            cbia_oldposts_log_message("[INFO] IA tÃ­tulo: no cambiÃ³ (igual) en post {$post_id}.");
+            cbia_oldposts_log_message("[INFO] IA tÃƒÆ’Ã‚Â­tulo: no cambiÃƒÆ’Ã‚Â³ (igual) en post {$post_id}.");
             return 'skipped';
         }
 
@@ -604,7 +604,7 @@ if (!function_exists('cbia_oldposts_ai_optimize_title')) {
             cbia_store_usage_meta($post_id, $usage, $model_used);
         }
 
-        cbia_oldposts_log_message("[OK] TÃ­tulo actualizado post {$post_id}: '{$old_title}' => '{$new_title}'");
+        cbia_oldposts_log_message("[OK] Title updated post {$post_id}: '{$old_title}' => '{$new_title}'");
         return true;
     }
 }
@@ -640,12 +640,12 @@ if (!function_exists('cbia_oldposts_ai_regenerate_content')) {
         $prompt = cbia_build_prompt_for_title($title);
 
         $model = cbia_pick_model();
-        cbia_oldposts_log_message("[INFO] IA contenido: llamando OpenAI post {$post_id} model={$model} images_limit={$images_limit}â€¦");
+        cbia_oldposts_log_message("[INFO] IA contenido: llamando OpenAI post {$post_id} model={$model} images_limit={$images_limit}ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦");
 
         list($ok, $text, $usage, $model_used, $err) = cbia_openai_responses_call($prompt, 'OLDPOSTS_CONTENT', 1);
 
         if (!$ok) {
-            cbia_oldposts_log_message("[ERROR] IA contenido fallo post {$post_id}: {$err}");
+            cbia_oldposts_log_message("[ERROR] AI content failed post {$post_id}: {$err}");
             return false;
         }
 
@@ -679,9 +679,9 @@ if (!function_exists('cbia_oldposts_ai_regenerate_content')) {
         update_post_meta($post_id, '_cbia_oldposts_content_done', current_time('mysql'));
         if (!empty($skip_images)) {
             update_post_meta($post_id, '_cbia_oldposts_content_noimg_done', current_time('mysql'));
-            cbia_oldposts_log_message("[OK] Contenido regenerado (sin imÃ¡genes) en post {$post_id}.");
+            cbia_oldposts_log_message("[OK] Content regenerated (without images) in post {$post_id}.");
         } else {
-            cbia_oldposts_log_message("[OK] Contenido regenerado en post {$post_id}. Pendientes imÃ¡genes=".count($pending_list));
+            cbia_oldposts_log_message("[OK] Content regenerated in post {$post_id}. Pending images=" . count($pending_list));
         }
 
         return true;
@@ -689,7 +689,7 @@ if (!function_exists('cbia_oldposts_ai_regenerate_content')) {
 }
 
 /* =========================================================
-   =================== IMÃGENES: RESET ======================
+   =================== IMÃƒÆ’Ã‚ÂGENES: RESET ======================
    ========================================================= */
 if (!function_exists('cbia_oldposts_images_reset_pending')) {
     function cbia_oldposts_images_reset_pending($post_id, $images_limit=3, $force=false, $clear_featured=false) {
@@ -711,10 +711,10 @@ if (!function_exists('cbia_oldposts_images_reset_pending')) {
             if ($clear_featured) {
                 delete_post_thumbnail($post_id);
                 update_post_meta($post_id, '_cbia_oldposts_images_done', current_time('mysql'));
-                cbia_oldposts_log_message("[OK] ImÃ¡genes reset: no habÃ­a marcadores, pero se quitÃ³ destacada post {$post_id}.");
+                cbia_oldposts_log_message("[OK] Images reset: no markers found, but featured image removed post {$post_id}.");
                 return true;
             }
-            cbia_oldposts_log_message("[INFO] ImÃ¡genes reset: no hay marcadores en post {$post_id}. SKIP.");
+            cbia_oldposts_log_message("[INFO] ImÃƒÆ’Ã‚Â¡genes reset: no hay marcadores en post {$post_id}. SKIP.");
             return 'skipped';
         }
 
@@ -738,14 +738,14 @@ if (!function_exists('cbia_oldposts_images_reset_pending')) {
         }
 
         update_post_meta($post_id, '_cbia_oldposts_images_done', current_time('mysql'));
-        cbia_oldposts_log_message("[OK] ImÃ¡genes reset post {$post_id}. Pendientes=".count($pending_list).($clear_featured ? " | destacada quitada" : ""));
+        cbia_oldposts_log_message("[OK] Images reset post {$post_id}. Pending=" . count($pending_list) . ($clear_featured ? " | featured removed" : ""));
 
         return true;
     }
 }
 
 /* =========================================================
-   ============ IMÃGENES: SOLO CONTENIDO (reset) ============
+   ============ IMÃƒÆ’Ã‚ÂGENES: SOLO CONTENIDO (reset) ============
    ========================================================= */
 if (!function_exists('cbia_oldposts_images_reset_content_only')) {
     function cbia_oldposts_images_reset_content_only($post_id, $images_limit=3, $force=false) {
@@ -761,7 +761,7 @@ if (!function_exists('cbia_oldposts_images_reset_content_only')) {
         $r = cbia_oldposts_images_reset_pending($post_id, $images_limit, true, false);
         if ($r === true) {
             update_post_meta($post_id, '_cbia_oldposts_images_content_done', current_time('mysql'));
-            cbia_oldposts_log_message("[OK] ImÃ¡genes (solo contenido) reseteadas en post {$post_id}.");
+            cbia_oldposts_log_message("[OK] ImÃƒÆ’Ã‚Â¡genes (solo contenido) reseteadas en post {$post_id}.");
             return true;
         }
         return $r;
@@ -782,14 +782,14 @@ if (!function_exists('cbia_oldposts_regenerate_featured_image')) {
         }
 
         if (!function_exists('cbia_generate_image_openai')) {
-            cbia_oldposts_log_message("[ERROR] No existe cbia_generate_image_openai(). No puedo regenerar destacada.");
+            cbia_oldposts_log_message("[ERROR] cbia_generate_image_openai() does not exist. Cannot regenerate featured image.");
             return false;
         }
 
         $title = get_the_title($post_id);
         $content = (string)$post->post_content;
 
-        // Intentamos usar el primer marcador si existe; si no, usamos el tÃ­tulo.
+        // Intentamos usar el primer marcador si existe; si no, usamos el tÃƒÆ’Ã‚Â­tulo.
         $desc = $title;
         $markers = cbia_oldposts_extract_image_markers_any($content);
         if (!empty($markers) && !empty($markers[0]['desc'])) {
@@ -826,7 +826,7 @@ if (!function_exists('cbia_oldposts_regenerate_featured_image')) {
             return true;
         }
 
-        cbia_oldposts_log_message("[ERROR] Destacada fallo post {$post_id}: " . (string)($err ?: ''));
+        cbia_oldposts_log_message("[ERROR] Featured image failed post {$post_id}: " . (string)($err ?: ''));
         if (function_exists('cbia_costes_record_usage')) {
             cbia_costes_record_usage($post_id, array(
                 'type' => 'image',
@@ -962,14 +962,14 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
 
             'do_content'         => 0,
             'force_content'      => 0,
-            // Variante: contenido sin tocar imÃ¡genes
+            // Variante: contenido sin tocar imÃƒÆ’Ã‚Â¡genes
             'do_content_no_images'    => 0,
             'force_content_no_images' => 0,
 
             'do_images_reset'    => 0,
             'force_images_reset' => 0,
             'clear_featured'     => 0,
-            // Variante: solo imÃ¡genes del contenido (sin destacada)
+            // Variante: solo imÃƒÆ’Ã‚Â¡genes del contenido (sin destacada)
             'do_images_content_only'    => 0,
             'force_images_content_only' => 0,
 
@@ -1002,7 +1002,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
         $date_ymd = current_time('Y-m-d');
 
         $ids_txt = !empty($post_ids) ? implode(',', array_slice($post_ids, 0, 20)) : '';
-        if ($ids_txt !== '' && count($post_ids) > 20) $ids_txt .= ',â€¦';
+        if ($ids_txt !== '' && count($post_ids) > 20) $ids_txt .= ',ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦';
         cbia_oldposts_log_message(
             "INICIO v3 | lote={$batch_size} | scope={$scope} | filtro={$filter_mode} | older_than_days={$older_than_days} | from={$date_from} | to={$date_to} | images_limit={$images_limit}" .
             " | ids=" . (!empty($post_ids) ? $ids_txt : '(auto)') .
@@ -1038,7 +1038,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
         if (!empty($dry_run)) {
             $ids = is_array($q->posts) ? $q->posts : array();
             $count = count($ids);
-            cbia_oldposts_log_message("DRY RUN: se procesarÃ­an {$count} posts (sin cambios).");
+            cbia_oldposts_log_message("DRY RUN: se procesarÃƒÆ’Ã‚Â­an {$count} posts (sin cambios).");
 
             $max_list = min(20, $count);
             for ($i = 0; $i < $max_list; $i++) {
@@ -1057,7 +1057,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                     $est = cbia_costes_estimate_for_post((int)$pid, $cost_settings, $cbia_settings);
                     if ($est !== null) $sum_est += (float)$est;
                 }
-                cbia_oldposts_log_message("DRY RUN: coste IA estimado (aprox)â‰ˆ " . number_format((float)$sum_est, 4, ',', '.') . " â‚¬");
+                cbia_oldposts_log_message("DRY RUN: coste IA estimado (aprox)ÃƒÂ¢Ã¢â‚¬Â°Ã‹â€  " . number_format((float)$sum_est, 4, ',', '.') . " ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬");
             }
 
             return array($count, 0, $count, 0);
@@ -1087,7 +1087,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
             $did_fail = false;
             $did_skip_all = true;
 
-            // 1) TÃ­TULO (IA)
+            // 1) TÃƒÆ’Ã‚Â­TULO (IA)
             if (!empty($opts['do_title'])) {
                 $r = cbia_oldposts_ai_optimize_title($pid, !empty($opts['force_title']));
                 if ($r === true) { $did_any = true; $did_skip_all=false; }
@@ -1110,7 +1110,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                 }
             }
 
-            // 2.1) CONTENIDO (IA) SIN IMÃ­GENES
+            // 2.1) CONTENIDO (IA) SIN IMÃƒÆ’Ã‚Â­GENES
             if (!empty($opts['do_content_no_images'])) {
                 $r = cbia_oldposts_ai_regenerate_content($pid, $images_limit, !empty($opts['force_content_no_images']), true);
                 if ($r === true) {
@@ -1138,7 +1138,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                 }
             }
 
-            // 4) IMÃ­GENES reset
+            // 4) IMÃƒÆ’Ã‚Â­GENES reset
             if (!empty($opts['do_images_reset'])) {
                 $r = cbia_oldposts_images_reset_pending($pid, $images_limit, !empty($opts['force_images_reset']), !empty($opts['clear_featured']));
                 if ($r === true) {
@@ -1152,7 +1152,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                 }
             }
 
-            // 4.1) IMÃGENES: solo contenido (sin tocar destacada)
+            // 4.1) IMÃƒÆ’Ã‚ÂGENES: solo contenido (sin tocar destacada)
             if (!empty($opts['do_images_content_only'])) {
                 $r = cbia_oldposts_images_reset_content_only($pid, $images_limit, !empty($opts['force_images_content_only']));
                 if ($r === true) {
@@ -1177,12 +1177,12 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                     $did_fail = true;
                 }
             }
-            // 5) CATEGORÃ­AS
+            // 5) CATEGORÃƒÆ’Ã‚Â­AS
             if (!empty($opts['do_categories'])) {
                 $r = cbia_oldposts_assign_categories_only($pid, $title, $content, !empty($opts['force_categories']));
-                if ($r === true) { $did_any = true; $did_skip_all=false; cbia_oldposts_log_message("[OK] CategorÃ­as aplicadas en post {$pid}."); }
+                if ($r === true) { $did_any = true; $did_skip_all=false; cbia_oldposts_log_message("[OK] CategorÃƒÆ’Ã‚Â­as aplicadas en post {$pid}."); }
                 elseif ($r === 'skipped') { /* */ }
-                else { cbia_oldposts_log_message("[WARN] CategorÃ­as no aplicadas en post {$pid}."); }
+                else { cbia_oldposts_log_message("[WARN] CategorÃƒÆ’Ã‚Â­as no aplicadas en post {$pid}."); }
             }
 
             // 6) ETIQUETAS
@@ -1220,10 +1220,10 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
 
             if ($did_fail) {
                 $fail++;
-                cbia_oldposts_log_message("RESULTADO post {$pid}: FALLO (alguna acciÃ³n fallÃ³).");
+                cbia_oldposts_log_message("RESULTADO post {$pid}: FALLO (alguna acciÃƒÆ’Ã‚Â³n fallÃƒÆ’Ã‚Â³).");
             } elseif ($did_skip_all && !$did_any) {
                 $sk++;
-                cbia_oldposts_log_message("RESULTADO post {$pid}: SKIP (nada que hacer / ya hecho).");
+                cbia_oldposts_log_message("RESULTADO post {$pid}: SKIP (nothing to do / already done).");
             } else {
                 $ok++;
                 cbia_oldposts_log_message("RESULTADO post {$pid}: OK (hubo cambios).");
@@ -1308,7 +1308,7 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                     $settings['force_tags']      = !empty($u['force_tags']) ? 1 : 0;
     
                     update_option(cbia_oldposts_settings_key(), $settings);
-                    echo '<div class="notice notice-success is-dismissible"><p>ConfiguraciÃ³n guardada.</p></div>';
+                    echo '<div class="notice notice-success is-dismissible"><p>ConfiguraciÃƒÆ’Ã‚Â³n guardada.</p></div>';
                 }
             }
     
@@ -1327,7 +1327,7 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                         'run_quick_content_only',
                     );
     
-                    // Base comÃºn para ejecuciones (normal o rÃ¡pida)
+                    // Base comÃƒÆ’Ã‚Âºn para ejecuciones (normal o rÃƒÆ’Ã‚Â¡pida)
                     $run_base = $settings;
                     if (in_array($action, $run_actions, true)) {
                         cbia_set_stop_flag(false);
@@ -1362,7 +1362,7 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                         // Base: presets
                         $run = $run_base;
     
-                        // Overrides bÃ¡sicos siempre visibles
+                        // Overrides bÃƒÆ’Ã‚Â¡sicos siempre visibles
                         $run['batch_size']      = isset($u['run_batch_size']) ? max(1, min(200, (int)$u['run_batch_size'])) : (int)$settings['batch_size'];
                         $run['scope']           = !empty($u['run_scope_plugin']) ? 'plugin' : 'all';
     
@@ -1373,7 +1373,7 @@ if (!function_exists('cbia_oldposts_handle_post')) {
     
                         $run['images_limit']    = isset($u['run_images_limit']) ? max(1, min(10, (int)$u['run_images_limit'])) : (int)$settings['images_limit'];
     
-                        // Si el usuario activa personalizaciÃ³n, entonces sÃ­ aplicamos overrides de acciones.
+                        // Si el usuario activa personalizaciÃƒÆ’Ã‚Â³n, entonces sÃƒÆ’Ã‚Â­ aplicamos overrides de acciones.
                         $custom = !empty($u['run_custom_actions']) ? true : false;
     
                         if ($custom) {
@@ -1416,7 +1416,7 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                         echo '<div class="notice notice-success is-dismissible"><p>Lote ejecutado. Revisa el log.</p></div>';
                     }
     
-                    // Acciones rÃ¡pidas (sobrescriben acciones, respetan filtros)
+                    // Acciones rÃƒÆ’Ã‚Â¡pidas (sobrescriben acciones, respetan filtros)
                     if (in_array($action, $run_actions, true) && $action !== 'run_oldposts') {
                         $run = $run_base;
     
@@ -1453,7 +1453,7 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                         }
     
                         cbia_oldposts_run_batch_v3($run);
-                        echo '<div class="notice notice-success is-dismissible"><p>AcciÃ³n rÃ¡pida ejecutada. Revisa el log.</p></div>';
+                        echo '<div class="notice notice-success is-dismissible"><p>AcciÃƒÆ’Ã‚Â³n rÃƒÆ’Ã‚Â¡pida ejecutada. Revisa el log.</p></div>';
                     }
     
                     if ($action === 'stop') {
@@ -1463,7 +1463,7 @@ if (!function_exists('cbia_oldposts_handle_post')) {
     
                     if ($action === 'clear_log') {
                         cbia_oldposts_clear_log();
-                        cbia_oldposts_log_message("Log limpiado manualmente.");
+                        cbia_oldposts_log_message("Log cleared manually.");
                         echo '<div class="notice notice-success is-dismissible"><p>Log limpiado.</p></div>';
                     }
                 }
