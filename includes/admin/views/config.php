@@ -57,7 +57,7 @@ if (trim((string)$s['prompt_img_featured']) === '') $s['prompt_img_featured'] = 
 echo '<div class="cbia-view-container">';
 $saved_flag = (string) filter_input(INPUT_GET, 'saved', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 if ($saved_flag !== '') {
-    echo '<div class="notice notice-success is-dismissible" style="background: rgba(34, 211, 238, 0.1); border-color: var(--abb-cyan); color: var(--abb-cyan);"><p>' . esc_html('Configuracion guardada con exito.') . '</p></div>';
+    echo '<div class="notice notice-success is-dismissible" style="background: rgba(34, 211, 238, 0.1); border-color: var(--abb-cyan); color: var(--abb-cyan);"><p>' . esc_html__('Configuracion guardada con exito.', 'cbiastudio-blogflow-ai') . '</p></div>';
 }
 // CAMBIO: avisos por API key faltante
 $warnings = get_transient('cbia_config_warnings');
@@ -71,8 +71,8 @@ wp_nonce_field('cbia_config_save_action', 'cbia_config_nonce');
 echo '<input type="hidden" name="cbia_config_save" value="1" />';
 
 echo '<div class="cbia-section-header">';
-echo '<div class="cbia-section-title">Proveedor y Modelo</div>';
-echo '<p class="description">Configura los motores de IA para texto e imágenes.</p>';
+echo '<div class="cbia-section-title">' . esc_html__('Proveedor y Modelo', 'cbiastudio-blogflow-ai') . '</div>';
+echo '<p class="description">' . esc_html__('Configura los motores de IA para texto e imagenes.', 'cbiastudio-blogflow-ai') . '</p>';
 echo '</div>';
 echo '<div class="abb-card">';
 
@@ -98,7 +98,7 @@ if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' 
 echo '<div class="abb-provider-grid">';
 // Proveedor texto
 echo '<div class="abb-field">';
-echo '<label>Proveedor (texto)</label>';
+echo '<label>' . esc_html__('Proveedor (texto)', 'cbiastudio-blogflow-ai') . '</label>';
 echo '<div class="abb-provider-select" data-scope="text">';
 echo '<button type="button" class="abb-provider-trigger" aria-expanded="false">';
 echo '<img class="abb-provider-logo" src="' . esc_url($text_provider_logo) . '" alt="' . esc_attr($text_provider_label) . '" />';
@@ -133,7 +133,7 @@ echo '</div>';
 
 // Proveedor imagen
 echo '<div class="abb-field">';
-echo '<label>Proveedor (imagen)</label>';
+echo '<label>' . esc_html__('Proveedor (imagen)', 'cbiastudio-blogflow-ai') . '</label>';
 echo '<div class="abb-provider-select" data-scope="image">';
 echo '<button type="button" class="abb-provider-trigger" aria-expanded="false">';
 echo '<img class="abb-provider-logo" src="' . esc_url($image_provider_logo) . '" alt="' . esc_attr($image_provider_label) . '" />';
@@ -176,7 +176,7 @@ foreach ($providers_list as $pkey => $pdef) {
     if ($saved === '' && $pkey === 'openai' && !empty($s['openai_model'])) $saved = (string)$s['openai_model'];
     if ($saved === '' && function_exists('cbia_providers_get_recommended_text_model')) $saved = cbia_providers_get_recommended_text_model($pkey);
     echo '<div class="abb-field abb-provider-model" data-scope="text" data-provider="' . esc_attr($pkey) . '"' . ($text_provider === $pkey ? '' : ' style="display:none;"') . '>';
-    echo '<label>Modelo (texto)</label>';
+    echo '<label>' . esc_html__('Modelo (texto)', 'cbiastudio-blogflow-ai') . '</label>';
     echo '<select name="text_model[' . esc_attr($pkey) . ']" class="abb-select">';
     foreach ($text_list as $mdl) {
         $label = $mdl;
@@ -196,10 +196,10 @@ foreach ($providers_list as $pkey => $pdef) {
     if ($saved_img === '' && !empty($provider_settings['providers'][$pkey]['image_model'])) $saved_img = (string)$provider_settings['providers'][$pkey]['image_model'];
     if ($saved_img === '' && function_exists('cbia_providers_get_recommended_image_model')) $saved_img = cbia_providers_get_recommended_image_model($pkey);
     echo '<div class="abb-field abb-provider-model" data-scope="image" data-provider="' . esc_attr($pkey) . '"' . ($image_provider === $pkey ? '' : ' style="display:none;"') . '>';
-    echo '<label>Modelo (imagen)</label>';
+    echo '<label>' . esc_html__('Modelo (imagen)', 'cbiastudio-blogflow-ai') . '</label>';
     echo '<select name="image_model_by_provider[' . esc_attr($pkey) . ']" class="abb-select">';
     if (empty($img_list)) {
-        echo '<option value="">' . esc_html('No disponible') . '</option>';
+        echo '<option value="">' . esc_html__('No disponible', 'cbiastudio-blogflow-ai') . '</option>';
     } else {
         foreach ($img_list as $mdl) {
             $label = $mdl;
@@ -215,7 +215,7 @@ echo '</div>'; // grid
 
 // API keys: texto
 echo '<div class="abb-api-row">';
-echo '<label>Clave API (texto)</label>';
+echo '<label>' . esc_html__('Clave API (texto)', 'cbiastudio-blogflow-ai') . '</label>';
 foreach ($providers_list as $pkey => $pdef) {
     $key_val = '';
     if ($pkey === 'openai') $key_val = (string)($s['openai_api_key'] ?? '');
@@ -227,7 +227,7 @@ foreach ($providers_list as $pkey => $pdef) {
     echo '<div class="abb-api-input">';
 		echo '<input class="abb-input" type="password" name="provider_api_key_text[' . esc_attr($pkey) . ']" value="' . esc_attr($key_val) . '" autocomplete="off" />';
     if ($link !== '') {
-        echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">Obtener API Key</a>';
+        echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Obtener API Key', 'cbiastudio-blogflow-ai') . '</a>';
     }
     echo '</div>';
     echo '</div>';
@@ -236,7 +236,7 @@ echo '</div>'; // api row texto
 
 // API keys: imagen
 echo '<div class="abb-api-row">';
-echo '<label>Clave API (imagen)</label>';
+echo '<label>' . esc_html__('Clave API (imagen)', 'cbiastudio-blogflow-ai') . '</label>';
 foreach ($providers_list as $pkey => $pdef) {
     $key_val = '';
     if ($pkey === 'openai') $key_val = (string)($s['openai_api_key'] ?? '');
@@ -248,33 +248,33 @@ foreach ($providers_list as $pkey => $pdef) {
     echo '<div class="abb-api-input">';
 		echo '<input class="abb-input" type="password" name="provider_api_key_image[' . esc_attr($pkey) . ']" value="' . esc_attr($key_val) . '" autocomplete="off" />';
     if ($link !== '') {
-        echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">Obtener API Key</a>';
+        echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Obtener API Key', 'cbiastudio-blogflow-ai') . '</a>';
     }
     echo '</div>';
     echo '</div>';
 }
 echo '</div>'; // api row imagen
 
-echo '<p class="description" style="margin-top:8px;">Puedes usar proveedores distintos para texto e imagen.</p>';
+echo '<p class="description" style="margin-top:8px;">' . esc_html__('Puedes usar proveedores distintos para texto e imagen.', 'cbiastudio-blogflow-ai') . '</p>';
 
 echo '</div>'; // provider card
 echo '</div>'; // section
 
 echo '<div class="cbia-section">';
-echo '<div class="cbia-section-title">Preferencias</div>';
+echo '<div class="cbia-section-title">' . esc_html__('Preferencias', 'cbiastudio-blogflow-ai') . '</div>';
 echo '<table class="form-table" role="presentation">';
 
-echo '<tr><th scope="row"><label>Temperatura</label></th><td>';
+echo '<tr><th scope="row"><label>' . esc_html__('Temperatura', 'cbiastudio-blogflow-ai') . '</label></th><td>';
 echo '<input type="text" name="openai_temperature" value="' . esc_attr((string)$s['openai_temperature']) . '" style="width:120px;" />';
-echo '<p class="description">Rango recomendado: 0.0 a 1.0 (max 2.0).</p>';
+echo '<p class="description">' . esc_html__('Rango recomendado: 0.0 a 1.0 (max 2.0).', 'cbiastudio-blogflow-ai') . '</p>';
 echo '</td></tr>';
 
-echo '<tr><th scope="row"><label>Max tokens de salida</label></th><td>';
+echo '<tr><th scope="row"><label>' . esc_html__('Max tokens de salida', 'cbiastudio-blogflow-ai') . '</label></th><td>';
 echo '<input type="number" min="1500" max="12000" name="responses_max_output_tokens" value="' . esc_attr((string)$s['responses_max_output_tokens']) . '" style="width:120px;" />';
-echo '<p class="description">Sube este valor si el texto sale cortado. Recomendado 6000-8000.</p>';
+echo '<p class="description">' . esc_html__('Sube este valor si el texto sale cortado. Recomendado 6000-8000.', 'cbiastudio-blogflow-ai') . '</p>';
 echo '</td></tr>';
 
-echo '<tr><th scope="row"><label>Longitud de post</label></th><td>';
+echo '<tr><th scope="row"><label>' . esc_html__('Longitud de post', 'cbiastudio-blogflow-ai') . '</label></th><td>';
 $variants = [
     'short'  => 'Corto (~1000 palabras)',
     'medium' => 'Medio (~1800-2000 palabras)',
@@ -288,26 +288,26 @@ foreach ($variants as $k => $label) {
 }
 echo '</td></tr>';
 
-echo '<tr><th scope="row"><label>Prompt imagen destacada</label></th><td>';
-echo '<p class="description">El prompt base ya esta optimizado. Se combina automaticamente con [IMAGEN: ...] y el titulo del post. No es necesario ajustarlo salvo que quieras cambiar el estilo.</p>';
-echo '<p class="description">Marcadores disponibles: {title}, {desc}, {format}.</p>';
+echo '<tr><th scope="row"><label>' . esc_html__('Prompt imagen destacada', 'cbiastudio-blogflow-ai') . '</label></th><td>';
+echo '<p class="description">' . esc_html__('El prompt base ya esta optimizado. Se combina automaticamente con [IMAGEN: ...] y el titulo del post. No es necesario ajustarlo salvo que quieras cambiar el estilo.', 'cbiastudio-blogflow-ai') . '</p>';
+echo '<p class="description">' . esc_html__('Marcadores disponibles: {title}, {desc}, {format}.', 'cbiastudio-blogflow-ai') . '</p>';
 
 echo '<div class="cbia-prompt-panel" style="margin-top:10px;">';
 echo '<div class="cbia-prompt-actions" style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">';
-echo '<button type="button" class="button cbia-prompt-btn" data-type="featured" data-idx="0">Editar prompt destacada</button>';
+echo '<button type="button" class="button cbia-prompt-btn" data-type="featured" data-idx="0">' . esc_html__('Editar prompt destacada', 'cbiastudio-blogflow-ai') . '</button>';
 echo '</div>';
-echo '<p class="description">El titulo del post se inserta automaticamente en {title}.</p>';
+echo '<p class="description">' . esc_html__('El titulo del post se inserta automaticamente en {title}.', 'cbiastudio-blogflow-ai') . '</p>';
 echo '</div>';
 
 echo '<div id="cbia-prompt-modal" class="cbia-modal" style="display:none;">';
 echo '  <div class="cbia-modal-inner">';
 echo '    <div class="cbia-modal-header">';
-echo '      <strong id="cbia-prompt-title">Editar prompt</strong>';
-echo '      <button type="button" class="button-link cbia-modal-close">Cerrar</button>';
+echo '      <strong id="cbia-prompt-title">' . esc_html__('Editar prompt', 'cbiastudio-blogflow-ai') . '</strong>';
+echo '      <button type="button" class="button-link cbia-modal-close">' . esc_html__('Cerrar', 'cbiastudio-blogflow-ai') . '</button>';
 echo '    </div>';
 echo '    <textarea id="cbia-prompt-text" rows="8" style="width:100%;"></textarea>';
 echo '    <div class="cbia-modal-actions">';
-echo '      <button type="button" class="button button-primary" id="cbia-prompt-save">Guardar prompt base</button>';
+echo '      <button type="button" class="button button-primary" id="cbia-prompt-save">' . esc_html__('Guardar prompt base', 'cbiastudio-blogflow-ai') . '</button>';
 echo '    </div>';
 echo '    <div class="cbia-modal-status" id="cbia-prompt-status"></div>';
 echo '  </div>';
@@ -317,20 +317,20 @@ echo '</td></tr>';
 
 // Normal: sin imágenes internas (solo destacada). UI eliminada.
 
-echo '<tr><th scope="row"><label>Si falla un modelo de imagen</label></th><td>';
+echo '<tr><th scope="row"><label>' . esc_html__('Si falla un modelo de imagen', 'cbiastudio-blogflow-ai') . '</label></th><td>';
 $image_failover = (string)($s['image_failover'] ?? 'continue');
 echo '<select name="image_failover" class="abb-select" style="width:260px;">';
-echo '<option value="continue" ' . selected($image_failover, 'continue', false) . '>Continuar con el siguiente modelo</option>';
-echo '<option value="stop" ' . selected($image_failover, 'stop', false) . '>Detener creacion de la entrada</option>';
+echo '<option value="continue" ' . selected($image_failover, 'continue', false) . '>' . esc_html__('Continuar con el siguiente modelo', 'cbiastudio-blogflow-ai') . '</option>';
+echo '<option value="stop" ' . selected($image_failover, 'stop', false) . '>' . esc_html__('Detener creacion de la entrada', 'cbiastudio-blogflow-ai') . '</option>';
 echo '</select>';
-echo '<p class="description">Por defecto se intenta el siguiente modelo si hay error.</p>';
+echo '<p class="description">' . esc_html__('Por defecto se intenta el siguiente modelo si hay error.', 'cbiastudio-blogflow-ai') . '</p>';
 echo '</td></tr>';
 
 echo '</table>';
 echo '</div>';
 
 echo '<div class="cbia-section">';
-echo '<div class="cbia-section-title">Integraciones</div>';
+echo '<div class="cbia-section-title">' . esc_html__('Integraciones', 'cbiastudio-blogflow-ai') . '</div>';
 // Aviso Yoast al final de la configuracion
 $yoast_active = defined('WPSEO_VERSION') || class_exists('WPSEO_Options');
 if (!$yoast_active) {
@@ -341,7 +341,7 @@ if (!$yoast_active) {
 echo '</div>';
 
 echo '<p>';
-echo '<button type="submit" name="cbia_config_save" class="button button-primary">Guardar Configuracion</button>';
+echo '<button type="submit" name="cbia_config_save" class="button button-primary">' . esc_html__('Guardar Configuracion', 'cbiastudio-blogflow-ai') . '</button>';
 echo '</p>';
 
 echo '</form>';
@@ -350,5 +350,3 @@ echo '</div>';
 }
 
 cbia_render_view_config();
-
-

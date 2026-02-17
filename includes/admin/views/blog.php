@@ -58,94 +58,94 @@ $log_payload = $service && method_exists($service, 'get_log') ? $service->get_lo
 $log_text = is_array($log_payload) ? (string)($log_payload['log'] ?? '') : '';
 
 if ($saved_notice === 'guardado') {
-    echo '<div class="notice notice-success is-dismissible"><p>Configuracion de Blog guardada.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Configuracion de Blog guardada.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'guardado_warn') {
     $warns = get_transient('cbia_blog_prompt_warnings');
     if (!is_array($warns)) $warns = array();
-    $msg = 'Configuracion de Blog guardada con avisos.';
+    $msg = __('Configuracion de Blog guardada con avisos.', 'cbiastudio-blogflow-ai');
     if (!empty($warns)) {
         $msg .= ' ' . implode(' ', array_map('sanitize_text_field', $warns));
     }
     echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($msg) . '</p></div>';
 } elseif ($saved_notice === 'test') {
-    echo '<div class="notice notice-success is-dismissible"><p>Prueba ejecutada. Revisa el log.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Prueba ejecutada. Revisa el log.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'stop') {
-    echo '<div class="notice notice-warning is-dismissible"><p>Stop activado.</p></div>';
+    echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Stop activado.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'pending') {
-    echo '<div class="notice notice-success is-dismissible"><p>Relleno de pendientes ejecutado. Revisa el log.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Relleno de pendientes ejecutado. Revisa el log.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'checkpoint') {
-    echo '<div class="notice notice-success is-dismissible"><p>Checkpoint limpiado y programacion reseteada.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Checkpoint limpiado y programacion reseteada.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'log') {
-    echo '<div class="notice notice-success is-dismissible"><p>Log limpiado.</p></div>';
+    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Log limpiado.', 'cbiastudio-blogflow-ai') . '</p></div>';
 }
 
 $ajax_nonce = wp_create_nonce('cbia_ajax_nonce');
 ?>
 
-<h2>Titulos</h2>
+<h2><?php echo esc_html__('Titulos', 'cbiastudio-blogflow-ai'); ?></h2>
 <form method="post">
 <input type="hidden" name="cbia_form" value="blog_save" />
 <?php wp_nonce_field('cbia_blog_save_nonce'); ?>
 
 <table class="form-table">
 <tr>
-<th>Modo</th>
+<th><?php echo esc_html__('Modo', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
-<label><input type="radio" name="title_input_mode" value="manual" <?php checked($mode,'manual'); ?> /> Manual</label>
+<label><input type="radio" name="title_input_mode" value="manual" <?php checked($mode,'manual'); ?> /> <?php echo esc_html__('Manual', 'cbiastudio-blogflow-ai'); ?></label>
 &nbsp;&nbsp;
-<label><input type="radio" name="title_input_mode" value="csv" <?php checked($mode,'csv'); ?> /> CSV</label>
+<label><input type="radio" name="title_input_mode" value="csv" <?php checked($mode,'csv'); ?> /> <?php echo esc_html__('CSV', 'cbiastudio-blogflow-ai'); ?></label>
 </td>
 </tr>
 <tr id="cbia_row_manual" <?php if($mode!=='manual') echo 'style="display:none;"'; ?>>
-  <th>Titulos manuales</th>
+<th><?php echo esc_html__('Titulos manuales', 'cbiastudio-blogflow-ai'); ?></th>
   <td>
   <div class="cbia-single-title-wrap" style="max-width:1100px;">
       <div id="cbia_single_title_card" style="display:none;align-items:center;gap:10px;border:1px solid #d7dce1;border-radius:10px;padding:10px 12px;background:#fff;">
           <span id="cbia_single_title_text" style="flex:1;word-break:break-word;"></span>
           <button type="button" id="cbia_single_title_clear" class="button" style="line-height:1;">×</button>
       </div>
-      <input type="text" id="cbia_single_title_input" class="regular-text" style="width:100%;max-width:1100px;" placeholder="Introduce un titulo..." />
+      <input type="text" id="cbia_single_title_input" class="regular-text" style="width:100%;max-width:1100px;" placeholder="<?php echo esc_attr__('Introduce un titulo...', 'cbiastudio-blogflow-ai'); ?>" />
       <textarea name="manual_titles" id="cbia_manual_titles" rows="6" style="display:none;"><?php echo esc_textarea($manual_titles); ?></textarea>
   </div>
-  <p class="description">Guarda y luego pulsa "Crear blog automático".</p>
+  <p class="description"><?php echo esc_html__('Guarda y luego pulsa "Crear blog automatico".', 'cbiastudio-blogflow-ai'); ?></p>
 
 <p style="margin-top:10px;">
-<button type="submit" class="button button-primary">Guardar</button>
+<button type="submit" class="button button-primary"><?php echo esc_html__('Guardar', 'cbiastudio-blogflow-ai'); ?></button>
 </p>
 </td>
 </tr>
 <tr id="cbia_row_csv" <?php if($mode!=='csv') echo 'style="display:none;"'; ?>>
-<th>URL CSV</th>
+<th><?php echo esc_html__('URL CSV', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <input type="text" name="csv_url" value="<?php echo esc_attr($csv_url); ?>" style="width:100%;max-width:1100px;" />
 </td>
 </tr>
 <tr>
-<th>Prompt del contenido del blog</th>
+<th><?php echo esc_html__('Prompt del contenido del blog', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <div class="cbia-blog-prompt-panel" style="padding:12px;border:1px solid #dcdcde;border-radius:8px;max-width:1100px;">
-<p class="description" style="margin-top:0;">Prompt editorial optimizado para Google Discover e insercion de marcadores de imagen. Puedes ajustar el estilo, pero hay reglas fijas para evitar cortes y mantener compatibilidad.</p>
-<p class="description" style="margin-top:0;">El idioma se aplica automaticamente segun el selector de idioma y no se edita desde el prompt.</p>
+<p class="description" style="margin-top:0;"><?php echo esc_html__('Prompt editorial optimizado para Google Discover e insercion de marcadores de imagen. Puedes ajustar el estilo, pero hay reglas fijas para evitar cortes y mantener compatibilidad.', 'cbiastudio-blogflow-ai'); ?></p>
+<p class="description" style="margin-top:0;"><?php echo esc_html__('El idioma se aplica automaticamente segun el selector de idioma y no se edita desde el prompt.', 'cbiastudio-blogflow-ai'); ?></p>
 
 <p style="margin:8px 0;">
-<label><input type="radio" name="blog_prompt_mode" value="recommended" <?php checked($blog_prompt_mode, 'recommended'); ?> /> Prompt recomendado (seguro)</label>
+<label><input type="radio" name="blog_prompt_mode" value="recommended" <?php checked($blog_prompt_mode, 'recommended'); ?> /> <?php echo esc_html__('Prompt recomendado (seguro)', 'cbiastudio-blogflow-ai'); ?></label>
 </p>
 <p style="margin:8px 0;">
 <label style="display:inline-flex;align-items:center;gap:6px;">
     <input type="checkbox" id="cbia_toggle_advanced_prompt" <?php checked($blog_prompt_mode, 'legacy'); ?> />
-    Mostrar opciones avanzadas (compatibilidad)
+    <?php echo esc_html__('Mostrar opciones avanzadas (compatibilidad)', 'cbiastudio-blogflow-ai'); ?>
 </label>
 </p>
 <div id="cbia_advanced_prompt_wrap" style="display:none;">
 <p style="margin:8px 0;">
-<label><input type="radio" name="blog_prompt_mode" value="legacy" <?php checked($blog_prompt_mode, 'legacy'); ?> /> Prompt avanzado (compatibilidad)</label>
+<label><input type="radio" name="blog_prompt_mode" value="legacy" <?php checked($blog_prompt_mode, 'legacy'); ?> /> <?php echo esc_html__('Prompt avanzado (compatibilidad)', 'cbiastudio-blogflow-ai'); ?></label>
 </p>
-<p class="description" style="margin-top:0;">Advertencia: este modo permite control total y puede romper formato, idioma o marcadores de imagen.</p>
+<p class="description" style="margin-top:0;"><?php echo esc_html__('Advertencia: este modo permite control total y puede romper formato, idioma o marcadores de imagen.', 'cbiastudio-blogflow-ai'); ?></p>
 </div>
 
 <label style="display:inline-flex;align-items:center;gap:6px;">
     <input type="checkbox" id="cbia_toggle_prompt_edit" />
-    Editar prompt
+    <?php echo esc_html__('Editar prompt', 'cbiastudio-blogflow-ai'); ?>
 </label>
 
 <div id="cbia_prompt_edit_wrap" style="display:none;margin-top:10px;">
@@ -153,12 +153,12 @@ $ajax_nonce = wp_create_nonce('cbia_ajax_nonce');
         <textarea name="blog_prompt_editable" id="cbia_blog_prompt_editable" rows="12" style="width:100%;"><?php echo esc_textarea($blog_prompt_editable); ?></textarea>
         <input type="hidden" id="cbia_blog_prompt_default" value="<?php echo esc_attr(function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : ''); ?>" />
         <p style="margin-top:8px;">
-            <button type="button" class="button" id="cbia_btn_restore_prompt">Restaurar prompt recomendado</button>
+<button type="button" class="button" id="cbia_btn_restore_prompt"><?php echo esc_html__('Restaurar prompt recomendado', 'cbiastudio-blogflow-ai'); ?></button>
         </p>
     </div>
     <div id="cbia_prompt_edit_legacy" style="display:none;">
-        <textarea name="legacy_full_prompt" rows="12" style="width:100%;" placeholder="Prompt legado completo"><?php echo esc_textarea($legacy_full_prompt !== '' ? $legacy_full_prompt : $legacy_placeholder); ?></textarea>
-        <p class="description">Modo avanzado: se usa el prompt completo historico para compatibilidad.</p>
+        <textarea name="legacy_full_prompt" rows="12" style="width:100%;" placeholder="<?php echo esc_attr__('Prompt legado completo', 'cbiastudio-blogflow-ai'); ?>"><?php echo esc_textarea($legacy_full_prompt !== '' ? $legacy_full_prompt : $legacy_placeholder); ?></textarea>
+        <p class="description"><?php echo esc_html__('Modo avanzado: se usa el prompt completo historico para compatibilidad.', 'cbiastudio-blogflow-ai'); ?></p>
     </div>
 </div>
 </div>
@@ -171,19 +171,19 @@ $ajax_nonce = wp_create_nonce('cbia_ajax_nonce');
 $preview_titles = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)$manual_titles))));
 ?>
 
-<h2>Publicacion y clasificacion</h2>
+<h2><?php echo esc_html__('Publicacion y clasificacion', 'cbiastudio-blogflow-ai'); ?></h2>
 <form method="post">
 <input type="hidden" name="cbia_form" value="blog_save" />
 <?php wp_nonce_field('cbia_blog_save_nonce'); ?>
 <table class="form-table">
 <tr>
-<th>Autor por defecto</th>
+<th><?php echo esc_html__('Autor por defecto', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <?php
 $author_args = [
     'name'             => 'default_author_id',
     'selected'         => (int)($settings['default_author_id'] ?? 0),
-    'show_option_none' => '- Automatico (usuario actual / admin) -',
+    'show_option_none' => __('- Automatico (usuario actual / admin) -', 'cbiastudio-blogflow-ai'),
     'option_none_value'=> 0,
     'capability'       => ['edit_posts'],
     'class'            => 'regular-text',
@@ -193,12 +193,13 @@ wp_dropdown_users($author_args);
 $dd = ob_get_clean();
 $dd = str_replace('class=\'', 'style="width:420px;" class=\'', $dd);
 $dd = str_replace('class="', 'style="width:420px;" class="', $dd);
-echo wp_kses_post($dd);
+// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated HTML from wp_dropdown_users().
+echo $dd;
 ?>
 </td>
 </tr>
 <tr>
-<th>Idioma del post</th>
+<th><?php echo esc_html__('Idioma del post', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <?php
 $language_options = [
@@ -236,114 +237,114 @@ foreach ($language_options as $val => $label) {
 }
 echo '</select>';
 ?>
-<p class="description">Se usa para {IDIOMA_POST} y para normalizar el titulo de "Preguntas frecuentes".</p>
+<p class="description"><?php echo esc_html__('Se usa para {IDIOMA_POST} y para normalizar el titulo de "Preguntas frecuentes".', 'cbiastudio-blogflow-ai'); ?></p>
 </td>
 </tr>
 <tr>
-<th>Categoria por defecto</th>
+<th><?php echo esc_html__('Categoria por defecto', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <input type="text" name="default_category" value="<?php echo esc_attr((string)($settings['default_category'] ?? 'Noticias')); ?>" style="width:420px;" />
 </td>
 </tr>
 <tr>
-<th>Reglas: keywords - Categorias</th>
+<th><?php echo esc_html__('Reglas: keywords - Categorias', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <textarea name="keywords_to_categories" rows="6" style="width:100%;"><?php echo esc_textarea((string)($settings['keywords_to_categories'] ?? '')); ?></textarea>
-<p class="description">Formato por linea: <code>Categoria: kw1, kw2, kw3</code>. Se compara contra (titulo+contenido).</p>
+<p class="description"><?php echo esc_html__('Formato por linea: ', 'cbiastudio-blogflow-ai'); ?><code><?php echo esc_html__('Categoria: kw1, kw2, kw3', 'cbiastudio-blogflow-ai'); ?></code><?php echo esc_html__('. Se compara contra (titulo+contenido).', 'cbiastudio-blogflow-ai'); ?></p>
 </td>
 </tr>
 <tr>
-<th>Tags permitidas</th>
+<th><?php echo esc_html__('Tags permitidas', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <input type="text" name="default_tags" value="<?php echo esc_attr((string)($settings['default_tags'] ?? '')); ?>" style="width:100%;" />
-<p class="description">Separadas por comas. El engine SOLO podra usar estas tags (max 7 por post).</p>
+<p class="description"><?php echo esc_html__('Separadas por comas. El engine SOLO podra usar estas tags (max 7 por post).', 'cbiastudio-blogflow-ai'); ?></p>
 </td>
 </tr>
 </table>
 <p style="margin-top:10px;">
-<button type="submit" class="button button-primary">Guardar</button>
+<button type="submit" class="button button-primary"><?php echo esc_html__('Guardar', 'cbiastudio-blogflow-ai'); ?></button>
 </p>
 </form>
 
   <hr/>
 
-  <h2>Acciones</h2>
+  <h2><?php echo esc_html__('Acciones', 'cbiastudio-blogflow-ai'); ?></h2>
 <form method="post" id="cbia_actions_form">
 <input type="hidden" name="cbia_form" value="blog_actions" />
 <?php wp_nonce_field('cbia_blog_actions_nonce'); ?>
 
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
-<button type="submit" class="button" name="cbia_action" value="test_config">Probar configuracion</button>
+<button type="submit" class="button" name="cbia_action" value="test_config"><?php echo esc_html__('Probar configuracion', 'cbiastudio-blogflow-ai'); ?></button>
 
-  <button type="button" class="button button-primary" id="cbia_btn_generate" onclick="if(window.cbiaStartGeneration){window.cbiaStartGeneration();} return false;">Crear blog automático</button>
-<button type="button" class="button" id="cbia_btn_open_preview_modal">Generacion con previsualizacion</button>
+  <button type="button" class="button button-primary" id="cbia_btn_generate" onclick="if(window.cbiaStartGeneration){window.cbiaStartGeneration();} return false;"><?php echo esc_html__('Crear blog automatico', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="button" class="button" id="cbia_btn_open_preview_modal"><?php echo esc_html__('Generacion con previsualizacion', 'cbiastudio-blogflow-ai'); ?></button>
 
-<button type="submit" class="button" name="cbia_action" value="stop_generation" style="background:#b70000;color:#fff;border-color:#7a0000;">Detener (STOP)</button>
-<button type="submit" class="button" name="cbia_action" value="clear_log">Limpiar log</button>
+<button type="submit" class="button" name="cbia_action" value="stop_generation" style="background:#b70000;color:#fff;border-color:#7a0000;"><?php echo esc_html__('Detener (STOP)', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="submit" class="button" name="cbia_action" value="clear_log"><?php echo esc_html__('Limpiar log', 'cbiastudio-blogflow-ai'); ?></button>
 </p>
 </form>
 
-<h2>Vista previa del articulo</h2>
+<h2><?php echo esc_html__('Vista previa del articulo', 'cbiastudio-blogflow-ai'); ?></h2>
 <section id="cbia-preview-panel" class="cbia-preview-card" aria-live="polite" data-open="false">
 <header class="cbia-preview-header">
 <div class="cbia-preview-title-wrap">
-<h3 class="cbia-preview-title">ARTICLE PREVIEW</h3>
+<h3 class="cbia-preview-title"><?php echo esc_html__('ARTICLE PREVIEW', 'cbiastudio-blogflow-ai'); ?></h3>
 <div class="cbia-preview-title-inline">
-<label for="cbia_preview_title" class="screen-reader-text">Titulo</label>
+<label for="cbia_preview_title" class="screen-reader-text"><?php echo esc_html__('Titulo', 'cbiastudio-blogflow-ai'); ?></label>
 <select id="cbia_preview_title" class="abb-select" style="width:420px;">
 <?php if (!empty($preview_titles)): ?>
     <?php foreach ($preview_titles as $pt): ?>
         <option value="<?php echo esc_attr($pt); ?>"><?php echo esc_html($pt); ?></option>
     <?php endforeach; ?>
 <?php else: ?>
-    <option value="">(Primero anade titulos manuales y guarda)</option>
+    <option value=""><?php echo esc_html__('(Primero anade titulos manuales y guarda)', 'cbiastudio-blogflow-ai'); ?></option>
 <?php endif; ?>
 </select>
 </div>
-<span id="cbia-preview-wordcount" class="cbia-wordcount">0 words</span>
+<span id="cbia-preview-wordcount" class="cbia-wordcount"><?php echo esc_html__('0 words', 'cbiastudio-blogflow-ai'); ?></span>
 <span id="cbia_preview_mode_badge" class="cbia-preview-mode">STREAM</span>
 </div>
 <div class="cbia-preview-head-actions">
-<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_copy" title="Copiar texto"><span class="dashicons dashicons-admin-page" aria-hidden="true"></span></button>
-<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_expand" title="Expandir preview"><span class="dashicons dashicons-editor-expand" aria-hidden="true"></span></button>
-<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_edit" title="Editar preview"><span class="dashicons dashicons-edit" aria-hidden="true"></span></button>
-<button type="button" class="button cbia-preview-icon-btn cbia-preview-icon-danger" id="cbia_preview_btn_clear" title="Limpiar output"><span class="dashicons dashicons-trash" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_copy" title="<?php echo esc_attr__('Copiar texto', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-admin-page" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_expand" title="<?php echo esc_attr__('Expandir preview', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-editor-expand" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn" id="cbia_preview_btn_edit" title="<?php echo esc_attr__('Editar preview', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-edit" aria-hidden="true"></span></button>
+<button type="button" class="button cbia-preview-icon-btn cbia-preview-icon-danger" id="cbia_preview_btn_clear" title="<?php echo esc_attr__('Limpiar output', 'cbiastudio-blogflow-ai'); ?>"><span class="dashicons dashicons-trash" aria-hidden="true"></span></button>
 </div>
 </header>
 
 <div class="cbia-preview-controls">
-<button type="button" class="button button-primary" id="cbia_btn_preview" onclick="if(window.cbiaStartPreview){window.cbiaStartPreview();} return false;">Generar preview</button>
+<button type="button" class="button button-primary" id="cbia_btn_preview" onclick="if(window.cbiaStartPreview){window.cbiaStartPreview();} return false;"><?php echo esc_html__('Generar preview', 'cbiastudio-blogflow-ai'); ?></button>
 </div>
 
 <div class="cbia-preview-body">
 <aside class="cbia-preview-media">
 <div id="cbia-featured-image-wrap" class="cbia-featured-image" data-state="idle">
-<div class="cbia-image-placeholder">Featured image preview</div>
+<div class="cbia-image-placeholder"><?php echo esc_html__('Featured image preview', 'cbiastudio-blogflow-ai'); ?></div>
 </div>
 <input id="cbia-preview-token" type="hidden" value="">
 <div id="cbia_preview_runtime" class="cbia-preview-runtime" style="display:none;">
 <div id="cbia_preview_phase" class="cbia-preview-phase">
-<span id="cbia_phase_texto" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;">Texto</span>
-<span id="cbia_phase_img" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;">Imagenes</span>
-<span id="cbia_phase_ready" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;">Listo</span>
+<span id="cbia_phase_texto" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;"><?php echo esc_html__('Texto', 'cbiastudio-blogflow-ai'); ?></span>
+<span id="cbia_phase_img" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;"><?php echo esc_html__('Imagenes', 'cbiastudio-blogflow-ai'); ?></span>
+<span id="cbia_phase_ready" style="padding:4px 8px;border:1px solid #dcdcde;border-radius:999px;background:#f6f7f7;"><?php echo esc_html__('Listo', 'cbiastudio-blogflow-ai'); ?></span>
 </div>
 </div>
 </aside>
 <main class="cbia-preview-main">
-<div id="cbia-preview-status" class="cbia-status">Esperando generacion...</div>
+<div id="cbia-preview-status" class="cbia-status"><?php echo esc_html__('Esperando generacion...', 'cbiastudio-blogflow-ai'); ?></div>
 <article id="cbia-preview-content" class="cbia-preview-content"></article>
 <div id="cbia_preview_edit_panel" style="display:none;">
-<p style="margin:8px 0;"><strong>Editar antes de crear</strong></p>
+<p style="margin:8px 0;"><strong><?php echo esc_html__('Editar antes de crear', 'cbiastudio-blogflow-ai'); ?></strong></p>
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;">
-<label for="cbia_preview_edit_title">Titulo</label>
+<label for="cbia_preview_edit_title"><?php echo esc_html__('Titulo', 'cbiastudio-blogflow-ai'); ?></label>
 <input type="text" id="cbia_preview_edit_title" style="width:420px;" />
 </p>
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0;">
-<button type="button" class="button" id="cbia_btn_preview_edit_toggle" style="display:none;">&#9998; Editar preview</button>
-<button type="button" class="button" id="cbia_btn_preview_edit_save" style="display:none;">Guardar cambios</button>
-<button type="button" class="button" id="cbia_btn_preview_edit_cancel" style="display:none;">Cancelar</button>
+<button type="button" class="button" id="cbia_btn_preview_edit_toggle" style="display:none;">&#9998; <?php echo esc_html__('Editar preview', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="button" class="button" id="cbia_btn_preview_edit_save" style="display:none;"><?php echo esc_html__('Guardar cambios', 'cbiastudio-blogflow-ai'); ?></button>
+<button type="button" class="button" id="cbia_btn_preview_edit_cancel" style="display:none;"><?php echo esc_html__('Cancelar', 'cbiastudio-blogflow-ai'); ?></button>
 </p>
-<p class="description">Edita directamente el contenido del preview con el boton de editar. No se muestra HTML crudo.</p>
+<p class="description"><?php echo esc_html__('Edita directamente el contenido del preview con el boton de editar. No se muestra HTML crudo.', 'cbiastudio-blogflow-ai'); ?></p>
 </div>
 </main>
 </div>
@@ -355,19 +356,19 @@ echo '</select>';
 </button>
 <div id="cbia_preview_meta_body" style="display:none;margin-top:8px;">
 <div style="margin-top:8px;">
-<label><strong>Excerpt</strong></label>
+<label><strong><?php echo esc_html__('Excerpt', 'cbiastudio-blogflow-ai'); ?></strong></label>
 <textarea id="cbia_preview_meta_excerpt" rows="2" style="width:100%;"></textarea>
 </div>
 <div style="margin-top:8px;">
-<label><strong>Etiquetas</strong></label>
+<label><strong><?php echo esc_html__('Etiquetas', 'cbiastudio-blogflow-ai'); ?></strong></label>
 <textarea id="cbia_preview_meta_tags" rows="2" style="width:100%;"></textarea>
 </div>
 <div style="margin-top:8px;">
-<label><strong>Focus Keyword</strong></label>
+<label><strong><?php echo esc_html__('Focus Keyword', 'cbiastudio-blogflow-ai'); ?></strong></label>
 <input type="text" id="cbia_preview_meta_focus" style="width:100%;" />
 </div>
 <div style="margin-top:8px;">
-<label><strong>Meta Description</strong></label>
+<label><strong><?php echo esc_html__('Meta Description', 'cbiastudio-blogflow-ai'); ?></strong></label>
 <textarea id="cbia_preview_meta_description" rows="2" style="width:100%;"></textarea>
 </div>
 </div>
@@ -375,11 +376,42 @@ echo '</select>';
 
 </section>
 
-<h2>Log</h2>
+<h2><?php echo esc_html__('Log', 'cbiastudio-blogflow-ai'); ?></h2>
 <textarea id="cbia_log" rows="14" readonly style="width:100%;max-width:1100px;background:#f9f9f9;"><?php echo esc_textarea($log_text); ?></textarea>
 
 <script>
 (function(){
+    const I18N = <?php echo wp_json_encode(array(
+        'launching' => __('Lanzando...', 'cbiastudio-blogflow-ai'),
+        'runningLog' => __('En marcha (ver log)...', 'cbiastudio-blogflow-ai'),
+        'featuredError' => __('No se pudo generar la imagen destacada.', 'cbiastudio-blogflow-ai'),
+        'featuredPlaceholderFast' => __('Preview rapido: imagen destacada en placeholder.', 'cbiastudio-blogflow-ai'),
+        'featuredPending' => __('Imagen destacada en proceso...', 'cbiastudio-blogflow-ai'),
+        'imageInProcess' => __('Imagen en proceso...', 'cbiastudio-blogflow-ai'),
+        'copyEmpty' => __('No hay contenido para copiar.', 'cbiastudio-blogflow-ai'),
+        'copyOk' => __('Contenido copiado al portapapeles.', 'cbiastudio-blogflow-ai'),
+        'copyFail' => __('No se pudo copiar al portapapeles.', 'cbiastudio-blogflow-ai'),
+        'collapse' => __('Contraer preview', 'cbiastudio-blogflow-ai'),
+        'expand' => __('Expandir preview', 'cbiastudio-blogflow-ai'),
+        'previewCleared' => __('Preview limpiado.', 'cbiastudio-blogflow-ai'),
+        'cancelPreviewFail' => __('No se pudo cancelar el preview.', 'cbiastudio-blogflow-ai'),
+        'previewChangesSaved' => __('Cambios del preview guardados.', 'cbiastudio-blogflow-ai'),
+        'previewEditCancelled' => __('Edicion cancelada.', 'cbiastudio-blogflow-ai'),
+        'noDraftToEdit' => __('No hay borrador del preview para editar.', 'cbiastudio-blogflow-ai'),
+        'hidePreview' => __('Ocultar previsualizacion', 'cbiastudio-blogflow-ai'),
+        'showPreview' => __('Generacion con previsualizacion', 'cbiastudio-blogflow-ai'),
+        'previewFail' => __('No se pudo generar el preview.', 'cbiastudio-blogflow-ai'),
+        'previewOk' => __('Preview generado correctamente.', 'cbiastudio-blogflow-ai'),
+        'streamTimeoutInitial' => __('Timeout inicial de streaming.', 'cbiastudio-blogflow-ai'),
+        'streamTimeout' => __('Timeout de streaming.', 'cbiastudio-blogflow-ai'),
+        'streamStarting' => __('Iniciando preview de: ', 'cbiastudio-blogflow-ai'),
+        'streamIncomplete' => __('Respuesta incompleta de streaming.', 'cbiastudio-blogflow-ai'),
+        'streamFail' => __('Fallo en streaming.', 'cbiastudio-blogflow-ai'),
+        'selectTitleFirst' => __('Selecciona o escribe primero un titulo manual.', 'cbiastudio-blogflow-ai'),
+        'previewGenerating' => __('Generando preview...', 'cbiastudio-blogflow-ai'),
+        'imagePhasePending' => __('Pendiente de fase de imagen...', 'cbiastudio-blogflow-ai'),
+        'previewError' => __('Error al generar preview.', 'cbiastudio-blogflow-ai'),
+    )); ?>;
     const manualRow = document.getElementById('cbia_row_manual');
     const csvRow = document.getElementById('cbia_row_csv');
     const radios = document.querySelectorAll('input[name="title_input_mode"]');
@@ -510,7 +542,7 @@ echo '</select>';
         if (btn.disabled) return;
             btn.disabled = true;
             const old = btn.textContent;
-            btn.textContent = 'Lanzando...';
+            btn.textContent = I18N.launching;
 
             const fd = new FormData();
             fd.append('action','cbia_start_generation');
@@ -522,7 +554,7 @@ echo '</select>';
                 let data = null;
                 try { data = JSON.parse(text); } catch(e) { data = null; }
                 if(data && data.success){
-                    btn.textContent = 'En marcha (ver log)...';
+                    btn.textContent = I18N.runningLog;
                     setTimeout(()=>{ btn.disabled=false; btn.textContent=old; }, 4000);
                 }else{
                     btn.disabled=false; btn.textContent=old;
@@ -614,14 +646,14 @@ echo '</select>';
             return;
         }
         if (state === 'error') {
-            previewFeaturedWrap.innerHTML = '<div class="cbia-image-placeholder">No se pudo generar la imagen destacada.</div>';
+            previewFeaturedWrap.innerHTML = '<div class="cbia-image-placeholder">' + I18N.featuredError + '</div>';
             return;
         }
         if (state === 'placeholder') {
-            previewFeaturedWrap.innerHTML = '<div class="cbia-image-placeholder">' + (message || 'Preview rapido: imagen destacada en placeholder.') + '</div>';
+            previewFeaturedWrap.innerHTML = '<div class="cbia-image-placeholder">' + (message || I18N.featuredPlaceholderFast) + '</div>';
             return;
         }
-        previewFeaturedWrap.innerHTML = '<div class="cbia-image-placeholder">' + (message || 'Imagen destacada en proceso...') + '</div>';
+        previewFeaturedWrap.innerHTML = '<div class="cbia-image-placeholder">' + (message || I18N.featuredPending) + '</div>';
     }
     function renderSeoMeta(excerpt, tags, focus, metaDescription){
         if (previewMetaExcerpt) previewMetaExcerpt.value = excerpt || '';
@@ -635,11 +667,11 @@ echo '</select>';
         return raw
         .replace(/\[IMAGEN_PENDIENTE:[^\]]*\]/gi, function(marker){
             const label = marker.replace(/^\[IMAGEN_PENDIENTE:\s*/i, '').replace(/\]$/, '').trim();
-            return '<figure class="cbia-preview-img-ph"><span class="dashicons dashicons-format-image" aria-hidden="true"></span><span class="description">' + (label ? label : 'Imagen en proceso...') + '</span></figure>';
+            return '<figure class="cbia-preview-img-ph"><span class="dashicons dashicons-format-image" aria-hidden="true"></span><span class="description">' + (label ? label : I18N.imageInProcess) + '</span></figure>';
         })
         .replace(/\[IMAGEN:[^\]]*\]/gi, function(marker){
             const label = marker.replace(/^\[IMAGEN:\s*/i, '').replace(/\]$/, '').trim();
-            return '<figure class="cbia-preview-img-ph"><span class="dashicons dashicons-format-image" aria-hidden="true"></span><span class="description">' + (label ? label : 'Imagen en proceso...') + '</span></figure>';
+            return '<figure class="cbia-preview-img-ph"><span class="dashicons dashicons-format-image" aria-hidden="true"></span><span class="description">' + (label ? label : I18N.imageInProcess) + '</span></figure>';
         });
     }
     let typewriterTimer = null;
@@ -719,7 +751,7 @@ echo '</select>';
     function renderInitialImagePlaceholders(){
         if (!previewHtml) return;
         // En versión normal solo hay imagen destacada.
-        previewHtml.innerHTML = '<div class="cbia-preview-img-ph"><span class="dashicons dashicons-format-image" aria-hidden="true"></span><span class="description">Imagen destacada en proceso...</span></div>';
+        previewHtml.innerHTML = '<div class="cbia-preview-img-ph"><span class="dashicons dashicons-format-image" aria-hidden="true"></span><span class="description">' + I18N.featuredPending + '</span></div>';
     }
     function clearProgressiveQueue(){
         clearTypewriter();
@@ -814,14 +846,14 @@ echo '</select>';
         if (!previewHtml) return;
         const text = (previewHtml.innerText || previewHtml.textContent || '').trim();
         if (!text) {
-            setPreviewStatus('No hay contenido para copiar.', true);
+            setPreviewStatus(I18N.copyEmpty, true);
             return;
         }
         if (navigator.clipboard && navigator.clipboard.writeText) {
             navigator.clipboard.writeText(text).then(function(){
-                setPreviewStatus('Contenido copiado al portapapeles.', false);
+                setPreviewStatus(I18N.copyOk, false);
             }).catch(function(){
-                setPreviewStatus('No se pudo copiar al portapapeles.', true);
+                setPreviewStatus(I18N.copyFail, true);
             });
             return;
         }
@@ -831,9 +863,9 @@ echo '</select>';
         aux.select();
         try {
             document.execCommand('copy');
-            setPreviewStatus('Contenido copiado al portapapeles.', false);
+            setPreviewStatus(I18N.copyOk, false);
         } catch (e) {
-            setPreviewStatus('No se pudo copiar al portapapeles.', true);
+            setPreviewStatus(I18N.copyFail, true);
         }
         document.body.removeChild(aux);
     }
@@ -843,11 +875,11 @@ echo '</select>';
         if (previewExpanded) {
             previewPanel.classList.add('cbia-preview-expanded');
             document.body.classList.add('cbia-preview-lock');
-            if (previewBtnExpand) previewBtnExpand.title = 'Contraer preview';
+            if (previewBtnExpand) previewBtnExpand.title = I18N.collapse;
         } else {
             previewPanel.classList.remove('cbia-preview-expanded');
             document.body.classList.remove('cbia-preview-lock');
-            if (previewBtnExpand) previewBtnExpand.title = 'Expandir preview';
+            if (previewBtnExpand) previewBtnExpand.title = I18N.expand;
         }
     }
     function clearPreviewOutput(options){
@@ -866,7 +898,7 @@ echo '</select>';
         setWordCount(0);
         renderSeoMeta('', [], '', '');
         setFeaturedState('placeholder', 'Sin contenido generado.', '');
-        setPreviewStatus('Preview limpiado.', false);
+        setPreviewStatus(I18N.previewCleared, false);
         if (previewEditPanel) previewEditPanel.style.display = 'none';
         setPreviewEditMode(false);
         if (!skipCancel && tokenToCancel) {
@@ -884,7 +916,7 @@ echo '</select>';
                 let data = null;
                 try { data = JSON.parse(text); } catch(e) { data = null; }
                 if (!data || !data.success) {
-                    const msg = data && data.data && data.data.message ? data.data.message : 'No se pudo cancelar el preview.';
+                    const msg = data && data.data && data.data.message ? data.data.message : I18N.cancelPreviewFail;
                     setPreviewStatus(msg, true);
                     throw new Error(msg);
                 }
@@ -948,7 +980,7 @@ echo '</select>';
             previewOriginalHtml = previewHtml.innerHTML || '';
             previewEdited = true;
             setPreviewEditMode(false);
-            setPreviewStatus('Cambios del preview guardados.', false);
+            setPreviewStatus(I18N.previewChangesSaved, false);
         });
     }
     if (previewEditCancelBtn) {
@@ -957,7 +989,7 @@ echo '</select>';
             previewHtml.innerHTML = previewOriginalHtml || '';
             previewEdited = false;
             setPreviewEditMode(false);
-            setPreviewStatus('Edicion cancelada.', false);
+            setPreviewStatus(I18N.previewEditCancelled, false);
         });
     }
     if (previewBtnCopy) {
@@ -985,7 +1017,7 @@ echo '</select>';
     }
     function openDraftEditor(){
         if (!previewPostId) {
-            setPreviewStatus('No hay borrador del preview para editar.', true);
+            setPreviewStatus(I18N.noDraftToEdit, true);
             return;
         }
         const targetUrl = editBaseUrl + '?post=' + previewPostId + '&action=edit';
@@ -1000,7 +1032,7 @@ echo '</select>';
         if (!previewPanel) return;
         previewPanel.dataset.open = 'true';
         previewPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        if (previewOpenBtn) previewOpenBtn.textContent = 'Ocultar previsualizacion';
+        if (previewOpenBtn) previewOpenBtn.textContent = I18N.hidePreview;
     }
     function closePreviewPanel(){
         if (!previewPanel) return;
@@ -1008,7 +1040,7 @@ echo '</select>';
         previewPanel.classList.remove('cbia-preview-expanded');
         previewExpanded = false;
         document.body.classList.remove('cbia-preview-lock');
-        if (previewOpenBtn) previewOpenBtn.textContent = 'Generacion con previsualizacion';
+        if (previewOpenBtn) previewOpenBtn.textContent = I18N.showPreview;
     }
     function ensurePreviewVisible(){
         openPreviewPanel();
@@ -1040,14 +1072,14 @@ echo '</select>';
             let data = null;
             try { data = JSON.parse(text); } catch(e) { data = null; }
             if (!data || !data.success || !data.data) {
-                const msg = data && data.data && data.data.message ? data.data.message : 'No se pudo generar el preview.';
+                const msg = data && data.data && data.data.message ? data.data.message : I18N.previewFail;
             setPreviewStatus(msg, true);
             throw new Error(msg);
             }
             setPhase('texto', false);
             enqueueClassicSimulation(data.data.preview_html || '');
             renderPreviewResult(data.data, { skipImmediateHtml: true });
-            setPreviewStatus('Preview generado correctamente.', false);
+            setPreviewStatus(I18N.previewOk, false);
             setPhase('ready', false);
         });
     }
@@ -1081,7 +1113,7 @@ echo '</select>';
                 if (completed || doneReceived || fatalReceived) return;
                 clearInterval(watchdog);
                 try { source.close(); } catch(e) {}
-                reject(new Error('Timeout inicial de streaming.'));
+                reject(new Error(I18N.streamTimeoutInitial));
             }, 6000);
 
             function readEventData(evt){
@@ -1101,14 +1133,14 @@ echo '</select>';
                     clearInterval(watchdog);
                     clearTimeout(initialTimeout);
                     try { source.close(); } catch(e) {}
-                    reject(new Error('Timeout de streaming.'));
+                    reject(new Error(I18N.streamTimeout));
                 }
             }, 1000);
 
             source.addEventListener('preview_start', function(evt){
                 markEvent('preview_start');
                 const data = readEventData(evt);
-                setPreviewStatus('Iniciando preview de: ' + (data.title || ''), false);
+                setPreviewStatus(I18N.streamStarting + (data.title || ''), false);
                 setWordCount(0);
                 renderInitialImagePlaceholders();
             });
@@ -1158,11 +1190,11 @@ echo '</select>';
                 clearTimeout(initialTimeout);
                 source.close();
                 if (!data || !data.result) {
-                    reject(new Error('Respuesta incompleta de streaming.'));
+                    reject(new Error(I18N.streamIncomplete));
                     return;
                 }
                 renderPreviewResult(data.result);
-                setPreviewStatus('Preview generado correctamente.', false);
+                setPreviewStatus(I18N.previewOk, false);
                 resolve();
             });
             source.addEventListener('cbia_done', function(evt){
@@ -1174,11 +1206,11 @@ echo '</select>';
                 clearTimeout(initialTimeout);
                 source.close();
                 if (!data || !data.result) {
-                    reject(new Error('Respuesta incompleta de streaming.'));
+                    reject(new Error(I18N.streamIncomplete));
                     return;
                 }
                 renderPreviewResult(data.result);
-                setPreviewStatus('Preview generado correctamente.', false);
+                setPreviewStatus(I18N.previewOk, false);
                 resolve();
             });
             source.addEventListener('preview_error', function(evt){
@@ -1190,7 +1222,7 @@ echo '</select>';
                 clearTimeout(initialTimeout);
                 source.close();
                 setPhase('ready', true);
-                reject(new Error(data.message || 'No se pudo generar el preview.'));
+                reject(new Error(data.message || I18N.previewFail));
             });
             source.addEventListener('cbia_error', function(evt){
                 markEvent('cbia_error');
@@ -1201,7 +1233,7 @@ echo '</select>';
                 clearTimeout(initialTimeout);
                 source.close();
                 setPhase('ready', true);
-                reject(new Error(data.message || 'No se pudo generar el preview.'));
+                reject(new Error(data.message || I18N.previewFail));
             });
             source.onerror = function(){
                 if (completed || doneReceived || fatalReceived) {
@@ -1220,7 +1252,7 @@ echo '</select>';
                         resolve();
                         return;
                     }
-                    reject(new Error('Fallo en streaming.'));
+                    reject(new Error(I18N.streamFail));
                 }, 1100);
             };
         });
@@ -1229,11 +1261,11 @@ echo '</select>';
     function startPreview(){
         const titleVal = previewTitle ? (previewTitle.value || '').trim() : '';
         if (!titleVal) {
-            setPreviewStatus('Selecciona o escribe primero un titulo manual.', true);
+            setPreviewStatus(I18N.selectTitleFirst, true);
             return;
         }
 
-        setPreviewStatus('Generando preview...', false);
+        setPreviewStatus(I18N.previewGenerating, false);
         if (previewRuntime) previewRuntime.style.display = '';
         setPhase('texto', false);
         ensurePreviewVisible();
@@ -1244,7 +1276,7 @@ echo '</select>';
         renderSeoMeta('', [], '', '');
         setWordCount(0);
         setPreviewModeBadge('stream');
-        setFeaturedState('placeholder', 'Pendiente de fase de imagen...', '');
+        setFeaturedState('placeholder', I18N.imagePhasePending, '');
         renderInitialImagePlaceholders();
         previewOriginalHtml = '';
         clearProgressiveQueue();
@@ -1252,7 +1284,7 @@ echo '</select>';
         if (previewEditPanel) previewEditPanel.style.display = 'none';
         runPreviewClassic(titleVal)
         .catch((classicErr) => {
-            const msg = (classicErr && classicErr.message) ? classicErr.message : 'Error al generar preview.';
+            const msg = (classicErr && classicErr.message) ? classicErr.message : I18N.previewError;
             setPreviewStatus(msg, true);
             setPhase('ready', true);
         })
@@ -1341,5 +1373,3 @@ echo '</select>';
 
 cbia_render_view_blog();
 ?>
-
-

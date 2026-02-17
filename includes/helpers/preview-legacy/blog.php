@@ -192,7 +192,8 @@ wp_dropdown_users($author_args);
 $dd = ob_get_clean();
 $dd = str_replace('class=\'', 'style="width:420px;" class=\'', $dd);
 $dd = str_replace('class="', 'style="width:420px;" class="', $dd);
-echo wp_kses_post($dd);
+// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated HTML from wp_dropdown_users().
+echo $dd;
 ?>
 </td>
 </tr>
@@ -1314,5 +1315,3 @@ echo '</select>';
 })();
 </script>
 <?php // phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound ?>
-
-

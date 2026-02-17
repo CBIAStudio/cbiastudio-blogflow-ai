@@ -206,12 +206,6 @@ if (is_array($calibration_info)) {
 <?php endif; ?>
 </p>
 </div>
-<?php
-    }
-}
-
-cbia_render_view_costs();
-
 <h3>EstimaciÃ³n rÃ¡pida (segÃºn Config actual)</h3>
 <table class="widefat striped" style="max-width:980px;">
 <tbody>
@@ -426,8 +420,8 @@ echo ($eur_total_est === null)
 <td>
 <select name="seo_model" class="abb-select" style="width:240px;">
 <?php
-$seo_candidates = array('gpt-4.1-mini','gpt-4.1','gpt-4.1-nano','gpt-5','gpt-5-mini','gpt-5-nano','gpt-5.1','gpt-5.2');
-foreach ($seo_candidates as $m) {
+$cbia_seo_candidates = array('gpt-4.1-mini','gpt-4.1','gpt-4.1-nano','gpt-5','gpt-5-mini','gpt-5-nano','gpt-5.1','gpt-5.2');
+foreach ($cbia_seo_candidates as $m) {
     if (!isset($table[$m])) continue;
     echo '<option value="' . esc_attr($m) . '" ' . selected($model_seo_current, $m, false) . '>' . esc_html($m) . '</option>';
 }
@@ -526,4 +520,3 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 cbia_render_view_costs();
-
