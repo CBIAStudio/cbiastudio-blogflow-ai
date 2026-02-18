@@ -1,6 +1,6 @@
-# CBIAStudio BlogFlow with AI (WordPress) v1.1.3
+# CBIAStudio BlogFlow with AI (WordPress) v1.1.4
 
-## Novedades 1.1.3
+## Novedades 1.1.4
 - Limpieza final para Plugin Check (sin errores).
 - Ajustes de hooks Yoast para cumplir naming de WordPress Coding Standards.
 - Mejoras de i18n/encoding y estabilidad en Config/Preview/Logs.

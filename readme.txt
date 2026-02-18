@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.3
+Stable tag: 1.1.4
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
