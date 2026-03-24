@@ -3,8 +3,6 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 // Costs tab view (extracted from legacy cbia-costes.php)
 
-if (!function_exists('cbia_render_view_costs')) {
-    function cbia_render_view_costs() {
 if (!current_user_can('manage_options')) return;
 
 $cbia = cbia_get_settings();
@@ -516,8 +514,3 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 </div>
-    }
-}
-
-cbia_render_view_costs();
-

@@ -1,4 +1,7 @@
-# CBIAStudio BlogFlow with AI (WordPress) v1.1.4
+# CBIAStudio BlogFlow with AI (WordPress) v1.1.6
+
+## Novedades 1.1.6
+- Fix de sintaxis PHP en `includes/admin/views/costs.php` para cumplir validaciones del directorio de plugins.
 
 ## Novedades 1.1.4
 - Limpieza final para Plugin Check (sin errores).

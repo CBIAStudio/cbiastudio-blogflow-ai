@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.4
+Stable tag: 1.1.6
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -64,3 +64,8 @@ This plugin can connect to third-party AI services only when the site administra
 - When sent: when creating preview or creating posts.
 - Terms: https://platform.deepseek.com/terms
 - Privacy: https://platform.deepseek.com/privacy
+
+== Changelog ==
+
+= 1.1.6 =
+* Fixed PHP syntax issue in Costs view (`includes/admin/views/costs.php`) to satisfy directory checks.
