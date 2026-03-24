@@ -489,7 +489,7 @@ If there is no real usage, use estimation
 <h3><?php echo esc_html__('Costs log', 'cbiastudio-blogflow-ai'); ?></h3>
 <textarea id="cbia-costes-log" rows="14" cols="120" readonly style="background:#f9f9f9;width:100%;"><?php echo esc_textarea($cbia_log); ?></textarea>
 
-<script>
+<?php ob_start(); ?>
 document.addEventListener('DOMContentLoaded', function() {
     const logBox = document.getElementById('cbia-costes-log');
                 function refreshLog(){
@@ -512,5 +512,5 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     setInterval(refreshLog, 3000);
 });
-</script>
+<?php wp_add_inline_script('abb-admin', (string) ob_get_clean(), 'after'); ?>
 </div>

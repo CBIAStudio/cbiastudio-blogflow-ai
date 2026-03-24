@@ -685,7 +685,7 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' - ', $defaults_su
     <h3><?php echo esc_html__('Log', 'cbiastudio-blogflow-ai'); ?></h3>
     <textarea id="cbia-oldposts-log" rows="14" cols="120" readonly style="background:#f9f9f9;width:100%;"><?php echo esc_textarea($log); ?></textarea>
 
-    <script>
+    <?php ob_start(); ?>
     document.addEventListener('DOMContentLoaded', function() {
         // Defensive mojibake fix: only improves UI readability.
         function tryDecodeLatin1ToUtf8(str) {
@@ -852,11 +852,10 @@ $defaults_summary_text = !empty($defaults_summary) ? implode(' - ', $defaults_su
         }
         setInterval(refreshLog, 3000);
     });
-    </script>
+    <?php wp_add_inline_script('abb-admin', (string) ob_get_clean(), 'after'); ?>
 </div>
 <?php
     }
 }
 
 cbia_render_view_oldposts();
-

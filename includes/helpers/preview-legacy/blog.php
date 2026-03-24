@@ -411,7 +411,7 @@ echo '</select>';
 <h2>Log</h2>
 <textarea id="cbia_log" rows="14" readonly style="width:100%;max-width:1100px;background:#f9f9f9;"><?php echo esc_textarea($log_text); ?></textarea>
 
-<script>
+<?php ob_start(); ?>
 (function(){
     const manualRow = document.getElementById('cbia_row_manual');
     const csvRow = document.getElementById('cbia_row_csv');
@@ -1331,5 +1331,5 @@ echo '</select>';
 
     refreshPromptEditor();
 })();
-</script>
+<?php wp_add_inline_script('abb-admin', (string) ob_get_clean(), 'after'); ?>
 <?php // phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound ?>

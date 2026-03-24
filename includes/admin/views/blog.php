@@ -393,7 +393,7 @@ echo '</select>';
 <h2><?php echo esc_html__('Log', 'cbiastudio-blogflow-ai'); ?></h2>
 <textarea id="cbia_log" rows="14" readonly style="width:100%;max-width:1100px;background:#f9f9f9;"><?php echo esc_textarea($log_text); ?></textarea>
 
-<script>
+<?php ob_start(); ?>
 (function(){
     const I18N = <?php echo wp_json_encode(array(
         'launching' => __('Launching...', 'cbiastudio-blogflow-ai'),
@@ -1384,7 +1384,7 @@ echo '</select>';
 
     refreshPromptEditor();
 })();
-</script>
+<?php wp_add_inline_script('abb-admin', (string) ob_get_clean(), 'after'); ?>
 <?php
     }
 }

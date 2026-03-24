@@ -37,7 +37,7 @@ if (!class_exists('CBIA_Blog_Service')) {
             if (!is_admin() || !current_user_can('manage_options')) return '';
             if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') return '';
 
-            $post_unslashed = wp_unslash($_POST);
+            $post_unslashed = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
             $saved_notice = '';
 
             $settings = $this->get_settings();
@@ -49,12 +49,12 @@ if (!class_exists('CBIA_Blog_Service')) {
                 }
 
                 if (array_key_exists('manual_titles', $post_unslashed)) {
-                    $settings['manual_titles'] = (string)($post_unslashed['manual_titles'] ?? '');
+                    $settings['manual_titles'] = sanitize_textarea_field((string)($post_unslashed['manual_titles'] ?? ''));
                 }
                 $settings['csv_url'] = '';
 
                 if (array_key_exists('first_publication_datetime_local', $post_unslashed)) {
-                    $dt_local = trim((string)($post_unslashed['first_publication_datetime_local'] ?? ''));
+                    $dt_local = sanitize_text_field(trim((string)($post_unslashed['first_publication_datetime_local'] ?? '')));
                     if ($dt_local !== '') {
                         $dt_local = str_replace('T',' ', $dt_local);
                         if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/', $dt_local)) $dt_local .= ':00';
@@ -116,7 +116,7 @@ if (!class_exists('CBIA_Blog_Service')) {
                     $default_editable = function_exists('cbia_prompt_recommended_editable_default_for_language')
                         ? cbia_prompt_recommended_editable_default_for_language($prompt_language)
                         : (function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : '');
-                    $editable_raw = (string)($post_unslashed['blog_prompt_editable'] ?? ($settings['blog_prompt_editable'] ?? $default_editable));
+                    $editable_raw = sanitize_textarea_field((string)($post_unslashed['blog_prompt_editable'] ?? ($settings['blog_prompt_editable'] ?? $default_editable)));
                     if (!empty($post_unslashed['blog_prompt_restore'])) {
                         $editable_raw = $default_editable !== '' ? $default_editable : $editable_raw;
                     }
@@ -153,7 +153,7 @@ if (!class_exists('CBIA_Blog_Service')) {
                     $settings['blog_prompt_editable'] = $editable_raw;
                 }
 
-                $legacy_input = (string)($post_unslashed['legacy_full_prompt'] ?? '');
+                $legacy_input = sanitize_textarea_field((string)($post_unslashed['legacy_full_prompt'] ?? ''));
                 if ($legacy_input !== '') {
                     if (function_exists('cbia_prompt_clean_legacy_template')) {
                         $legacy_input = cbia_prompt_clean_legacy_template($legacy_input, $prompt_language);

@@ -1,4 +1,10 @@
-# CBIAStudio BlogFlow with AI (WordPress) v1.1.6
+# CBIAStudio BlogFlow with AI (WordPress) v1.1.7
+
+## Novedades 1.1.7
+- Migración de scripts/estilos inline a APIs nativas de WordPress (`wp_add_inline_script` / `wp_add_inline_style`).
+- Refuerzo de nonces en AJAX (`check_ajax_referer` obligatorio en stream/start).
+- Endurecimiento de sanitización en formularios Config/Blog/Oldposts.
+- Ajuste de cabecera de plugin (sin `Domain Path`) y documentación de servicios externos con dominios explícitos.
 
 ## Novedades 1.1.6
 - Fix de sintaxis PHP en `includes/admin/views/costs.php` para cumplir validaciones del directorio de plugins.

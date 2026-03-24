@@ -282,8 +282,11 @@ if (!function_exists('cbia_output_banner_css')) {
 
         $css = trim((string)($settings['content_images_banner_css'] ?? ''));
         if ($css === '') return;
-
-        echo "<style id='cbia-banner-css'>\n" . esc_html($css) . "\n</style>";
+        if (!wp_style_is('cbia-banner-css-inline', 'registered')) {
+            wp_register_style('cbia-banner-css-inline', false, array(), CBIA_VERSION);
+        }
+        wp_enqueue_style('cbia-banner-css-inline');
+        wp_add_inline_style('cbia-banner-css-inline', $css);
     }
 }
 
@@ -304,7 +307,11 @@ if (!function_exists('cbia_output_banner_css_admin')) {
 
         $css = trim((string)($settings['content_images_banner_css'] ?? ''));
         if ($css === '') return;
-        echo "<style id='cbia-banner-css-admin'>\n" . esc_html($css) . "\n</style>";
+        if (!wp_style_is('cbia-banner-css-admin-inline', 'registered')) {
+            wp_register_style('cbia-banner-css-admin-inline', false, array(), CBIA_VERSION);
+        }
+        wp_enqueue_style('cbia-banner-css-admin-inline');
+        wp_add_inline_style('cbia-banner-css-admin-inline', $css);
     }
 }
 
@@ -381,15 +388,7 @@ if (!function_exists('cbia_ajax_preview_article_stream')) {
         header('Cache-Control: no-cache, no-transform');
         header('X-Accel-Buffering: no');
 
-        $nonce_ok = check_ajax_referer('cbia_ajax_nonce', '_ajax_nonce', false);
-        if (!$nonce_ok) {
-            if (function_exists('cbia_log')) {
-                cbia_log('[PREVIEW] Stream: invalid nonce.', 'ERROR');
-            }
-            cbia_sse_emit('preview_error', array('message' => __('Invalid nonce.', 'cbiastudio-blogflow-ai')));
-            cbia_sse_emit('cbia_error', array('message' => __('Invalid nonce.', 'cbiastudio-blogflow-ai')));
-            exit;
-        }
+        check_ajax_referer('cbia_ajax_nonce');
         if (!current_user_can('manage_options')) {
             if (function_exists('cbia_log')) {
                 cbia_log('[PREVIEW] Stream: not authorized.', 'ERROR');
@@ -619,16 +618,7 @@ if (!function_exists('cbia_ajax_get_checkpoint_status')) {
 
 if (!function_exists('cbia_ajax_start_generation')) {
     function cbia_ajax_start_generation() {
-        $nonce = '';
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if (isset($_REQUEST['_ajax_nonce'])) $nonce = sanitize_text_field(wp_unslash($_REQUEST['_ajax_nonce']));
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ($nonce === '' && isset($_REQUEST['_wpnonce'])) $nonce = sanitize_text_field(wp_unslash($_REQUEST['_wpnonce']));
-        // phpcs:ignore WordPress.Security.NonceVerification.Recommended
-        if ($nonce === '' && isset($_REQUEST['nonce'])) $nonce = sanitize_text_field(wp_unslash($_REQUEST['nonce']));
-        if ($nonce === '' || !wp_verify_nonce($nonce, 'cbia_ajax_nonce')) {
-            wp_send_json_error(['msg' => 'bad_nonce'], 403);
-        }
+        check_ajax_referer('cbia_ajax_nonce');
         if (!current_user_can('manage_options')) wp_send_json_error(['msg' => __('Not authorized', 'cbiastudio-blogflow-ai')], 403);
 
         if (!function_exists('cbia_set_stop_flag')) {
@@ -1002,8 +992,6 @@ if (!function_exists('cbia_ajax_sync_models')) {
         wp_send_json_error(['message' => __('Sync failed', 'cbiastudio-blogflow-ai'), 'result' => $result], 500);
     }
 }
-
-
 
 
 

@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.6
+Stable tag: 1.1.7
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -48,6 +48,7 @@ This plugin can connect to third-party AI services only when the site administra
 - Service purpose: text generation and image generation for posts.
 - Data sent: post title, prompt/template text, generation parameters, and image prompts.
 - When sent: when creating preview, creating posts, or generating images manually.
+- API domain used by the plugin: `api.openai.com`
 - Terms: https://openai.com/policies/terms-of-use
 - Privacy: https://openai.com/policies/privacy-policy
 
@@ -55,6 +56,7 @@ This plugin can connect to third-party AI services only when the site administra
 - Service purpose: text generation (Gemini) and image generation (Imagen/Gemini image models).
 - Data sent: post title, prompt/template text, generation parameters, and image prompts.
 - When sent: when creating preview, creating posts, or generating images manually.
+- API domain used by the plugin: `generativelanguage.googleapis.com`
 - Terms: https://ai.google.dev/terms
 - Privacy: https://policies.google.com/privacy
 
@@ -67,5 +69,9 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Changelog ==
 
-= 1.1.6 =
-* Fixed PHP syntax issue in Costs view (`includes/admin/views/costs.php`) to satisfy directory checks.
+= 1.1.7 =
+* Replaced inline `<script>`/`<style>` output with WordPress enqueue APIs (`wp_add_inline_script`, `wp_add_inline_style`).
+* Hardened nonce validation in AJAX stream/start handlers by enforcing `check_ajax_referer()`.
+* Improved POST input handling/sanitization in Config/Blog/Oldposts services.
+* Removed plugin header `Domain Path` entry to match WordPress.org guidance.
+* Clarified external services section with explicit API domains (`api.openai.com`, `generativelanguage.googleapis.com`).

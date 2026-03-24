@@ -22,8 +22,7 @@ if (!function_exists('cbia_config_handle_post')) {
 	function cbia_config_handle_post(): void {
 		if (!is_admin()) return;
 		if (!current_user_can('manage_options')) return;
-		$post = filter_input_array(INPUT_POST, FILTER_UNSAFE_RAW);
-		$post = is_array($post) ? $post : array();
+		$post = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
 
 		if (!isset($post['cbia_config_save'])) return;
 
@@ -375,5 +374,4 @@ if (!function_exists('cbia_render_tab_config')) {
         echo '<p>No se pudo cargar Configuracion.</p>';
     }
 }
-
 

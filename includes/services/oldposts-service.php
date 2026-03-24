@@ -44,7 +44,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
                 // Guardar presets
                 if (isset($_POST['cbia_form']) && $_POST['cbia_form'] === 'oldposts_settings') {
                     if (check_admin_referer('cbia_oldposts_settings_nonce')) {
-                        $u = wp_unslash($_POST);
+                        $u = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
 
                         $settings['batch_size']      = isset($u['batch_size']) ? max(1, min(200, (int)$u['batch_size'])) : (int)$settings['batch_size'];
                         $settings['scope']           = (!empty($u['scope']) && $u['scope'] === 'plugin') ? 'plugin' : 'all';
@@ -55,7 +55,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
                         $settings['date_to']         = cbia_oldposts_sanitize_ymd($u['date_to'] ?? '');
 
                         $settings['images_limit']    = isset($u['images_limit']) ? max(1, min(10, (int)$u['images_limit'])) : (int)$settings['images_limit'];
-                        $settings['post_ids']        = isset($u['post_ids']) ? implode(',', cbia_oldposts_parse_ids_csv($u['post_ids'])) : (string)$settings['post_ids'];
+                        $settings['post_ids']        = isset($u['post_ids']) ? implode(',', cbia_oldposts_parse_ids_csv(sanitize_text_field((string)$u['post_ids']))) : (string)$settings['post_ids'];
                         $settings['category_id']     = isset($u['category_id']) ? (int)$u['category_id'] : (int)$settings['category_id'];
                         $settings['author_id']       = isset($u['author_id']) ? (int)$u['author_id'] : (int)$settings['author_id'];
                         $settings['dry_run']         = !empty($u['dry_run']) ? 1 : 0;
@@ -101,7 +101,7 @@ if (!class_exists('CBIA_Oldposts_Service')) {
                 // Acciones
                 if (isset($_POST['cbia_form']) && $_POST['cbia_form'] === 'oldposts_actions') {
                     if (check_admin_referer('cbia_oldposts_actions_nonce')) {
-                        $u = wp_unslash($_POST);
+                        $u = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
                         $action = sanitize_text_field($u['cbia_action'] ?? '');
 
                         $run_actions = array(
@@ -128,11 +128,8 @@ if (!class_exists('CBIA_Oldposts_Service')) {
                             $run_base['images_limit']    = isset($u['run_images_limit']) ? max(1, min(10, (int)$u['run_images_limit'])) : (int)$settings['images_limit'];
 
                             // Filtros avanzados (acepta run_* y nombres simples)
-                            $run_base['post_ids'] = cbia_oldposts_parse_ids_csv(
-                                $u['run_post_ids']
-                                    ?? $u['post_ids']
-                                    ?? ($settings['post_ids'] ?? '')
-                            );
+                            $run_post_ids_raw = isset($u['run_post_ids']) ? sanitize_text_field((string)$u['run_post_ids']) : (isset($u['post_ids']) ? sanitize_text_field((string)$u['post_ids']) : (string)($settings['post_ids'] ?? ''));
+                            $run_base['post_ids'] = cbia_oldposts_parse_ids_csv($run_post_ids_raw);
                             $run_base['category_id'] = isset($u['run_category_id'])
                                 ? (int)$u['run_category_id']
                                 : (isset($u['category_id']) ? (int)$u['category_id'] : (int)($settings['category_id'] ?? 0));
@@ -274,4 +271,3 @@ if (!class_exists('CBIA_Oldposts_Service')) {
         }
     }
 }
-

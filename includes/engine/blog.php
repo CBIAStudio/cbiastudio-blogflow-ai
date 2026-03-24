@@ -126,19 +126,19 @@ if (!function_exists('cbia_blog_handle_post')) {
         if (!is_admin() || !current_user_can('manage_options')) return '';
         if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') return '';
 
-        $post_unslashed = wp_unslash($_POST);
+        $post_unslashed = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
         $saved_notice = '';
 
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
 
         if (!empty($post_unslashed['cbia_form']) && $post_unslashed['cbia_form'] === 'blog_save' && check_admin_referer('cbia_blog_save_nonce')) {
-            $mode = (string)($post_unslashed['title_input_mode'] ?? 'manual');
+            $mode = sanitize_key((string)($post_unslashed['title_input_mode'] ?? 'manual'));
             $settings['title_input_mode'] = in_array($mode, array('manual','csv'), true) ? $mode : 'manual';
 
-            $settings['manual_titles'] = (string)($post_unslashed['manual_titles'] ?? '');
-            $settings['csv_url'] = trim((string)($post_unslashed['csv_url'] ?? ''));
+            $settings['manual_titles'] = sanitize_textarea_field((string)($post_unslashed['manual_titles'] ?? ''));
+            $settings['csv_url'] = esc_url_raw(trim((string)($post_unslashed['csv_url'] ?? '')));
 
-            $dt_local = trim((string)($post_unslashed['first_publication_datetime_local'] ?? ''));
+            $dt_local = sanitize_text_field(trim((string)($post_unslashed['first_publication_datetime_local'] ?? '')));
             if ($dt_local !== '') {
                 $dt_local = str_replace('T',' ', $dt_local);
                 if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/', $dt_local)) $dt_local .= ':00';
@@ -480,4 +480,3 @@ if (!function_exists('cbia_render_tab_blog')) {
         echo '<p>No se pudo cargar Blog.</p>';
     }
 }
-
