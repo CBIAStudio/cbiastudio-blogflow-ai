@@ -95,10 +95,16 @@ if (!class_exists('CBIA_Costs_Service')) {
 
                 // Tarifa fija por imagen
                 $cost['use_image_flat_pricing'] = !empty($u['use_image_flat_pricing']) ? 1 : 0;
-                $cost['image_flat_usd_mini'] = isset($u['image_flat_usd_mini']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_mini']) : (float)$cost['image_flat_usd_mini'];
-                if ($cost['image_flat_usd_mini'] < 0) $cost['image_flat_usd_mini'] = 0.0;
-                $cost['image_flat_usd_full'] = isset($u['image_flat_usd_full']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_full']) : (float)$cost['image_flat_usd_full'];
-                if ($cost['image_flat_usd_full'] < 0) $cost['image_flat_usd_full'] = 0.0;
+                $cost['image_flat_usd_openai_mini'] = isset($u['image_flat_usd_openai_mini']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_mini']) : (float)($cost['image_flat_usd_openai_mini'] ?? ($cost['image_flat_usd_mini'] ?? 0.011));
+                if ($cost['image_flat_usd_openai_mini'] < 0) $cost['image_flat_usd_openai_mini'] = 0.0;
+                $cost['image_flat_usd_openai_full'] = isset($u['image_flat_usd_openai_full']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_full']) : (float)($cost['image_flat_usd_openai_full'] ?? ($cost['image_flat_usd_full'] ?? 0.042));
+                if ($cost['image_flat_usd_openai_full'] < 0) $cost['image_flat_usd_openai_full'] = 0.0;
+                $cost['image_flat_usd_imagen3'] = isset($u['image_flat_usd_imagen3']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_imagen3']) : (float)($cost['image_flat_usd_imagen3'] ?? ($cost['image_flat_usd_mini'] ?? 0.040));
+                if ($cost['image_flat_usd_imagen3'] < 0) $cost['image_flat_usd_imagen3'] = 0.0;
+                $cost['image_flat_usd_imagen4'] = isset($u['image_flat_usd_imagen4']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_imagen4']) : (float)($cost['image_flat_usd_imagen4'] ?? 0.040);
+                if ($cost['image_flat_usd_imagen4'] < 0) $cost['image_flat_usd_imagen4'] = 0.0;
+                $cost['image_flat_usd_mini'] = $cost['image_flat_usd_openai_mini'];
+                $cost['image_flat_usd_full'] = $cost['image_flat_usd_openai_full'];
 
                 $cost['mult_text'] = isset($u['mult_text']) ? (float)str_replace(',', '.', (string)$u['mult_text']) : (float)$cost['mult_text'];
                 if ($cost['mult_text'] < 1.0) $cost['mult_text'] = 1.0;
@@ -130,8 +136,12 @@ if (!class_exists('CBIA_Costs_Service')) {
 
                 // modelo imagen (solo 2)
                 $im = isset($u['image_model']) ? sanitize_text_field((string)$u['image_model']) : (string)$cost['image_model'];
-                if (!isset($table[$im]) || ($im !== 'gpt-image-1' && $im !== 'gpt-image-1-mini')) {
-                    $im = 'gpt-image-1-mini';
+                $allowed_image_models = function_exists('cbia_costes_get_supported_image_models')
+                    ? cbia_costes_get_supported_image_models()
+                    : array('gpt-image-1-mini', 'gpt-image-1');
+                if (!in_array($im, $allowed_image_models, true)) {
+                    $im = function_exists('cbia_costes_get_current_image_model') ? cbia_costes_get_current_image_model($cbia) : 'gpt-image-1-mini';
+                    if ($im === '') $im = 'gpt-image-1-mini';
                 }
                 $cost['image_model'] = $im;
 

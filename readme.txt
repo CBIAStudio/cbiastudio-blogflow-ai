@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9
 Tested up to: 6.9
-Stable tag: 1.1.7
+Stable tag: 1.2.0
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -68,6 +68,12 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://platform.deepseek.com/privacy
 
 == Changelog ==
+
+= 1.2.0 =
+* Switched to the standard WordPress.org bootstrap file `cbiastudio-blogflow-ai.php` and aligned free/pro dependency metadata.
+* Refined Usage/Costs calculations with updated provider pricing, improved provider/model compatibility, and more reliable real-cost summaries.
+* Updated OpenAI / Gemini / DeepSeek model handling and aliases, with DeepSeek kept as text-only and image scope kept provider-aware.
+* Improved preview/create flows by returning real preview URLs for scheduled drafts and stabilizing admin-side usage rendering.
 
 = 1.1.7 =
 * Replaced inline `<script>`/`<style>` output with WordPress enqueue APIs (`wp_add_inline_script`, `wp_add_inline_style`).

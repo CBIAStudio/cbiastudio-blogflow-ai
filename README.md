@@ -1,4 +1,10 @@
-# CBIAStudio BlogFlow with AI (WordPress) v1.1.7
+# CBIAStudio BlogFlow with AI (WordPress) v1.2.0
+
+## Novedades 1.2.0
+- Archivo principal estandarizado como `cbiastudio-blogflow-ai.php` para WordPress.org y dependencias PRO/FREE mas limpias.
+- Ajustes de `Usage/Costes` para usar mejor el modelo/proveedor real, con tarifas actualizadas y calculo mas fiable del coste real.
+- Matriz de proveedores/modelos afinada: alias nuevos de OpenAI, Gemini/Imagen actualizados y DeepSeek limitado a texto.
+- Flujo de preview/create afinado para devolver `preview_url` valida en borradores programados.
 
 ## Novedades 1.1.7
 - Migración de scripts/estilos inline a APIs nativas de WordPress (`wp_add_inline_script` / `wp_add_inline_style`).

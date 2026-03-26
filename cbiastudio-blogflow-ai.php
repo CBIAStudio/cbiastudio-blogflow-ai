@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CBIAStudio BlogFlow with AI
  * Description: Version normal de CBIAStudio BlogFlow with AI.
- * Version: 1.1.7
+ * Version: 1.2.0
  *
  * Author: CBIA Studio
  * Requires at least: 6.9
@@ -14,7 +14,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-if (!defined('CBIA_VERSION')) define('CBIA_VERSION', '1.1.7');
+if (!defined('CBIA_VERSION')) define('CBIA_VERSION', '1.2.0');
 if (!defined('CBIA_PLUGIN_FILE')) define('CBIA_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_PLUGIN_DIR')) define('CBIA_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_PLUGIN_URL')) define('CBIA_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -76,7 +76,7 @@ if (!function_exists('cbia_log')) {
 		$log = (string) get_option(CBIA_OPTION_LOG, '');
 		$log = $log ? ($log . "\n" . $line) : $line;
 
-		// Mantener el log con un tamaÃƒÆ’Ã‚Â±o razonable (ÃƒÆ’Ã‚Âºltimos ~2000 lÃƒÆ’Ã‚Â­neas)
+		// Mantener el log con un tamaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±o razonable (ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºltimos ~2000 lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­neas)
 		$lines = explode("\n", $log);
 		if (count($lines) > 2000) {
 			$lines = array_slice($lines, -2000);
@@ -143,7 +143,7 @@ if (!function_exists('cbia_get_default_settings')) {
 			'google_location'       => '',
 			'google_service_account_json' => '',
 
-			// Longitud / imÃƒÆ’Ã‚Â¡genes
+			// Longitud / imÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡genes
 			'post_length_variant'   => 'medium',
 			// Normal: solo imagen destacada
 			'images_limit'          => 1,
@@ -151,19 +151,19 @@ if (!function_exists('cbia_get_default_settings')) {
 			'blog_prompt_mode'      => 'recommended',
 			'blog_prompt_editable'  => '',
 			'legacy_full_prompt'    => '',
-			'prompt_single_all'     => "Escribe un artÃƒÆ’Ã‚Â­culo de blog en HTML (sin <h1>) sobre: {title}\nIncluye marcadores de imagen del tipo [IMAGEN: descripciÃƒÆ’Ã‚Â³n].",
+			'prompt_single_all'     => "Escribe un artÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­culo de blog en HTML (sin <h1>) sobre: {title}\nIncluye marcadores de imagen del tipo [IMAGEN: descripciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n].",
 			'prompt_img_intro'      => '',
 			'prompt_img_body'       => '',
 			'prompt_img_conclusion' => '',
 			'prompt_img_faq'        => '',
-			'post_language'         => 'espaÃƒÆ’Ã‚Â±ol',
+			'post_language'         => 'espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±ol',
 			'responses_max_output_tokens' => 6000,
 			'image_request_delay'   => 2,
 
-			// CategorÃƒÆ’Ã‚Â­as/Tags
+			// CategorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­as/Tags
 			'default_category'      => 'Noticias',
-			'keywords_to_categories'=> "", // lÃƒÆ’Ã‚Â­neas: "Categoria: kw1, kw2"
-			'default_tags'          => "", // tags permitidas separadas por comas
+			'keywords_to_categories'=> "",
+			'default_tags'          => "",
 
 			// Blog scheduling / cron fill
 			'enable_cron_fill'      => 0,
@@ -185,9 +185,6 @@ if (!function_exists('cbia_get_default_settings')) {
 }
 
 if (!function_exists('cbia_get_settings')) {
-	/**
-	 * Devuelve settings mergeando defaults + guardados (sin borrar campos de otros tabs)
-	 */
 	function cbia_get_settings(): array {
 		$defaults = cbia_get_default_settings();
 		$stored = get_option(CBIA_OPTION_SETTINGS, []);
@@ -197,9 +194,6 @@ if (!function_exists('cbia_get_settings')) {
 }
 
 if (!function_exists('cbia_update_settings_merge')) {
-	/**
-	 * Merge seguro (no destruye otros campos).
-	 */
 	function cbia_update_settings_merge(array $partial): array {
 		$current = get_option(CBIA_OPTION_SETTINGS, []);
 		if (!is_array($current)) $current = [];
@@ -209,9 +203,6 @@ if (!function_exists('cbia_update_settings_merge')) {
 	}
 }
 
-/**
- * ActivaciÃƒÆ’Ã‚Â³n: asegurar options base
- */
 register_activation_hook(__FILE__, function () {
 	if (get_option(CBIA_OPTION_SETTINGS, null) === null) {
 		update_option(CBIA_OPTION_SETTINGS, cbia_get_default_settings(), false);
@@ -230,9 +221,6 @@ register_activation_hook(__FILE__, function () {
 	}
 });
 
-/**
- * Cargar mÃƒÆ’Ã‚Â³dulos core (sin legacy)
- */
 if (!function_exists('cbia_pro_load_modules')) {
 	function cbia_pro_load_modules(): void {
 		$modules = [
@@ -242,7 +230,6 @@ if (!function_exists('cbia_pro_load_modules')) {
 			if (file_exists($module_file)) {
 				require_once $module_file;
 			} else {
-				// No romper el admin: solo log
 				cbia_log('Modulo no encontrado: ' . basename($module_file), 'ERROR');
 			}
 		}
@@ -250,17 +237,12 @@ if (!function_exists('cbia_pro_load_modules')) {
 }
 cbia_pro_load_modules();
 
-// Registrar hooks core (notices, AJAX, assets)
 if (function_exists('cbia_register_core_hooks')) {
 	cbia_register_core_hooks();
 }
 
-/**
- * Admin: menÃƒÆ’Ã‚Âº + tabs
- */
 add_action('admin_menu', function () {
 	if (class_exists('CBIA_Admin_Router')) {
-		// El router nuevo registra su propio menÃƒÆ’Ã‚Âº.
 		return;
 	}
 	add_menu_page(
@@ -277,11 +259,11 @@ add_action('admin_menu', function () {
 if (!function_exists('cbia_get_admin_tabs')) {
 	function cbia_get_admin_tabs(): array {
 		return [
-			'config'   => ['label' => 'ConfiguraciÃƒÆ’Ã‚Â³n', 'render' => 'cbia_render_tab_config'],
-			'blog'     => ['label' => 'Blog',          'render' => 'cbia_render_tab_blog'],
+			'config'   => ['label' => 'ConfiguraciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n', 'render' => 'cbia_render_tab_config'],
+			'blog'     => ['label' => 'Blog', 'render' => 'cbia_render_tab_blog'],
 			'oldposts' => ['label' => 'Actualizar antiguos', 'render' => 'cbia_render_tab_oldposts'],
-			'costes'   => ['label' => 'Costes',        'render' => 'cbia_render_tab_costes'],
-			'yoast'    => ['label' => 'Yoast',         'render' => 'cbia_render_tab_yoast'],
+			'costes'   => ['label' => 'Costes', 'render' => 'cbia_render_tab_costes'],
+			'yoast'    => ['label' => 'Yoast', 'render' => 'cbia_render_tab_yoast'],
 		];
 	}
 }
@@ -298,7 +280,7 @@ if (!function_exists('cbia_get_current_tab')) {
 if (!function_exists('cbia_render_admin_page')) {
 	function cbia_render_admin_page(): void {
 		if (!current_user_can('manage_options')) {
-			wp_die('No tienes permisos para ver esta pÃƒÆ’Ã‚Â¡gina.');
+			wp_die('No tienes permisos para ver esta pÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡gina.');
 		}
 
 		$tabs = cbia_get_admin_tabs();
@@ -321,7 +303,7 @@ if (!function_exists('cbia_render_admin_page')) {
 		if ($current_tab && isset($current_tab['render']) && is_callable($current_tab['render'])) {
 			call_user_func($current_tab['render']);
 		} else {
-			echo '<p>No se pudo cargar esta pestaÃƒÆ’Ã‚Â±a.</p>';
+			echo '<p>No se pudo cargar esta pestaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â±a.</p>';
 		}
 
 		echo '</div>';

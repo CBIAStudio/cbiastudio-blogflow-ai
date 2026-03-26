@@ -286,7 +286,7 @@ if (!function_exists('cbia_providers_get_model_list')) {
                 'gemini-2.5-pro',
                 'gemini-2.5-flash-lite',
             ),
-            'deepseek' => array('deepseek-chat', 'deepseek-coder'),
+            'deepseek' => array('deepseek-chat', 'deepseek-reasoner'),
         );
         return $lists[$provider] ?? array();
     }
@@ -314,6 +314,18 @@ if (!function_exists('cbia_providers_get_image_model_list')) {
     }
 }
 
+if (!function_exists('cbia_providers_get_image_capable_providers')) {
+    function cbia_providers_get_image_capable_providers(): array {
+        return array('openai', 'google');
+    }
+}
+
+if (!function_exists('cbia_providers_supports_image')) {
+    function cbia_providers_supports_image(string $provider): bool {
+        return in_array(sanitize_key($provider), cbia_providers_get_image_capable_providers(), true);
+    }
+}
+
 // CAMBIO: recomendados por proveedor (texto/imagen)
 if (!function_exists('cbia_providers_get_recommended_text_model')) {
     function cbia_providers_get_recommended_text_model(string $provider): string {
@@ -328,7 +340,7 @@ if (!function_exists('cbia_providers_get_recommended_image_model')) {
     function cbia_providers_get_recommended_image_model(string $provider): string {
         $provider = sanitize_key($provider);
         if ($provider === 'google') return 'imagen-3.0-generate-002';
+        if (!cbia_providers_supports_image($provider)) return '';
         return 'gpt-image-1-mini';
     }
 }
-

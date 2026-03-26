@@ -12,6 +12,27 @@
     padding: 6px 0 24px;
 }
 
+/* Keep WP admin footer at the page end on CBIA screens. */
+.toplevel_page_cbia #wpbody-content {
+    padding-bottom: 65px;
+}
+
+.toplevel_page_cbia #wpfooter {
+    position: static;
+    margin-left: 160px;
+}
+
+.folded.toplevel_page_cbia #wpfooter,
+.auto-fold.toplevel_page_cbia #wpfooter {
+    margin-left: 36px;
+}
+
+@media screen and (max-width: 960px) {
+    .toplevel_page_cbia #wpfooter {
+        margin-left: 0;
+    }
+}
+
 .cbia-header {
     display: flex;
     align-items: center;

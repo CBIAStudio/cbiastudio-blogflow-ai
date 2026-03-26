@@ -15,6 +15,13 @@ $s = $settings_service && method_exists($settings_service, 'get_settings')
 $provider_settings = function_exists('cbia_providers_get_settings') ? cbia_providers_get_settings() : [];
 $providers_all = function_exists('cbia_providers_get_all') ? cbia_providers_get_all() : [];
 $providers_list = isset($providers_all['providers']) && is_array($providers_all['providers']) ? $providers_all['providers'] : [];
+$image_providers_list = array();
+foreach ($providers_list as $pkey => $pdef) {
+    if (function_exists('cbia_providers_supports_image') && !cbia_providers_supports_image((string)$pkey)) {
+        continue;
+    }
+    $image_providers_list[$pkey] = $pdef;
+}
 $provider_current = function_exists('cbia_providers_get_current_provider') ? cbia_providers_get_current_provider() : 'openai';
 $provider_key_urls = array(
     'openai' => 'https://platform.openai.com/api-keys',
@@ -79,7 +86,7 @@ echo '<div class="abb-card">';
 $text_provider = sanitize_key((string)($s['text_provider'] ?? $provider_current));
 if ($text_provider === '' || !isset($providers_list[$text_provider])) $text_provider = 'openai';
 $image_provider = sanitize_key((string)($s['image_provider'] ?? 'openai'));
-if ($image_provider === '' || !isset($providers_list[$image_provider])) $image_provider = 'openai';
+if ($image_provider === '' || !isset($image_providers_list[$image_provider])) $image_provider = 'openai';
 
 $text_provider_data = $providers_list[$text_provider] ?? [];
 $text_provider_label = (string)($text_provider_data['label'] ?? 'OpenAI');
@@ -88,7 +95,7 @@ if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' 
     $text_provider_logo = plugins_url('assets/images/providers/openai.svg', CBIA_PLUGIN_FILE);
 }
 
-$image_provider_data = $providers_list[$image_provider] ?? [];
+$image_provider_data = $image_providers_list[$image_provider] ?? [];
 $image_provider_label = (string)($image_provider_data['label'] ?? 'OpenAI');
 $image_provider_logo = plugins_url('assets/images/providers/' . $image_provider . '.svg', CBIA_PLUGIN_FILE);
 if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $image_provider . '.svg')) {
@@ -141,7 +148,7 @@ echo '<span class="abb-provider-label">' . esc_html($image_provider_label) . '</
 echo '<span class="abb-provider-caret">&#9662;</span>';
 echo '</button>';
 echo '<div class="abb-provider-menu">';
-foreach ($providers_list as $pkey => $pdef) {
+foreach ($image_providers_list as $pkey => $pdef) {
     $plabel = (string)($pdef['label'] ?? $pkey);
     $plogo = plugins_url('assets/images/providers/' . $pkey . '.svg', CBIA_PLUGIN_FILE);
     if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $pkey . '.svg')) {
@@ -154,7 +161,7 @@ foreach ($providers_list as $pkey => $pdef) {
 }
 echo '</div>';
 echo '<select class="abb-provider-select-input" name="image_provider" data-scope="image" style="display:none;">';
-foreach ($providers_list as $pkey => $pdef) {
+foreach ($image_providers_list as $pkey => $pdef) {
     $plabel = (string)($pdef['label'] ?? $pkey);
     $plogo = plugins_url('assets/images/providers/' . $pkey . '.svg', CBIA_PLUGIN_FILE);
     if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $pkey . '.svg')) {
@@ -189,7 +196,7 @@ foreach ($providers_list as $pkey => $pdef) {
 }
 
 // Image models
-foreach ($providers_list as $pkey => $pdef) {
+foreach ($image_providers_list as $pkey => $pdef) {
     $img_list = function_exists('cbia_providers_get_image_model_list') ? cbia_providers_get_image_model_list($pkey) : [];
     $saved_img = '';
     if ($image_provider === $pkey && !empty($s['image_model'])) $saved_img = (string)$s['image_model'];
@@ -237,7 +244,7 @@ echo '</div>'; // api row texto
 // API keys: imagen
 echo '<div class="abb-api-row">';
 echo '<label>' . esc_html__('API key (image)', 'cbiastudio-blogflow-ai') . '</label>';
-foreach ($providers_list as $pkey => $pdef) {
+foreach ($image_providers_list as $pkey => $pdef) {
     $key_val = '';
     if ($pkey === 'openai') $key_val = (string)($s['openai_api_key'] ?? '');
     if ($pkey === 'google') $key_val = (string)($s['google_api_key'] ?? '');
@@ -255,7 +262,7 @@ foreach ($providers_list as $pkey => $pdef) {
 }
 echo '</div>'; // api row imagen
 
-echo '<p class="description" style="margin-top:8px;">' . esc_html__('You can use different providers for text and image.', 'cbiastudio-blogflow-ai') . '</p>';
+echo '<p class="description" style="margin-top:8px;">' . esc_html__('You can use different providers for text and image. DeepSeek is available for text only.', 'cbiastudio-blogflow-ai') . '</p>';
 
 echo '</div>'; // provider card
 echo '</div>'; // section

@@ -237,11 +237,18 @@ if (!function_exists('cbia_get_text_provider')) {
 if (!function_exists('cbia_get_image_provider')) {
     function cbia_get_image_provider(): string {
         if (!empty($GLOBALS['cbia_force_image_provider'])) {
-            return sanitize_key((string)$GLOBALS['cbia_force_image_provider']);
+            $forced = sanitize_key((string)$GLOBALS['cbia_force_image_provider']);
+            if ($forced !== '' && function_exists('cbia_providers_supports_image') && cbia_providers_supports_image($forced)) {
+                return $forced;
+            }
+            return 'openai';
         }
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
         $p = sanitize_key((string)($settings['image_provider'] ?? ''));
-        return $p !== '' ? $p : 'openai';
+        if ($p !== '' && function_exists('cbia_providers_supports_image') && cbia_providers_supports_image($p)) {
+            return $p;
+        }
+        return 'openai';
     }
 }
 
@@ -423,4 +430,3 @@ if (!function_exists('cbia_replace_first_occurrence')) {
         return substr($haystack, 0, $pos) . $replacement . substr($haystack, $pos + strlen($needle));
     }
 }
-

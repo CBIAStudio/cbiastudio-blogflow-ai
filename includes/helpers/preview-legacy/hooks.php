@@ -217,7 +217,7 @@ if (!function_exists('cbia_admin_enqueue_inline')) {
             $screen = get_current_screen();
             $enable_button = ($screen && $screen->base === 'edit' && $screen->post_type === 'post');
         }
-        wp_localize_script('abb-admin', 'ABB', array(
+        wp_localize_script('abb-admin', 'CBIAAdmin', array(
             'ajaxUrl' => $ajax_url,
             'nonce'   => $nonce,
             'addPostButton' => array(

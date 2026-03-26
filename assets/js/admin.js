@@ -1,19 +1,21 @@
 (function () {
     function addButton() {
-        if (!window.ABB || !ABB.addPostButton || !ABB.addPostButton.enabled) return;
+        var adminData = window.CBIAAdmin;
+        if (!adminData || !adminData.addPostButton || !adminData.addPostButton.enabled) return;
         var target = document.querySelector('.wrap .page-title-action');
         if (!target || document.querySelector('.cbia-add-ai')) return;
 
         var a = document.createElement('a');
         a.className = 'page-title-action cbia-add-ai';
-        a.href = ABB.addPostButton.url;
-        a.textContent = ABB.addPostButton.label || 'Anadir entrada con IA';
+        a.href = adminData.addPostButton.url;
+        a.textContent = adminData.addPostButton.label || 'Anadir entrada con IA';
         target.insertAdjacentElement('afterend', a);
     }
 
     function initPromptEditor() {
         var modal = document.getElementById('cbia-prompt-modal');
-        if (!modal || !window.ABB) return;
+        var adminData = window.CBIAAdmin;
+        if (!modal || !adminData) return;
         // CAMBIO: sacar el modal del flujo de la tabla para que no parezca ligado a "destacada".
         if (modal.parentNode !== document.body) {
             document.body.appendChild(modal);
@@ -47,12 +49,12 @@
 
             var params = new URLSearchParams();
             params.append('action', 'cbia_get_img_prompt');
-            params.append('_ajax_nonce', ABB.nonce);
+            params.append('_ajax_nonce', adminData.nonce);
             params.append('post_id', 0);
             params.append('type', type);
             params.append('idx', idx);
 
-            fetch(ABB.ajaxUrl, {
+            fetch(adminData.ajaxUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
@@ -78,13 +80,13 @@
 
             var params = new URLSearchParams();
             params.append('action', 'cbia_save_img_prompt_override');
-            params.append('_ajax_nonce', ABB.nonce);
+            params.append('_ajax_nonce', adminData.nonce);
             params.append('post_id', 0);
             params.append('type', current.type);
             params.append('idx', current.idx);
             params.append('prompt', prompt);
 
-            fetch(ABB.ajaxUrl, {
+            fetch(adminData.ajaxUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
@@ -332,7 +334,8 @@
 
     function initUsageModelSync() {
         var btn = document.getElementById('cbia-sync-models-btn');
-        if (!btn || !window.ABB) return;
+        var adminData = window.CBIAAdmin;
+        if (!btn || !adminData) return;
 
         btn.addEventListener('click', function () {
             var provider = btn.getAttribute('data-provider') || '';
@@ -342,10 +345,10 @@
 
             var params = new URLSearchParams();
             params.append('action', 'cbia_sync_models');
-            params.append('_ajax_nonce', ABB.nonce);
+            params.append('_ajax_nonce', adminData.nonce);
             params.append('provider', provider);
 
-            fetch(ABB.ajaxUrl, {
+            fetch(adminData.ajaxUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
@@ -394,5 +397,4 @@
         initUsageModelSync();
     }
 })();
-
 

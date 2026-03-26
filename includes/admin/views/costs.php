@@ -19,16 +19,17 @@ $cbia_defaults = array(
     'cached_input_ratio' => 0.0, // 0..1
     // Images: use fixed pricing per generation (recommended)
     'use_image_flat_pricing' => 1,
-    'image_flat_usd_mini' => 0.040,
-    'image_flat_usd_full' => 0.080,
+    'image_flat_usd_mini' => 0.011,
+    'image_flat_usd_full' => 0.042,
+    'image_flat_usd_openai_mini' => 0.011,
+    'image_flat_usd_openai_full' => 0.042,
+    'image_flat_usd_imagen3' => 0.040,
+    'image_flat_usd_imagen4' => 0.040,
     // Fine tuning
     'responses_fixed_usd_per_call' => 0.000,
     'real_adjust_multiplier' => 1.00,
     // Automatic model adjustment (only if REAL multiplier is 1.0)
-    'real_adjust_multiplier_by_model' => array(
-        'gpt-5-mini' => 1.12,
-        'gpt-5.1-mini' => 1.12,
-    ),
+    'real_adjust_multiplier_by_model' => array(),
 
     // Multipliers to approximate failures/retries
     'mult_text'  => 1.00,
@@ -54,12 +55,18 @@ $cbia_defaults = array(
 $cbia_cost = array_merge($cbia_defaults, $cbia_cost);
 
 $cbia_table = cbia_costes_price_table_usd_per_million();
+$cbia_image_provider_current = function_exists('cbia_get_image_provider') ? (string)cbia_get_image_provider() : 'openai';
 
-$cbia_model_text_current = isset($cbia['openai_model']) ? (string)$cbia['openai_model'] : 'gpt-4.1-mini';
+$cbia_model_text_current = function_exists('cbia_costes_get_current_text_model')
+    ? (string)cbia_costes_get_current_text_model($cbia)
+    : (isset($cbia['openai_model']) ? (string)$cbia['openai_model'] : 'gpt-4.1-mini');
 if (!isset($cbia_table[$cbia_model_text_current])) $cbia_model_text_current = 'gpt-4.1-mini';
 
-$cbia_model_img_current = isset($cbia_cost['image_model']) ? (string)$cbia_cost['image_model'] : 'gpt-image-1-mini';
-if (!isset($cbia_table[$cbia_model_img_current])) $cbia_model_img_current = 'gpt-image-1-mini';
+$cbia_model_img_current = isset($cbia_cost['image_model']) ? (string)$cbia_cost['image_model'] : '';
+if ($cbia_model_img_current === '' && function_exists('cbia_costes_get_current_image_model')) {
+    $cbia_model_img_current = (string)cbia_costes_get_current_image_model($cbia);
+}
+if ($cbia_model_img_current === '') $cbia_model_img_current = 'gpt-image-1-mini';
 
 $cbia_model_seo_current = (string)($cbia_cost['seo_model'] ?? '');
 if ($cbia_model_seo_current === '' || !isset($cbia_table[$cbia_model_seo_current])) $cbia_model_seo_current = $cbia_model_text_current;
@@ -85,11 +92,16 @@ $cbia_log  = $cbia_service && method_exists($cbia_service, 'get_log')
     ? $cbia_service->get_log()
     : cbia_costes_log_get();
 
-$cbia_model_text_current = isset($cbia['openai_model']) ? (string)$cbia['openai_model'] : 'gpt-4.1-mini';
+$cbia_model_text_current = function_exists('cbia_costes_get_current_text_model')
+    ? (string)cbia_costes_get_current_text_model($cbia)
+    : (isset($cbia['openai_model']) ? (string)$cbia['openai_model'] : 'gpt-4.1-mini');
 if (!isset($cbia_table[$cbia_model_text_current])) $cbia_model_text_current = 'gpt-4.1-mini';
 
-$cbia_model_img_current = isset($cbia_cost['image_model']) ? (string)$cbia_cost['image_model'] : 'gpt-image-1-mini';
-if (!isset($cbia_table[$cbia_model_img_current])) $cbia_model_img_current = 'gpt-image-1-mini';
+$cbia_model_img_current = isset($cbia_cost['image_model']) ? (string)$cbia_cost['image_model'] : '';
+if ($cbia_model_img_current === '' && function_exists('cbia_costes_get_current_image_model')) {
+    $cbia_model_img_current = (string)cbia_costes_get_current_image_model($cbia);
+}
+if ($cbia_model_img_current === '') $cbia_model_img_current = 'gpt-image-1-mini';
 
 $cbia_model_seo_current = (string)($cbia_cost['seo_model'] ?? '');
 if ($cbia_model_seo_current === '' || !isset($cbia_table[$cbia_model_seo_current])) $cbia_model_seo_current = $cbia_model_text_current;
@@ -203,6 +215,7 @@ if (is_array($cbia_calibration_info)) {
 <span class="description">(by global setting)</span>
 <?php endif; ?>
 </p>
+<p style="margin:6px 0;" class="description">No hidden model-specific multiplier is applied anymore. Only the visible global REAL multiplier affects the calculation.</p>
 </div>
 <h3><?php echo esc_html__('Quick estimate (based on current config)', 'cbiastudio-blogflow-ai'); ?></h3>
 <table class="widefat striped" style="max-width:980px;">
@@ -394,8 +407,12 @@ echo ($cbia_eur_total_est === null)
 <select name="image_model" class="abb-select" style="width:240px;">
 <option value="gpt-image-1-mini" <?php selected($cbia_model_img_current, 'gpt-image-1-mini'); ?>>gpt-image-1-mini</option>
 <option value="gpt-image-1" <?php selected($cbia_model_img_current, 'gpt-image-1'); ?>>gpt-image-1</option>
+<option value="imagen-3.0-generate-002" <?php selected($cbia_model_img_current, 'imagen-3.0-generate-002'); ?>>imagen-3.0-generate-002</option>
+<option value="imagen-4.0-generate-001" <?php selected($cbia_model_img_current, 'imagen-4.0-generate-001'); ?>>imagen-4.0-generate-001</option>
 </select>
-<p class="description">Fixed prices per image (USD): mini <input type="number" step="0.001" min="0" name="image_flat_usd_mini" value="<?php echo esc_attr((string)$cbia_cost['image_flat_usd_mini']); ?>" style="width:90px;" /> &nbsp;full <input type="number" step="0.001" min="0" name="image_flat_usd_full" value="<?php echo esc_attr((string)$cbia_cost['image_flat_usd_full']); ?>" style="width:90px;" /></p>
+<p class="description">Current image provider: <code><?php echo esc_html($cbia_image_provider_current); ?></code>. Use this field as an override if you want to fine-tune estimation manually.</p>
+<p class="description">Fixed prices per image (USD): OpenAI mini <input type="number" step="0.001" min="0" name="image_flat_usd_openai_mini" value="<?php echo esc_attr((string)$cbia_cost['image_flat_usd_openai_mini']); ?>" style="width:90px;" /> &nbsp;OpenAI full <input type="number" step="0.001" min="0" name="image_flat_usd_openai_full" value="<?php echo esc_attr((string)$cbia_cost['image_flat_usd_openai_full']); ?>" style="width:90px;" /></p>
+<p class="description">Google Imagen 3 <input type="number" step="0.001" min="0" name="image_flat_usd_imagen3" value="<?php echo esc_attr((string)$cbia_cost['image_flat_usd_imagen3']); ?>" style="width:90px;" /> &nbsp;Google Imagen 4 <input type="number" step="0.001" min="0" name="image_flat_usd_imagen4" value="<?php echo esc_attr((string)$cbia_cost['image_flat_usd_imagen4']); ?>" style="width:90px;" /></p>
 </td>
 </tr>
 <tr>
@@ -418,7 +435,10 @@ echo ($cbia_eur_total_est === null)
 <td>
 <select name="seo_model" class="abb-select" style="width:240px;">
 <?php
-$cbia_seo_candidates = array('gpt-4.1-mini','gpt-4.1','gpt-4.1-nano','gpt-5','gpt-5-mini','gpt-5-nano','gpt-5.1','gpt-5.2');
+$cbia_seo_candidates = array_values(array_filter(array_keys($cbia_table), static function ($model) {
+    return strpos((string)$model, 'gpt-image-') !== 0 && strpos((string)$model, 'imagen-') !== 0;
+}));
+sort($cbia_seo_candidates, SORT_STRING);
 foreach ($cbia_seo_candidates as $m) {
     if (!isset($cbia_table[$m])) continue;
     echo '<option value="' . esc_attr($m) . '" ' . selected($cbia_model_seo_current, $m, false) . '>' . esc_html($m) . '</option>';

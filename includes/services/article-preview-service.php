@@ -307,9 +307,14 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 }
             }
             $this->delete_preview_payload($user_id, $token);
+            $preview_url = '';
+            if (in_array($post_status, array('draft', 'future'), true)) {
+                $preview_url = (string) get_preview_post_link((int) $post_id);
+            }
             return array(
                 'post_id' => (int)$post_id,
                 'edit_url' => get_edit_post_link((int)$post_id, ''),
+                'preview_url' => $preview_url,
                 'message' => $post_status === 'future'
                     ? __('Post scheduled from preview successfully.', 'cbiastudio-blogflow-ai')
                     : ($post_status === 'draft'

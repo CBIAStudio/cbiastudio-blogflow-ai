@@ -113,11 +113,28 @@ if (!function_exists('cbia_costes_price_table_usd_per_million')) {
             'gpt-4.1-nano'  => array('in'=>0.10,  'cin'=>0.025, 'out'=>0.40),
 
             'gpt-5'         => array('in'=>1.25,  'cin'=>0.125, 'out'=>10.00),
+            'gpt-5-chat-latest' => array('in'=>1.25, 'cin'=>0.125, 'out'=>10.00),
             'gpt-5-mini'    => array('in'=>0.25,  'cin'=>0.025, 'out'=>2.00),
             'gpt-5-nano'    => array('in'=>0.05,  'cin'=>0.005, 'out'=>0.40),
+            'gpt-5-codex'   => array('in'=>1.25,  'cin'=>0.125, 'out'=>10.00),
 
             'gpt-5.1'       => array('in'=>1.25,  'cin'=>0.125, 'out'=>10.00),
+            'gpt-5.1-chat-latest' => array('in'=>1.25, 'cin'=>0.125, 'out'=>10.00),
+            'gpt-5.1-mini'  => array('in'=>0.25,  'cin'=>0.025, 'out'=>2.00),
+            'gpt-5.1-codex' => array('in'=>1.25,  'cin'=>0.125, 'out'=>10.00),
+            'gpt-5.1-codex-max' => array('in'=>1.25, 'cin'=>0.125, 'out'=>10.00),
             'gpt-5.2'       => array('in'=>1.75,  'cin'=>0.175, 'out'=>14.00),
+            'gpt-5.2-chat-latest' => array('in'=>1.75, 'cin'=>0.175, 'out'=>14.00),
+            'gpt-5.2-codex' => array('in'=>1.75, 'cin'=>0.175, 'out'=>14.00),
+
+            // GOOGLE GEMINI
+            'gemini-2.5-pro'        => array('in'=>1.25, 'cin'=>0.125, 'out'=>10.00),
+            'gemini-2.5-flash'      => array('in'=>0.30, 'cin'=>0.03,  'out'=>2.50),
+            'gemini-2.5-flash-lite' => array('in'=>0.10, 'cin'=>0.01,  'out'=>0.40),
+
+            // DEEPSEEK
+            'deepseek-chat'     => array('in'=>0.28, 'cin'=>0.028, 'out'=>0.42),
+            'deepseek-reasoner' => array('in'=>0.28, 'cin'=>0.028, 'out'=>0.42),
 
             // IMAGEN (solo para estimaciÃƒÂ³n basada en tokens; por defecto usaremos tarifa fija)
             'gpt-image-1'       => array('in'=>10.00, 'cin'=>2.50, 'out'=>40.00),
@@ -132,12 +149,66 @@ if (!function_exists('cbia_costes_price_table_usd_per_million')) {
 if (!function_exists('cbia_costes_image_flat_price_usd')) {
     function cbia_costes_image_flat_price_usd($model, $cost_settings) {
         $model = (string)$model;
-        $def_mini = isset($cost_settings['image_flat_usd_mini']) ? (float)$cost_settings['image_flat_usd_mini'] : 0.040; // editable
-        $def_full = isset($cost_settings['image_flat_usd_full']) ? (float)$cost_settings['image_flat_usd_full'] : 0.080; // editable
-        if ($model === 'gpt-image-1-mini') return $def_mini;
-        if ($model === 'gpt-image-1') return $def_full;
-        // fallback: si no reconocemos el modelo, usar mini
-        return $def_mini;
+        $openai_mini = isset($cost_settings['image_flat_usd_openai_mini'])
+            ? (float)$cost_settings['image_flat_usd_openai_mini']
+            : (isset($cost_settings['image_flat_usd_mini']) ? (float)$cost_settings['image_flat_usd_mini'] : 0.011);
+        $openai_full = isset($cost_settings['image_flat_usd_openai_full'])
+            ? (float)$cost_settings['image_flat_usd_openai_full']
+            : (isset($cost_settings['image_flat_usd_full']) ? (float)$cost_settings['image_flat_usd_full'] : 0.042);
+        $imagen3 = isset($cost_settings['image_flat_usd_imagen3'])
+            ? (float)$cost_settings['image_flat_usd_imagen3']
+            : (isset($cost_settings['image_flat_usd_mini']) ? (float)$cost_settings['image_flat_usd_mini'] : 0.040);
+        $imagen4 = isset($cost_settings['image_flat_usd_imagen4'])
+            ? (float)$cost_settings['image_flat_usd_imagen4']
+            : 0.040;
+        if ($model === 'gpt-image-1-mini') return $openai_mini;
+        if ($model === 'gpt-image-1') return $openai_full;
+        if ($model === 'imagen-3.0-generate-002') return $imagen3;
+        if ($model === 'imagen-4.0-generate-001') return $imagen4;
+        return $openai_mini;
+    }
+}
+
+if (!function_exists('cbia_costes_get_supported_image_models')) {
+    function cbia_costes_get_supported_image_models() {
+        return array(
+            'gpt-image-1-mini',
+            'gpt-image-1',
+            'imagen-3.0-generate-002',
+            'imagen-4.0-generate-001',
+        );
+    }
+}
+
+if (!function_exists('cbia_costes_get_current_text_model')) {
+    function cbia_costes_get_current_text_model($cbia_settings = array()) {
+        $provider = function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : 'openai';
+        $model = function_exists('cbia_get_text_model_for_provider')
+            ? (string)cbia_get_text_model_for_provider((string)$provider, '')
+            : '';
+        if ($model === '' && !empty($cbia_settings['openai_model'])) {
+            $model = (string)$cbia_settings['openai_model'];
+        }
+        if ($model === '' && function_exists('cbia_providers_get_recommended_text_model')) {
+            $model = (string)cbia_providers_get_recommended_text_model((string)$provider);
+        }
+        return (string)$model;
+    }
+}
+
+if (!function_exists('cbia_costes_get_current_image_model')) {
+    function cbia_costes_get_current_image_model($cbia_settings = array()) {
+        $provider = function_exists('cbia_get_image_provider') ? cbia_get_image_provider() : 'openai';
+        $model = function_exists('cbia_get_image_model_for_provider')
+            ? (string)cbia_get_image_model_for_provider((string)$provider, '')
+            : '';
+        if ($model === '' && !empty($cbia_settings['image_model'])) {
+            $model = (string)$cbia_settings['image_model'];
+        }
+        if ($model === '' && function_exists('cbia_providers_get_recommended_image_model')) {
+            $model = (string)cbia_providers_get_recommended_image_model((string)$provider);
+        }
+        return (string)$model;
     }
 }
 
@@ -357,16 +428,9 @@ if (!function_exists('cbia_costes_pick_primary_text_model')) {
 
 if (!function_exists('cbia_costes_get_model_multiplier')) {
     function cbia_costes_get_model_multiplier($model, $cost_settings) {
-        $model = (string)$model;
-        $map = isset($cost_settings['real_adjust_multiplier_by_model']) && is_array($cost_settings['real_adjust_multiplier_by_model'])
-            ? $cost_settings['real_adjust_multiplier_by_model']
-            : array();
-
-        if ($model === '' || empty($map) || !isset($map[$model])) return 1.0;
-
-        $mult = (float)$map[$model];
-        if ($mult <= 0) return 1.0;
-        return $mult;
+        // Desactivado: para evitar ajustes ocultos por modelo, el calculo oficial
+        // usa solo tarifas base + el multiplicador global visible en UI.
+        return 1.0;
     }
 }
 if (!function_exists('cbia_costes_calc_real_for_post')) {
@@ -509,14 +573,19 @@ if (!function_exists('cbia_costes_estimate_for_post')) {
         if (!$title) $title = '{title}';
 
         // Modelos
-        $model_text = (string)($cbia_settings['openai_model'] ?? 'gpt-4.1-mini');
+        $model_text = function_exists('cbia_costes_get_current_text_model')
+            ? (string)cbia_costes_get_current_text_model($cbia_settings)
+            : (string)($cbia_settings['openai_model'] ?? 'gpt-4.1-mini');
         if (!isset($table[$model_text])) $model_text = 'gpt-4.1-mini';
 
         $model_seo = (string)($cost_settings['seo_model'] ?? $model_text);
         if (!isset($table[$model_seo])) $model_seo = $model_text;
 
-        $model_img = (string)($cost_settings['image_model'] ?? 'gpt-image-1-mini');
-        if (!isset($table[$model_img])) $model_img = 'gpt-image-1-mini';
+        $model_img = (string)($cost_settings['image_model'] ?? '');
+        if ($model_img === '' && function_exists('cbia_costes_get_current_image_model')) {
+            $model_img = (string)cbia_costes_get_current_image_model($cbia_settings);
+        }
+        if ($model_img === '') $model_img = 'gpt-image-1-mini';
 
         // Llamadas por post
         $text_calls = max(1, (int)($cost_settings['text_calls_per_post'] ?? 1));
@@ -707,10 +776,16 @@ if (!function_exists('cbia_costes_handle_post')) {
 
             // Tarifa fija por imagen
             $cost['use_image_flat_pricing'] = !empty($u['use_image_flat_pricing']) ? 1 : 0;
-            $cost['image_flat_usd_mini'] = isset($u['image_flat_usd_mini']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_mini']) : (float)$cost['image_flat_usd_mini'];
-            if ($cost['image_flat_usd_mini'] < 0) $cost['image_flat_usd_mini'] = 0.0;
-            $cost['image_flat_usd_full'] = isset($u['image_flat_usd_full']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_full']) : (float)$cost['image_flat_usd_full'];
-            if ($cost['image_flat_usd_full'] < 0) $cost['image_flat_usd_full'] = 0.0;
+            $cost['image_flat_usd_openai_mini'] = isset($u['image_flat_usd_openai_mini']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_mini']) : (float)($cost['image_flat_usd_openai_mini'] ?? ($cost['image_flat_usd_mini'] ?? 0.011));
+            if ($cost['image_flat_usd_openai_mini'] < 0) $cost['image_flat_usd_openai_mini'] = 0.0;
+            $cost['image_flat_usd_openai_full'] = isset($u['image_flat_usd_openai_full']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_full']) : (float)($cost['image_flat_usd_openai_full'] ?? ($cost['image_flat_usd_full'] ?? 0.042));
+            if ($cost['image_flat_usd_openai_full'] < 0) $cost['image_flat_usd_openai_full'] = 0.0;
+            $cost['image_flat_usd_imagen3'] = isset($u['image_flat_usd_imagen3']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_imagen3']) : (float)($cost['image_flat_usd_imagen3'] ?? ($cost['image_flat_usd_mini'] ?? 0.040));
+            if ($cost['image_flat_usd_imagen3'] < 0) $cost['image_flat_usd_imagen3'] = 0.0;
+            $cost['image_flat_usd_imagen4'] = isset($u['image_flat_usd_imagen4']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_imagen4']) : (float)($cost['image_flat_usd_imagen4'] ?? 0.040);
+            if ($cost['image_flat_usd_imagen4'] < 0) $cost['image_flat_usd_imagen4'] = 0.0;
+            $cost['image_flat_usd_mini'] = $cost['image_flat_usd_openai_mini'];
+            $cost['image_flat_usd_full'] = $cost['image_flat_usd_openai_full'];
 
             $cost['mult_text'] = isset($u['mult_text']) ? (float)str_replace(',', '.', (string)$u['mult_text']) : (float)$cost['mult_text'];
             if ($cost['mult_text'] < 1.0) $cost['mult_text'] = 1.0;
@@ -740,10 +815,14 @@ if (!function_exists('cbia_costes_handle_post')) {
             if ($cost['image_calls_per_post'] < 0) $cost['image_calls_per_post'] = 0;
             if ($cost['image_calls_per_post'] > 20) $cost['image_calls_per_post'] = 20;
 
-            // modelo imagen (solo 2)
+            // modelo imagen
             $im = isset($u['image_model']) ? sanitize_text_field((string)$u['image_model']) : (string)$cost['image_model'];
-            if (!isset($table[$im]) || ($im !== 'gpt-image-1' && $im !== 'gpt-image-1-mini')) {
-                $im = 'gpt-image-1-mini';
+            $allowed_image_models = function_exists('cbia_costes_get_supported_image_models')
+                ? cbia_costes_get_supported_image_models()
+                : array('gpt-image-1-mini', 'gpt-image-1');
+            if (!in_array($im, $allowed_image_models, true)) {
+                $im = function_exists('cbia_costes_get_current_image_model') ? cbia_costes_get_current_image_model($cbia) : 'gpt-image-1-mini';
+                if ($im === '') $im = 'gpt-image-1-mini';
             }
             $cost['image_model'] = $im;
 
@@ -867,4 +946,3 @@ if (!function_exists('cbia_render_tab_costes')) {
 }
 
 /* ------------------------- FIN includes/domain/costs.php ------------------------- */
-

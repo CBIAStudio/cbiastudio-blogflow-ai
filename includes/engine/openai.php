@@ -18,7 +18,7 @@ if (!function_exists('cbia_get_current_provider_key')) {
 		}
 		if (function_exists('cbia_providers_get_settings') && function_exists('cbia_providers_get_current_provider')) {
 			$provider_settings = cbia_providers_get_settings();
-			$current_provider = cbia_providers_get_current_provider($provider_settings);
+			$current_provider = cbia_providers_get_current_provider();
 			return $current_provider ?: 'openai';
 		}
 		return 'openai';

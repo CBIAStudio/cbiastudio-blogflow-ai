@@ -93,7 +93,13 @@ if (!function_exists('cbia_config_handle_post')) {
 		if ($text_provider === '' || !isset($providers_list[$text_provider])) $text_provider = 'openai';
 
 		$image_provider = isset($post['image_provider']) ? sanitize_key((string) wp_unslash($post['image_provider'])) : (string)($settings['image_provider'] ?? '');
-		if ($image_provider === '' || !isset($providers_list[$image_provider])) $image_provider = 'openai';
+		if (
+			$image_provider === ''
+			|| !isset($providers_list[$image_provider])
+			|| (function_exists('cbia_providers_supports_image') && !cbia_providers_supports_image($image_provider))
+		) {
+			$image_provider = 'openai';
+		}
 
 		// CAMBIO: modelos por proveedor (texto)
 		$text_model = isset($text_models_post[$text_provider]) ? sanitize_text_field((string)$text_models_post[$text_provider]) : '';
@@ -141,6 +147,9 @@ if (!function_exists('cbia_config_handle_post')) {
 				);
 				$mdl = isset($text_models_post[$pkey]) ? sanitize_text_field((string)$text_models_post[$pkey]) : (string)($providers_new[$pkey]['model'] ?? ($pdef['models'][0] ?? ''));
 				$img = isset($image_models_post[$pkey]) ? sanitize_text_field((string)$image_models_post[$pkey]) : (string)($providers_new[$pkey]['image_model'] ?? '');
+				if (function_exists('cbia_providers_supports_image') && !cbia_providers_supports_image($pkey)) {
+					$img = '';
+				}
 				$base = isset($provider_base_url_post[$pkey]) ? sanitize_text_field((string)$provider_base_url_post[$pkey]) : (string)($providers_new[$pkey]['base_url'] ?? ($pdef['base_url'] ?? ''));
 				$providers_new[$pkey] = [
 					'api_key'     => $api,
@@ -374,4 +383,3 @@ if (!function_exists('cbia_render_tab_config')) {
         echo '<p>No se pudo cargar Configuracion.</p>';
     }
 }
-
