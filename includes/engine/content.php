@@ -315,6 +315,7 @@ if (!function_exists('cbia_fix_content_artifacts')) {
         // Eliminar puntos sueltos tras spans pendientes o tags
         $html = preg_replace('/(<\/span>)\s*\./i', '$1', $html);
         $html = preg_replace('/(<\/p>)\s*\./i', '$1', $html);
+        $html = preg_replace('/\s*[\x{2014}\x{2013}]\s*/u', ', ', $html);
 
         // Eliminar lÃƒÂ­neas con solo un punto
         $html = preg_replace('/^\s*\.\s*$/m', '', $html);
@@ -327,6 +328,93 @@ if (!function_exists('cbia_fix_content_artifacts')) {
         $html = preg_replace('/<p>\s*&nbsp;\s*<\/p>/i', '', $html);
 
         return $html;
+    }
+}
+
+if (!function_exists('cbia_count_words_plain_text')) {
+    function cbia_count_words_plain_text($text) {
+        $text = trim(preg_replace('/\s+/u', ' ', wp_strip_all_tags((string)$text)));
+        if ($text === '') return 0;
+        preg_match_all('/[\p{L}\p{N}\']+/u', $text, $m);
+        return is_array($m[0] ?? null) ? count($m[0]) : 0;
+    }
+}
+
+if (!function_exists('cbia_split_long_paragraph_html')) {
+    function cbia_split_long_paragraph_html($inner_html, $max_words = 140) {
+        $inner_html = trim((string)$inner_html);
+        if ($inner_html === '') return $inner_html;
+
+        if (preg_match('/<(img|ul|ol|li|table|blockquote|iframe|h[1-6]|div|figure|figcaption|pre|code)\b/i', $inner_html)) {
+            return $inner_html;
+        }
+
+        $plain = trim(preg_replace('/\s+/u', ' ', wp_strip_all_tags($inner_html)));
+        if ($plain === '') return $inner_html;
+        if (cbia_count_words_plain_text($plain) <= (int)$max_words) return $inner_html;
+
+        $sentences = preg_split('/(?<=[\.\!\?\:\;])\s+/u', $plain, -1, PREG_SPLIT_NO_EMPTY);
+        if (!is_array($sentences) || count($sentences) < 2) {
+            $words = preg_split('/\s+/u', $plain, -1, PREG_SPLIT_NO_EMPTY);
+            if (!is_array($words) || count($words) <= (int)$max_words) return $inner_html;
+            $chunks = array_chunk($words, max(1, (int)ceil(count($words) / 2)));
+            $parts = array();
+            foreach ($chunks as $chunk) {
+                $piece = trim(implode(' ', $chunk));
+                if ($piece !== '') $parts[] = '<p>' . esc_html($piece) . '</p>';
+            }
+            return implode("\n", $parts);
+        }
+
+        $parts = array();
+        $current = array();
+        $current_words = 0;
+        $target_words = min(110, max(80, (int)floor((int)$max_words * 0.78)));
+
+        foreach ($sentences as $sentence) {
+            $sentence = trim((string)$sentence);
+            if ($sentence === '') continue;
+            $sentence_words = cbia_count_words_plain_text($sentence);
+            if (!empty($current) && ($current_words + $sentence_words > (int)$max_words || $current_words >= $target_words)) {
+                $parts[] = '<p>' . esc_html(trim(implode(' ', $current))) . '</p>';
+                $current = array();
+                $current_words = 0;
+            }
+            $current[] = $sentence;
+            $current_words += $sentence_words;
+        }
+
+        if (!empty($current)) {
+            $parts[] = '<p>' . esc_html(trim(implode(' ', $current))) . '</p>';
+        }
+
+        if (count($parts) <= 1) return $inner_html;
+        return implode("\n", $parts);
+    }
+}
+
+if (!function_exists('cbia_split_long_paragraphs_in_html')) {
+    function cbia_split_long_paragraphs_in_html($html, $max_words = 140) {
+        $html = (string)$html;
+        return preg_replace_callback('/<p\b([^>]*)>(.*?)<\/p>/is', function($m) use ($max_words) {
+            $attrs = trim((string)($m[1] ?? ''));
+            $inner = (string)($m[2] ?? '');
+            $plain_words = cbia_count_words_plain_text($inner);
+            if ($plain_words <= (int)$max_words) {
+                return $m[0];
+            }
+
+            $split = cbia_split_long_paragraph_html($inner, (int)$max_words);
+            if ($split === $inner) {
+                return $m[0];
+            }
+
+            if ($attrs !== '') {
+                $paragraphs = preg_replace('/<p>/i', '<p ' . $attrs . '>', $split);
+                return $paragraphs;
+            }
+            return $split;
+        }, $html);
     }
 }
 
@@ -386,7 +474,9 @@ if (!function_exists('cbia_cleanup_post_html')) {
         if (function_exists('cbia_fix_content_artifacts')) {
             $html = cbia_fix_content_artifacts($html);
         }
+        if (function_exists('cbia_split_long_paragraphs_in_html')) {
+            $html = cbia_split_long_paragraphs_in_html($html, 140);
+        }
         return $html;
     }
 }
-

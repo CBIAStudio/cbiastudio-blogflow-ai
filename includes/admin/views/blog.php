@@ -187,10 +187,9 @@ $author_args = [
     'option_none_value'=> 0,
     'capability'       => ['edit_posts'],
     'class'            => 'regular-text',
+    'echo'             => 0,
 ];
-ob_start();
-wp_dropdown_users($author_args);
-$dd = ob_get_clean();
+$dd = (string) wp_dropdown_users($author_args);
 $dd = str_replace('class=\'', 'style="width:420px;" class=\'', $dd);
 $dd = str_replace('class="', 'style="width:420px;" class="', $dd);
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated HTML from wp_dropdown_users().
@@ -393,39 +392,43 @@ echo '</select>';
 <h2><?php echo esc_html__('Log', 'cbiastudio-blogflow-ai'); ?></h2>
 <textarea id="cbia_log" rows="14" readonly style="width:100%;max-width:1100px;background:#f9f9f9;"><?php echo esc_textarea($log_text); ?></textarea>
 
-<?php ob_start(); ?>
+<?php
+$cbia_blog_i18n_json = wp_json_encode(array(
+    'launching' => __('Launching...', 'cbiastudio-blogflow-ai'),
+    'runningLog' => __('Running (see log)...', 'cbiastudio-blogflow-ai'),
+    'featuredError' => __('Could not generate featured image.', 'cbiastudio-blogflow-ai'),
+    'featuredPlaceholderFast' => __('Fast preview: featured image in placeholder.', 'cbiastudio-blogflow-ai'),
+    'featuredPending' => __('Featured image in progress...', 'cbiastudio-blogflow-ai'),
+    'imageInProcess' => __('Image in progress...', 'cbiastudio-blogflow-ai'),
+    'copyEmpty' => __('There is no content to copy.', 'cbiastudio-blogflow-ai'),
+    'copyOk' => __('Content copied to clipboard.', 'cbiastudio-blogflow-ai'),
+    'copyFail' => __('Could not copy to clipboard.', 'cbiastudio-blogflow-ai'),
+    'collapse' => __('Collapse preview', 'cbiastudio-blogflow-ai'),
+    'expand' => __('Expand preview', 'cbiastudio-blogflow-ai'),
+    'previewCleared' => __('Preview cleared.', 'cbiastudio-blogflow-ai'),
+    'cancelPreviewFail' => __('Could not cancel preview.', 'cbiastudio-blogflow-ai'),
+    'previewChangesSaved' => __('Preview changes saved.', 'cbiastudio-blogflow-ai'),
+    'previewEditCancelled' => __('Editing canceled.', 'cbiastudio-blogflow-ai'),
+    'noDraftToEdit' => __('There is no preview draft to edit.', 'cbiastudio-blogflow-ai'),
+    'hidePreview' => __('Hide preview', 'cbiastudio-blogflow-ai'),
+    'showPreview' => __('Generation with preview', 'cbiastudio-blogflow-ai'),
+    'previewFail' => __('Could not generate preview.', 'cbiastudio-blogflow-ai'),
+    'previewOk' => __('Preview generated successfully.', 'cbiastudio-blogflow-ai'),
+    'streamTimeoutInitial' => __('Initial streaming timeout.', 'cbiastudio-blogflow-ai'),
+    'streamTimeout' => __('Streaming timeout.', 'cbiastudio-blogflow-ai'),
+    'streamStarting' => __('Starting preview for: ', 'cbiastudio-blogflow-ai'),
+    'streamIncomplete' => __('Incomplete streaming response.', 'cbiastudio-blogflow-ai'),
+    'streamFail' => __('Streaming failed.', 'cbiastudio-blogflow-ai'),
+    'selectTitleFirst' => __('Select or type a manual title first.', 'cbiastudio-blogflow-ai'),
+    'previewGenerating' => __('Generating preview...', 'cbiastudio-blogflow-ai'),
+    'imagePhasePending' => __('Waiting for image phase...', 'cbiastudio-blogflow-ai'),
+    'previewError' => __('Error generating preview.', 'cbiastudio-blogflow-ai'),
+));
+$cbia_blog_ajax_nonce_json = wp_json_encode($ajax_nonce);
+$cbia_blog_edit_base_url_json = wp_json_encode(admin_url('post.php'));
+$cbia_blog_js = <<<'JS'
 (function(){
-    const I18N = <?php echo wp_json_encode(array(
-        'launching' => __('Launching...', 'cbiastudio-blogflow-ai'),
-        'runningLog' => __('Running (see log)...', 'cbiastudio-blogflow-ai'),
-        'featuredError' => __('Could not generate featured image.', 'cbiastudio-blogflow-ai'),
-        'featuredPlaceholderFast' => __('Fast preview: featured image in placeholder.', 'cbiastudio-blogflow-ai'),
-        'featuredPending' => __('Featured image in progress...', 'cbiastudio-blogflow-ai'),
-        'imageInProcess' => __('Image in progress...', 'cbiastudio-blogflow-ai'),
-        'copyEmpty' => __('There is no content to copy.', 'cbiastudio-blogflow-ai'),
-        'copyOk' => __('Content copied to clipboard.', 'cbiastudio-blogflow-ai'),
-        'copyFail' => __('Could not copy to clipboard.', 'cbiastudio-blogflow-ai'),
-        'collapse' => __('Collapse preview', 'cbiastudio-blogflow-ai'),
-        'expand' => __('Expand preview', 'cbiastudio-blogflow-ai'),
-        'previewCleared' => __('Preview cleared.', 'cbiastudio-blogflow-ai'),
-        'cancelPreviewFail' => __('Could not cancel preview.', 'cbiastudio-blogflow-ai'),
-        'previewChangesSaved' => __('Preview changes saved.', 'cbiastudio-blogflow-ai'),
-        'previewEditCancelled' => __('Editing canceled.', 'cbiastudio-blogflow-ai'),
-        'noDraftToEdit' => __('There is no preview draft to edit.', 'cbiastudio-blogflow-ai'),
-        'hidePreview' => __('Hide preview', 'cbiastudio-blogflow-ai'),
-        'showPreview' => __('Generation with preview', 'cbiastudio-blogflow-ai'),
-        'previewFail' => __('Could not generate preview.', 'cbiastudio-blogflow-ai'),
-        'previewOk' => __('Preview generated successfully.', 'cbiastudio-blogflow-ai'),
-        'streamTimeoutInitial' => __('Initial streaming timeout.', 'cbiastudio-blogflow-ai'),
-        'streamTimeout' => __('Streaming timeout.', 'cbiastudio-blogflow-ai'),
-        'streamStarting' => __('Starting preview for: ', 'cbiastudio-blogflow-ai'),
-        'streamIncomplete' => __('Incomplete streaming response.', 'cbiastudio-blogflow-ai'),
-        'streamFail' => __('Streaming failed.', 'cbiastudio-blogflow-ai'),
-        'selectTitleFirst' => __('Select or type a manual title first.', 'cbiastudio-blogflow-ai'),
-        'previewGenerating' => __('Generating preview...', 'cbiastudio-blogflow-ai'),
-        'imagePhasePending' => __('Waiting for image phase...', 'cbiastudio-blogflow-ai'),
-        'previewError' => __('Error generating preview.', 'cbiastudio-blogflow-ai'),
-    )); ?>;
+    const I18N = __CBIA_I18N__;
     const manualRow = document.getElementById('cbia_row_manual');
     const csvRow = document.getElementById('cbia_row_csv');
     const radios = document.querySelectorAll('input[name="title_input_mode"]');
@@ -528,7 +531,7 @@ echo '</select>';
 
     function refreshLog(){
         if (typeof ajaxurl === 'undefined') return;
-        const logUrl = ajaxurl + '?action=cbia_get_log&_ajax_nonce=' + encodeURIComponent(<?php echo wp_json_encode($ajax_nonce); ?>) + '&ts=' + Date.now();
+        const logUrl = ajaxurl + '?action=cbia_get_log&_ajax_nonce=' + encodeURIComponent(__CBIA_AJAX_NONCE__) + '&ts=' + Date.now();
         fetch(logUrl, { credentials:'same-origin', cache:'no-store' })
         .then(r => r.text())
         .then(text => {
@@ -564,7 +567,7 @@ echo '</select>';
 
             const fd = new FormData();
             fd.append('action','cbia_start_generation');
-            fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+            fd.append('_ajax_nonce', __CBIA_AJAX_NONCE__);
 
             fetch(ajaxurl, { method:'POST', credentials:'same-origin', body: fd })
             .then(r => r.text())
@@ -1025,7 +1028,7 @@ echo '</select>';
             clearPreviewOutput({ skipCancel: true });
         });
     }
-    const editBaseUrl = <?php echo wp_json_encode(admin_url('post.php')); ?>;
+    const editBaseUrl = __CBIA_EDIT_BASE_URL__;
     function openInlinePreviewEdit(){
         if (previewEditPanel) previewEditPanel.style.display = '';
         if (!previewHtml) return;
@@ -1075,7 +1078,7 @@ echo '</select>';
         setPreviewModeBadge('classic');
         const fd = new FormData();
         fd.append('action', 'cbia_preview_article');
-        fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+        fd.append('_ajax_nonce', __CBIA_AJAX_NONCE__);
         fd.append('title', titleVal);
         fd.append('preview_mode', 'full');
         fd.append('post_language', postLanguage ? postLanguage.value : '');
@@ -1109,7 +1112,7 @@ echo '</select>';
         setPreviewModeBadge('stream');
         const params = new URLSearchParams();
         params.append('action', 'cbia_preview_article_stream');
-        params.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+        params.append('_ajax_nonce', __CBIA_AJAX_NONCE__);
         params.append('title', titleVal);
         params.append('preview_mode', 'full');
         params.append('post_language', postLanguage ? postLanguage.value : '');
@@ -1384,7 +1387,14 @@ echo '</select>';
 
     refreshPromptEditor();
 })();
-<?php wp_add_inline_script('abb-admin', (string) ob_get_clean(), 'after'); ?>
+JS;
+$cbia_blog_js = strtr($cbia_blog_js, array(
+    '__CBIA_I18N__' => $cbia_blog_i18n_json,
+    '__CBIA_AJAX_NONCE__' => $cbia_blog_ajax_nonce_json,
+    '__CBIA_EDIT_BASE_URL__' => $cbia_blog_edit_base_url_json,
+));
+wp_add_inline_script('abb-admin', $cbia_blog_js, 'after');
+?>
 <?php
     }
 }

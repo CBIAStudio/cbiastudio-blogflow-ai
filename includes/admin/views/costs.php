@@ -509,28 +509,29 @@ If there is no real usage, use estimation
 <h3><?php echo esc_html__('Costs log', 'cbiastudio-blogflow-ai'); ?></h3>
 <textarea id="cbia-costes-log" rows="14" cols="120" readonly style="background:#f9f9f9;width:100%;"><?php echo esc_textarea($cbia_log); ?></textarea>
 
-<?php ob_start(); ?>
-document.addEventListener('DOMContentLoaded', function() {
-    const logBox = document.getElementById('cbia-costes-log');
-                function refreshLog(){
-                    if (typeof ajaxurl === 'undefined') return;
-                    const nonce = (window.CBIA && CBIA.nonce) ? CBIA.nonce : '';
-                    const url = ajaxurl + '?action=cbia_get_costes_log' + (nonce ? '&_ajax_nonce=' + encodeURIComponent(nonce) : '');
-                    fetch(url, { credentials: 'same-origin' })
-                        .then(r => r.json())
-                        .then(data => {
-            if(data && data.success && logBox){
-                if (data.data && typeof data.data === 'object' && data.data.log) {
-                    logBox.value = data.data.log || '';
-                } else {
-                    logBox.value = data.data || '';
-                }
-                logBox.scrollTop = logBox.scrollHeight;
-            }
-        })
-        .catch(() => {});
-    }
-    setInterval(refreshLog, 3000);
-});
-<?php wp_add_inline_script('abb-admin', (string) ob_get_clean(), 'after'); ?>
+<?php
+$cbia_costs_log_js = "document.addEventListener('DOMContentLoaded', function() {\n"
+    . "const logBox = document.getElementById('cbia-costes-log');\n"
+    . "function refreshLog(){\n"
+    . "  if (typeof ajaxurl === 'undefined') return;\n"
+    . "  const nonce = (window.CBIA && CBIA.nonce) ? CBIA.nonce : '';\n"
+    . "  const url = ajaxurl + '?action=cbia_get_costes_log' + (nonce ? '&_ajax_nonce=' + encodeURIComponent(nonce) : '');\n"
+    . "  fetch(url, { credentials: 'same-origin' })\n"
+    . "    .then(r => r.json())\n"
+    . "    .then(data => {\n"
+    . "      if (data && data.success && logBox) {\n"
+    . "        if (data.data && typeof data.data === 'object' && data.data.log) {\n"
+    . "          logBox.value = data.data.log || '';\n"
+    . "        } else {\n"
+    . "          logBox.value = data.data || '';\n"
+    . "        }\n"
+    . "        logBox.scrollTop = logBox.scrollHeight;\n"
+    . "      }\n"
+    . "    })\n"
+    . "    .catch(() => {});\n"
+    . "}\n"
+    . "setInterval(refreshLog, 3000);\n"
+    . "});";
+wp_add_inline_script('abb-admin', $cbia_costs_log_js, 'after');
+?>
 </div>

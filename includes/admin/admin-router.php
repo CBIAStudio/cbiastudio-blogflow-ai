@@ -120,7 +120,6 @@ if (!class_exists('CBIA_Admin_Router')) {
 
 
             $logo_header = plugins_url('assets/images/ai-blog-builder-ico.svg', CBIA_PLUGIN_FILE);
-            $logo_sidebar = plugins_url('assets/images/AI-Blog-Builder.svg', CBIA_PLUGIN_FILE);
             echo '<div class="wrap cbia-shell">';
             echo '<div class="cbia-header">';
             echo '<div class="cbia-brand">';
@@ -132,7 +131,6 @@ if (!class_exists('CBIA_Admin_Router')) {
 
             echo '<div class="cbia-layout">';
             echo '<aside class="cbia-sidebar">';
-            echo '<div class="cbia-sidebar-logo"><img src="' . esc_url($logo_sidebar) . '" alt="CBIAStudio BlogFlow with AI" /></div>';
             echo '<ul class="cbia-sidebar-nav">';
 
 
@@ -175,6 +173,5 @@ if (!class_exists('CBIA_Admin_Router')) {
         }
     }
 }
-
 
 

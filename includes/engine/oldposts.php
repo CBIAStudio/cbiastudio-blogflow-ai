@@ -663,6 +663,9 @@ if (!function_exists('cbia_oldposts_ai_regenerate_content')) {
             $final_html = cbia_oldposts_mark_all_as_pending($html);
             $pending_list = cbia_oldposts_extract_image_markers_any($final_html);
         }
+        if (function_exists('cbia_cleanup_post_html')) {
+            $final_html = cbia_cleanup_post_html($final_html);
+        }
 
         wp_update_post(array(
             'ID'           => $post_id,

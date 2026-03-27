@@ -190,10 +190,9 @@ $author_args = [
     'option_none_value'=> 0,
     'capability'       => ['edit_posts'],
     'class'            => 'regular-text',
+    'echo'             => 0,
 ];
-ob_start();
-wp_dropdown_users($author_args);
-$dd = ob_get_clean();
+$dd = (string) wp_dropdown_users($author_args);
 $dd = str_replace('class=\'', 'style="width:420px;" class=\'', $dd);
 $dd = str_replace('class="', 'style="width:420px;" class="', $dd);
 // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Core-generated HTML from wp_dropdown_users().
@@ -411,7 +410,9 @@ echo '</select>';
 <h2>Log</h2>
 <textarea id="cbia_log" rows="14" readonly style="width:100%;max-width:1100px;background:#f9f9f9;"><?php echo esc_textarea($log_text); ?></textarea>
 
-<?php ob_start(); ?>
+<?php
+$cbia_legacy_blog_ajax_nonce_json = wp_json_encode($ajax_nonce);
+$cbia_legacy_blog_js = <<<'JS'
 (function(){
     const manualRow = document.getElementById('cbia_row_manual');
     const csvRow = document.getElementById('cbia_row_csv');
@@ -511,7 +512,7 @@ echo '</select>';
 
     function refreshLog(){
         if (typeof ajaxurl === 'undefined') return;
-        const logUrl = ajaxurl + '?action=cbia_get_log&_ajax_nonce=' + encodeURIComponent(<?php echo wp_json_encode($ajax_nonce); ?>) + '&ts=' + Date.now();
+        const logUrl = ajaxurl + '?action=cbia_get_log&_ajax_nonce=' + encodeURIComponent(__CBIA_AJAX_NONCE__) + '&ts=' + Date.now();
         fetch(logUrl, { credentials:'same-origin', cache:'no-store' })
         .then(r => r.text())
         .then(text => {
@@ -542,7 +543,7 @@ echo '</select>';
 
             const fd = new FormData();
             fd.append('action','cbia_start_generation');
-            fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+            fd.append('_ajax_nonce', __CBIA_AJAX_NONCE__);
 
             fetch(ajaxurl, { method:'POST', credentials:'same-origin', body: fd })
             .then(r => r.text())
@@ -949,7 +950,7 @@ echo '</select>';
         setPreviewModeBadge('classic');
         const fd = new FormData();
         fd.append('action', 'cbia_preview_article');
-        fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+        fd.append('_ajax_nonce', __CBIA_AJAX_NONCE__);
         fd.append('title', titleVal);
         fd.append('preview_mode', modeOverride || (previewMode ? previewMode.value : 'fast'));
         fd.append('post_language', postLanguage ? postLanguage.value : '');
@@ -989,7 +990,7 @@ echo '</select>';
         setPreviewModeBadge('stream');
         const params = new URLSearchParams();
         params.append('action', 'cbia_preview_article_stream');
-        params.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+        params.append('_ajax_nonce', __CBIA_AJAX_NONCE__);
         params.append('title', titleVal);
         params.append('preview_mode', previewMode ? previewMode.value : 'fast');
         params.append('post_language', postLanguage ? postLanguage.value : '');
@@ -1236,7 +1237,7 @@ echo '</select>';
         setPhase('ready', false);
         const fd = new FormData();
         fd.append('action', 'cbia_create_post_from_preview');
-        fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+        fd.append('_ajax_nonce', __CBIA_AJAX_NONCE__);
         fd.append('preview_token', previewToken);
         fd.append('edited_title', previewEditTitle ? previewEditTitle.value : '');
         fd.append('edited_html', previewHtml ? previewHtml.innerHTML : '');
@@ -1331,5 +1332,10 @@ echo '</select>';
 
     refreshPromptEditor();
 })();
-<?php wp_add_inline_script('abb-admin', (string) ob_get_clean(), 'after'); ?>
+JS;
+$cbia_legacy_blog_js = strtr($cbia_legacy_blog_js, array(
+    '__CBIA_AJAX_NONCE__' => $cbia_legacy_blog_ajax_nonce_json,
+));
+wp_add_inline_script('abb-admin', $cbia_legacy_blog_js, 'after');
+?>
 <?php // phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound ?>

@@ -272,6 +272,34 @@ if (!function_exists('cbia_admin_enqueue_inline')) {
     }
 }
 
+if (!function_exists('cbia_sanitize_custom_css')) {
+    function cbia_sanitize_custom_css($css) {
+        $css = (string)$css;
+        if ($css === '') return '';
+
+        $css = wp_kses_no_null($css, array('slash_zero' => 'keep'));
+        $css = preg_replace('!/\*.*?\*/!s', '', $css);
+        $css = preg_replace('/<\/?style\b[^>]*>/i', '', $css);
+        $css = preg_replace('/@import\b/i', '', $css);
+        $css = preg_replace('/expression\s*\(|javascript\s*:|vbscript\s*:|behavior\s*:|-moz-binding|data\s*:/i', '', $css);
+
+        $sanitized = '';
+        if (preg_match_all('/([^{]+)\{([^}]*)\}/', $css, $matches, PREG_SET_ORDER)) {
+            foreach ($matches as $match) {
+                $selector = trim((string)$match[1]);
+                $selector = preg_replace('/[^a-zA-Z0-9\-\_\.\#\s\:\,\>\+\~\*\[\]\=\"\'\(\)]/', '', $selector);
+                $rules = trim((string)safecss_filter_attr((string)$match[2]));
+                if ($selector === '' || $rules === '') {
+                    continue;
+                }
+                $sanitized .= $selector . '{' . $rules . '}';
+            }
+        }
+
+        return trim($sanitized);
+    }
+}
+
 if (!function_exists('cbia_output_banner_css')) {
     function cbia_output_banner_css() {
         if (is_admin()) return;
@@ -280,7 +308,7 @@ if (!function_exists('cbia_output_banner_css')) {
         $settings = cbia_get_settings();
         if (empty($settings['content_images_banner_enabled'])) return;
 
-        $css = trim((string)($settings['content_images_banner_css'] ?? ''));
+        $css = cbia_sanitize_custom_css($settings['content_images_banner_css'] ?? '');
         if ($css === '') return;
         if (!wp_style_is('cbia-banner-css-inline', 'registered')) {
             wp_register_style('cbia-banner-css-inline', false, array(), CBIA_VERSION);
@@ -305,7 +333,7 @@ if (!function_exists('cbia_output_banner_css_admin')) {
             }
         }
 
-        $css = trim((string)($settings['content_images_banner_css'] ?? ''));
+        $css = cbia_sanitize_custom_css($settings['content_images_banner_css'] ?? '');
         if ($css === '') return;
         if (!wp_style_is('cbia-banner-css-admin-inline', 'registered')) {
             wp_register_style('cbia-banner-css-admin-inline', false, array(), CBIA_VERSION);
@@ -992,5 +1020,3 @@ if (!function_exists('cbia_ajax_sync_models')) {
         wp_send_json_error(['message' => __('Sync failed', 'cbiastudio-blogflow-ai'), 'result' => $result], 500);
     }
 }
-
-

@@ -279,43 +279,44 @@ if (!function_exists('cbia_render_view_usage')) {
                         <span style="display:inline-block;width:10px;height:10px;background:#00a32a;border-radius:2px;margin:0 6px 0 14px;"></span>Output
                     </div>
                 </div>
-                <?php ob_start(); ?>
-                (function(){
-                    const data = <?php echo wp_json_encode($daily); ?>;
-                    const canvas = document.getElementById('cbia-usage-chart');
-                    if (!canvas) return;
-                    const ctx = canvas.getContext('2d');
-                    const keys = Object.keys(data);
-                    if (!keys.length) return;
-                    const padding = 30;
-                    const w = canvas.width = canvas.parentElement.clientWidth - 10;
-                    const h = canvas.height = 180;
-                    let max = 0;
-                    keys.forEach(k => {
-                        const total = (data[k].in || 0) + (data[k].out || 0);
-                        if (total > max) max = total;
-                    });
-                    const barW = Math.max(6, Math.floor((w - padding * 2) / keys.length) - 4);
-                    ctx.clearRect(0,0,w,h);
-                    ctx.fillStyle = '#f0f0f1';
-                    ctx.fillRect(0,0,w,h);
-                    ctx.fillStyle = '#fff';
-                    ctx.fillRect(padding, 10, w - padding * 2, h - 40);
-                    keys.forEach((k, i) => {
-                        const baseX = padding + i * (barW + 4);
-                        const inVal = data[k].in || 0;
-                        const outVal = data[k].out || 0;
-                        const scale = max > 0 ? (h - 60) / max : 1;
-                        const inH = Math.max(1, Math.round(inVal * scale));
-                        const outH = Math.max(1, Math.round(outVal * scale));
-                        const yBase = h - 30;
-                        ctx.fillStyle = '#2271b1';
-                        ctx.fillRect(baseX, yBase - inH, barW, inH);
-                        ctx.fillStyle = '#00a32a';
-                        ctx.fillRect(baseX, yBase - inH - outH, barW, outH);
-                    });
-                })();
-                <?php wp_add_inline_script('abb-admin', (string) ob_get_clean(), 'after'); ?>
+                <?php
+                $cbia_usage_chart_js = "(function(){\n"
+                    . "const data = " . wp_json_encode($daily) . ";\n"
+                    . "const canvas = document.getElementById('cbia-usage-chart');\n"
+                    . "if (!canvas) return;\n"
+                    . "const ctx = canvas.getContext('2d');\n"
+                    . "const keys = Object.keys(data);\n"
+                    . "if (!keys.length) return;\n"
+                    . "const padding = 30;\n"
+                    . "const w = canvas.width = canvas.parentElement.clientWidth - 10;\n"
+                    . "const h = canvas.height = 180;\n"
+                    . "let max = 0;\n"
+                    . "keys.forEach(k => {\n"
+                    . "  const total = (data[k].in || 0) + (data[k].out || 0);\n"
+                    . "  if (total > max) max = total;\n"
+                    . "});\n"
+                    . "const barW = Math.max(6, Math.floor((w - padding * 2) / keys.length) - 4);\n"
+                    . "ctx.clearRect(0,0,w,h);\n"
+                    . "ctx.fillStyle = '#f0f0f1';\n"
+                    . "ctx.fillRect(0,0,w,h);\n"
+                    . "ctx.fillStyle = '#fff';\n"
+                    . "ctx.fillRect(padding, 10, w - padding * 2, h - 40);\n"
+                    . "keys.forEach((k, i) => {\n"
+                    . "  const baseX = padding + i * (barW + 4);\n"
+                    . "  const inVal = data[k].in || 0;\n"
+                    . "  const outVal = data[k].out || 0;\n"
+                    . "  const scale = max > 0 ? (h - 60) / max : 1;\n"
+                    . "  const inH = Math.max(1, Math.round(inVal * scale));\n"
+                    . "  const outH = Math.max(1, Math.round(outVal * scale));\n"
+                    . "  const yBase = h - 30;\n"
+                    . "  ctx.fillStyle = '#2271b1';\n"
+                    . "  ctx.fillRect(baseX, yBase - inH, barW, inH);\n"
+                    . "  ctx.fillStyle = '#00a32a';\n"
+                    . "  ctx.fillRect(baseX, yBase - inH - outH, barW, outH);\n"
+                    . "});\n"
+                    . "})();";
+                wp_add_inline_script('abb-admin', $cbia_usage_chart_js, 'after');
+                ?>
             <?php endif; ?>
 
             <h3>Usage by model</h3>

@@ -51,7 +51,8 @@ if (!function_exists('cbia_generate_meta_description')) {
 		}
 
 		$base = trim(preg_replace('/\s+/u', ' ', (string)$base));
-		$max_len = 155;
+		// Keep a safer ceiling for Yoast/snippet checks across all flows.
+		$max_len = 139;
 		if (mb_strlen($base) <= $max_len) return $base;
 
 		$cut_len = $max_len - 3;
@@ -67,5 +68,4 @@ if (!function_exists('cbia_generate_meta_description')) {
 		return $truncated . '...';
 	}
 }
-
 

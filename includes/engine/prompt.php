@@ -43,6 +43,86 @@ if (!function_exists('cbia_prompt_recommended_editable_default')) {
             ."\n\nMANDATORY STRUCTURE (do not add or remove sections)"
             ."\n"
             ."\n1) One heading using <h2>"
+            ."\n   Opening section using 2 paragraphs with <p>."
+            ."\n   - DO NOT use the word \"Introduction\" or equivalents."
+            ."\n   - Total length: 180-220 words across both paragraphs."
+            ."\n   - Target 70-110 words per paragraph."
+            ."\n"
+            ."\n2) Three main blocks, each with:"
+            ."\n   - (Optional) a subtitle using <h3> ONLY if it adds real clarity."
+            ."\n   - Total length: 250-300 words per block."
+            ."\n   - Split each block into 2 or 3 paragraphs using <p>."
+            ."\n   - Target 70-110 words per paragraph."
+            ."\n   - Lists ONLY when they improve understanding (<ul> and <li>)."
+            ."\n"
+            ."\n3) FAQ section:"
+            ."\n   - One <h2> heading written in {IDIOMA_POST}, as the natural equivalent of \"Frequently Asked Questions\" in that language."
+            ."\n   - Six FAQs, each with:"
+            ."\n     - Question in <h3>."
+            ."\n     - Answer in 2 short paragraphs using <p>, with a total of 120-150 words."
+            ."\n"
+            ."\nREADABILITY RULES"
+            ."\n- No paragraph may exceed 140 words."
+            ."\n- If a paragraph exceeds 4 sentences, split it into a new paragraph."
+            ."\n- Keep most sentences between 12 and 22 words."
+            ."\n- No more than 20% of sentences should exceed 24 words."
+            ."\n- Use natural transition words in roughly 1 of every 3-4 sentences when they improve flow."
+            ."\n- Prefer short, clear sentences over chained clauses."
+            ."\n- Do NOT use em dashes or en dashes. Prefer commas, semicolons or full stops.";
+    }
+}
+
+if (!function_exists('cbia_prompt_recommended_editable_legacy_default')) {
+    function cbia_prompt_recommended_editable_legacy_default(): string {
+        return
+            "TONO Y ESTILO"
+            ."\n- Profesional, cercano y natural."
+            ."\n- Editorial y cultural, no enciclopedico."
+            ."\n- Narrativo cuando sea adecuado, con criterio y punto de vista."
+            ."\n- Pensado para lectores que no estaban buscando activamente el tema."
+            ."\n\nESTRUCTURA OBLIGATORIA (no anadir ni eliminar secciones)"
+            ."\n"
+            ."\n1) Un encabezado usando la etiqueta <h2>"
+            ."\n   Apertura usando 2 parrafos con la etiqueta <p>."
+            ."\n   - NO usar la palabra \"Introduccion\" ni equivalentes."
+            ."\n   - Extension total: 180-220 palabras entre ambos parrafos."
+            ."\n   - Objetivo: 70-110 palabras por parrafo."
+            ."\n"
+            ."\n2) Tres bloques principales, cada uno con:"
+            ."\n   - (Opcional) un subtitulo usando la etiqueta <h3> SOLO si aporta claridad real."
+            ."\n   - Extension total: 250-300 palabras por bloque."
+            ."\n   - Divide cada bloque en 2 o 3 parrafos usando <p>."
+            ."\n   - Objetivo: 70-110 palabras por parrafo."
+            ."\n   - Listas SOLO cuando ayuden a la comprension (etiquetas <ul> y <li>)."
+            ."\n"
+            ."\n3) Seccion de preguntas frecuentes:"
+            ."\n   - Un encabezado <h2> cuyo texto debe estar escrito en {IDIOMA_POST} y ser el equivalente natural a \"Preguntas frecuentes\" en ese idioma."
+            ."\n   - Seis preguntas frecuentes, cada una con:"
+            ."\n     - Pregunta en etiqueta <h3>."
+            ."\n     - Respuesta en 2 parrafos cortos usando <p>, con un total de 120-150 palabras."
+            ."\n"
+            ."\nREGLAS DE LEGIBILIDAD"
+            ."\n- Ningun parrafo puede superar 140 palabras."
+            ."\n- Si un parrafo supera 4 frases, dividelo en un nuevo parrafo."
+            ."\n- Mantener la mayoria de frases entre 12 y 22 palabras."
+            ."\n- No mas del 20% de las frases pueden superar 24 palabras."
+            ."\n- Usar conectores naturales en aproximadamente 1 de cada 3-4 frases cuando mejoren el flujo."
+            ."\n- Priorizar frases claras y directas frente a clausulas encadenadas."
+            ."\n- NO usar raya larga ni dash editorial. Preferir comas, punto y coma o punto.";
+    }
+}
+
+if (!function_exists('cbia_prompt_recommended_editable_default_previous')) {
+    function cbia_prompt_recommended_editable_default_previous(): string {
+        return
+            "TONE AND STYLE"
+            ."\n- Professional, close and natural."
+            ."\n- Editorial and cultural, not encyclopedic."
+            ."\n- Narrative when appropriate, with judgment and point of view."
+            ."\n- Designed for readers who were not actively searching for this topic."
+            ."\n\nMANDATORY STRUCTURE (do not add or remove sections)"
+            ."\n"
+            ."\n1) One heading using <h2>"
             ."\n   Opening paragraph using <p>."
             ."\n   - DO NOT use the word \"Introduction\" or equivalents."
             ."\n   - Length: 180-220 words."
@@ -60,8 +140,8 @@ if (!function_exists('cbia_prompt_recommended_editable_default')) {
     }
 }
 
-if (!function_exists('cbia_prompt_recommended_editable_legacy_default')) {
-    function cbia_prompt_recommended_editable_legacy_default(): string {
+if (!function_exists('cbia_prompt_recommended_editable_legacy_default_previous')) {
+    function cbia_prompt_recommended_editable_legacy_default_previous(): string {
         return
             "TONO Y ESTILO"
             ."\n- Profesional, cercano y natural."
@@ -91,16 +171,28 @@ if (!function_exists('cbia_prompt_recommended_editable_legacy_default')) {
 if (!function_exists('cbia_prompt_maybe_upgrade_legacy_editable')) {
     function cbia_prompt_maybe_upgrade_legacy_editable($text, $language = ''): string {
         $text = is_string($text) ? $text : '';
-        if (function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language)) {
-            return $text;
-        }
         $normalize = static function ($value): string {
             $value = str_replace(array("\r\n", "\r"), "\n", (string)$value);
             return trim($value);
         };
-        if ($normalize($text) === $normalize(cbia_prompt_recommended_editable_legacy_default())) {
+
+        $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        $normalized = $normalize($text);
+
+        if ($normalized === $normalize(cbia_prompt_recommended_editable_default_previous())
+            || $normalized === $normalize(cbia_prompt_recommended_editable_default())
+        ) {
             return cbia_prompt_recommended_editable_default();
         }
+
+        if ($normalized === $normalize(cbia_prompt_recommended_editable_legacy_default_previous())
+            || $normalized === $normalize(cbia_prompt_recommended_editable_legacy_default())
+        ) {
+            return $is_spanish
+                ? cbia_prompt_recommended_editable_legacy_default()
+                : cbia_prompt_recommended_editable_default();
+        }
+
         return $text;
     }
 }
