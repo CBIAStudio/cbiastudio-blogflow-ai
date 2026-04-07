@@ -126,7 +126,7 @@ if (!class_exists('CBIA_Admin_Router')) {
             echo '<img class="cbia-logo" src="' . esc_url($logo_header) . '" alt="CBIAStudio BlogFlow with AI" />';
             echo '<div class="cbia-title"><span class="ai-part">CBIAStudio</span> <span class="brand-part">BLOGFLOW</span> <span class="cbia-badge-pro">AI</span></div>';
             echo '</div>';
-            echo '<div class="cbia-version">v' . esc_html(defined('CBIA_VERSION') ? CBIA_VERSION : '3.0.2') . '</div>';
+            echo '<div class="cbia-version">v' . esc_html(defined('CBIA_VERSION') ? CBIA_VERSION : '1.2.2') . '</div>';
             echo '</div>';
 
             echo '<div class="cbia-layout">';
@@ -173,5 +173,4 @@ if (!class_exists('CBIA_Admin_Router')) {
         }
     }
 }
-
 
