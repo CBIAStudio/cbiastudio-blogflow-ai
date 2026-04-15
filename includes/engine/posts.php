@@ -9,45 +9,20 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
    ============== CREAR POST (WP) + METAS/SEO ===============
    ========================================================= */
 
-if (!function_exists('cbia_find_post_id_by_exact_title')) {
-	function cbia_find_post_id_by_exact_title($title) {
-		$title = trim((string)$title);
-		if ($title === '') return 0;
-		$q = new WP_Query(array(
-			'post_type'              => 'post',
-			'post_status'            => 'any',
-			'posts_per_page'         => 1,
-			'fields'                 => 'ids',
-			'no_found_rows'          => true,
-			'update_post_term_cache' => false,
-			'update_post_meta_cache' => false,
-			'title'                  => $title,
-		));
-		return !empty($q->posts[0]) ? (int)$q->posts[0] : 0;
-	}
-}
-
 if (!function_exists('cbia_post_exists_by_title')) {
 	function cbia_post_exists_by_title($title) {
+		global $wpdb;
 		$title = (string)$title;
 		$normalized = trim(preg_replace('/\s+/', ' ', $title));
 		$slug = sanitize_title($normalized);
-
-		if (cbia_find_post_id_by_exact_title($title) > 0) return true;
-
-		if ($normalized !== '' && $normalized !== $title) {
-			if (cbia_find_post_id_by_exact_title($normalized) > 0) return true;
-		}
-
-		$by_slug = get_posts(array(
-			'name'           => $slug,
-			'post_type'      => 'post',
-			'post_status'    => 'any',
-			'posts_per_page' => 1,
-			'fields'         => 'ids',
-			'no_found_rows'  => true,
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Exact title/slug collision check before insert.
+		$found = $wpdb->get_var($wpdb->prepare(
+			"SELECT ID FROM {$wpdb->posts} WHERE post_type='post' AND post_status IN ('publish','future','draft','pending','private') AND (post_title=%s OR post_title=%s OR post_name=%s) LIMIT 1",
+			$title,
+			$normalized !== '' ? $normalized : $title,
+			$slug
 		));
-		return !empty($by_slug);
+		return !empty($found);
 	}
 }
 
@@ -55,8 +30,8 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 	/**
 	 * Crea el post y asigna:
 	 * - featured (si se pasa)
-	 * - yoast metadesc + focuskw (bÃ¡sico)
-	 * - categorÃ­as y tags (reglas plugin)
+	 * - yoast metadesc + focuskw (básico)
+	 * - categorías y tags (reglas plugin)
 	 */
 	function cbia_create_post_in_wp_engine($title, $final_html, $featured_attach_id, $post_date_mysql, $force_status = '') {
 		$s = cbia_get_settings();
@@ -92,16 +67,16 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 
 		$post_id = wp_insert_post($postarr, true);
 		if (is_wp_error($post_id) || !$post_id) {
-			$err = is_wp_error($post_id) ? $post_id->get_error_message() : 'wp_insert_post_fallo';
+			$err = is_wp_error($post_id) ? $post_id->get_error_message() : 'wp_insert_post_failed';
 			return [false, 0, $err];
 		}
 
 		$post_id = (int)$post_id;
 
-		// CategorÃ­as
+		// Categorías
 		$cats = cbia_determine_categories_by_mapping($title, $final_html);
 		if (empty($cats)) {
-			$default_cat = trim((string)($s['default_category'] ?? 'Noticias'));
+			$default_cat = trim((string)($s['default_category'] ?? 'News'));
 			if ($default_cat !== '') $cats = [$default_cat];
 		}
 
@@ -112,6 +87,7 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 		}
 		if (!empty($cat_ids)) {
 			wp_set_post_categories($post_id, $cat_ids, false);
+			update_post_meta($post_id, '_yoast_wpseo_primary_category', (int)$cat_ids[0]);
 		}
 
 		// Tags (solo permitidas)
@@ -123,13 +99,37 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 		// Featured
 		if ($featured_attach_id) {
 			set_post_thumbnail($post_id, (int)$featured_attach_id);
+			wp_update_post(array(
+				'ID' => (int)$featured_attach_id,
+				'post_parent' => (int)$post_id,
+			));
 		}
 
-		// Yoast bÃ¡sico (luego en mÃ³dulo Yoast se mejora con hook)
+		// Yoast básico (luego en módulo Yoast se mejora con hook)
 		$metad = cbia_generate_meta_description($title, $final_html);
 		$focus = cbia_generate_focus_keyphrase($title, $final_html);
+		$yoast_title = wp_strip_all_tags((string)$title);
 		update_post_meta($post_id, '_yoast_wpseo_metadesc', $metad);
 		update_post_meta($post_id, '_yoast_wpseo_focuskw', $focus);
+		update_post_meta($post_id, '_yoast_wpseo_focuskw_text_input', $focus);
+		update_post_meta($post_id, '_yoast_wpseo_title', $yoast_title);
+		update_post_meta($post_id, '_yoast_wpseo_opengraph-title', $yoast_title);
+		update_post_meta($post_id, '_yoast_wpseo_opengraph-description', $metad);
+		update_post_meta($post_id, '_yoast_wpseo_twitter-title', $yoast_title);
+		update_post_meta($post_id, '_yoast_wpseo_twitter-description', $metad);
+		$extra_yoast_meta = apply_filters('cbia_yoast_extra_meta', array(), $post_id, $title, $final_html, $cat_ids);
+		if (is_array($extra_yoast_meta) && !empty($extra_yoast_meta)) {
+			$allowed = array(
+				'_yoast_wpseo_canonical',
+				'_yoast_wpseo_meta-robots-noindex',
+				'_yoast_wpseo_meta-robots-nofollow',
+				'_yoast_wpseo_schema_page_type',
+			);
+			foreach ($allowed as $meta_key) {
+				if (!array_key_exists($meta_key, $extra_yoast_meta)) continue;
+				update_post_meta($post_id, $meta_key, (string)$extra_yoast_meta[$meta_key]);
+			}
+		}
 
 		// Marcador plugin
 		update_post_meta($post_id, '_cbia_created', '1');
@@ -151,22 +151,23 @@ if (!function_exists('cbia_create_single_blog_post')) {
 	function cbia_create_single_blog_post($title, $post_date_mysql = '', $force_status = '') {
 		cbia_try_unlimited_runtime();
 		$title = trim((string)$title);
-		if ($title === '') return ['ok'=>false,'post_id'=>0,'error'=>'TÃ­tulo vacÃ­o'];
+		if ($title === '') return ['ok'=>false,'post_id'=>0,'error'=>'Empty title'];
 
 		if (cbia_is_stop_requested()) {
-			return ['ok'=>false,'post_id'=>0,'error'=>'STOP activado'];
+			return ['ok'=>false,'post_id'=>0,'error'=>'STOP enabled'];
 		}
 
 		if (cbia_post_exists_by_title($title)) {
-			cbia_log(sprintf("El post '%s' ya existe. Omitido.", (string)$title), 'INFO');
-			return ['ok'=>false,'post_id'=>0,'error'=>'Ya existe'];
+				cbia_log(sprintf("Post '%s' already exists. Skipped.", (string)$title), 'INFO');
+			return ['ok'=>false,'post_id'=>0,'error'=>'Already exists'];
 		}
 
 		$s = cbia_get_settings();
-		// Normal: only featured image (no in-content)
-		$images_limit = 1;
+		$images_limit = (int)($s['images_limit'] ?? 3);
+		if ($images_limit < 1) $images_limit = 1;
+		if ($images_limit > 4) $images_limit = 4;
 
-		// Tracking para costes reales (texto + imÃ¡genes)
+		// Tracking para costes reales (texto + imágenes)
 		$image_calls = array();
 		$text_call = array();
 
@@ -175,23 +176,24 @@ if (!function_exists('cbia_create_single_blog_post')) {
 
 		// 2) OpenAI texto (6 valores)
 		list($ok, $text_html, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, $title, 2);
+		$text_attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($raw) : array();
 		$text_call = array(
 			'context' => 'blog_text',
 			'model'   => (string)$model_used,
 			'usage'   => is_array($usage) ? $usage : cbia_usage_empty(),
 		);
 		if (!$ok) {
-			cbia_log("Text failure '{$title}': " . ($err ?: 'desconocido'), 'ERROR');
-			// Si OpenAI devolviÃ³ usage pero no hay post, deja rastro en el log de costes.
+				cbia_log(sprintf("Text generation failed for '%s': %s", (string)$title, (string)($err ?: 'unknown')), 'ERROR');
+			// Si OpenAI devolvió usage pero no hay post, deja rastro en el log de costes.
 			if (function_exists('cbia_costes_log')) {
 				$uin  = (int)($usage['input_tokens'] ?? 0);
 				$uout = (int)($usage['output_tokens'] ?? 0);
 				$umod = (string)($model_used ?? '');
 				if ($uin > 0 || $uout > 0) {
-					cbia_costes_log("Usage without post (text failure) title='{$title}' model={$umod} in={$uin} out={$uout} err=" . (string)($err ?: ''));
+					cbia_costes_log("Uso sin post (fallo texto) title='{$title}' model={$umod} in={$uin} out={$uout} err=" . (string)($err ?: ''));
 				}
 			}
-			return ['ok'=>false,'post_id'=>0,'error'=>$err ?: 'Text failure'];
+			return ['ok'=>false,'post_id'=>0,'error'=>$err ?: 'Text generation failed'];
 		}
 
 		$text_html = cbia_strip_document_wrappers($text_html);
@@ -199,28 +201,56 @@ if (!function_exists('cbia_create_single_blog_post')) {
 
 		// Corrige encabezados escritos como [h2]...[/h2] / [h3]...[/h3] a HTML real
 		$text_html = cbia_fix_bracket_headings($text_html);
-		// Normaliza el tÃ­tulo de FAQ segÃºn idioma/config
+		// Normaliza el título de FAQ según idioma/config
 		$text_html = cbia_normalize_faq_heading($text_html);
-		// Si Yoast FAQ Block estÃ¡ disponible, convierte FAQs a bloque
+		// Si Yoast FAQ Block está disponible, convierte FAQs a bloque
 		if (function_exists('cbia_convert_faq_to_yoast_block')) {
 			list($text_html, $faq_block_ok, $faq_block_status) = cbia_convert_faq_to_yoast_block($text_html);
 			if ($faq_block_ok) {
-				cbia_log('FAQ Yoast: bloque insertado correctamente', 'INFO');
+					cbia_log("Yoast FAQ: block inserted successfully", 'INFO');
 			} elseif (!empty($faq_block_status)) {
-				cbia_log('FAQ Yoast: ' . (string)$faq_block_status, 'INFO');
+					cbia_log(sprintf('FAQ Yoast: %s', (string)$faq_block_status), 'INFO');
 			}
 		}
-		cbia_log("AI text OK: generated HTML for '{$title}'", 'INFO');
-        // 3) Sin imagenes internas: limpiar cualquier marcador y seguir.
+			cbia_log(sprintf("AI text OK: generated HTML for '%s'", (string)$title), 'INFO');
+        // 3) Procesar marcadores de imagen
+        $internal_limit = max(0, $images_limit - 1);
         if (function_exists('cbia_normalize_image_markers')) {
             $text_html = cbia_normalize_image_markers($text_html);
         }
-        $markers_all = function_exists('cbia_extract_image_markers') ? cbia_extract_image_markers($text_html) : [];
-        if (!empty($markers_all)) {
-            foreach ($markers_all as $mk) {
-                $text_html = cbia_remove_marker_from_html($text_html, $mk['full']);
+
+        $markers_all = cbia_extract_image_markers($text_html);
+        $total_markers = count($markers_all);
+	        cbia_log(sprintf("Markers detected: %d | internal images to generate: %d", (int)$total_markers, (int)$internal_limit), 'INFO');
+
+        if ($internal_limit <= 0) {
+            if ($total_markers > 0) {
+                foreach ($markers_all as $mk) {
+                    $text_html = cbia_remove_marker_from_html($text_html, $mk['full']);
+                }
+                $text_html = cbia_cleanup_post_html($text_html);
+	                cbia_log("Markers removed (internal image limit = 0).", 'INFO');
             }
-            $text_html = cbia_cleanup_post_html($text_html);
+            $markers = [];
+        } else {
+            if ($total_markers < $internal_limit) {
+                $text_html = cbia_force_insert_markers($text_html, $title, $internal_limit);
+                $markers_all = cbia_extract_image_markers($text_html);
+                $total_markers = count($markers_all);
+	                cbia_log(sprintf("Markers after auto-insert: %d", (int)$total_markers), 'INFO');
+            }
+
+            if ($total_markers > $internal_limit) {
+                $extra = array_slice($markers_all, $internal_limit);
+                foreach ($extra as $mk) {
+                    $text_html = cbia_remove_marker_from_html($text_html, $mk['full']);
+                }
+                $text_html = cbia_cleanup_post_html($text_html);
+	                cbia_log(sprintf("Extra markers removed: %d", (int)count($extra)), 'INFO');
+            }
+
+            $markers = cbia_extract_image_markers($text_html);
+            if (!empty($markers)) $markers = array_slice($markers, 0, $internal_limit);
         }
 
         $pending_list = [];
@@ -232,37 +262,96 @@ if (!function_exists('cbia_create_single_blog_post')) {
 
         $GLOBALS['cbia_current_post_title_for_prompt'] = $title;
 
-        $skip_images = !empty($GLOBALS['cbia_preview_skip_images']);
-        if ($skip_images) {
-            cbia_log("Preview: skipping featured image generation para '{$title}'.", 'INFO');
-        } else {
-            // Destacada siempre
-            $featured_desc = $title;
-            $img_descs['featured'] = array(
-                'desc' => $featured_desc,
-                'section' => 'intro',
-                'attach_id' => 0,
-            );
-            $prompt_featured = cbia_build_image_prompt_for_post(0, 'featured', $featured_desc, 0);
-            $alt_featured = cbia_sanitize_alt_from_desc($featured_desc);
-            if ($alt_featured === '') $alt_featured = cbia_sanitize_alt_from_desc($title);
+        foreach ($markers as $i => $mk) {
+            if (cbia_is_stop_requested()) {
+	                cbia_log(sprintf("STOP during image generation on '%s'.", (string)$title), 'INFO');
+                break;
+            }
 
-            list($ok, $attach_id, $m, $e) = cbia_generate_image_openai_with_prompt($prompt_featured, 'intro', $title, $alt_featured);
+            $desc = (string)($mk['desc'] ?? '');
+            $short_desc = (string)($mk['short_desc'] ?? '');
+            if ($short_desc === '') {
+                $short_desc = cbia_sanitize_image_short_desc($desc);
+            }
+            if ($short_desc === '') {
+                $short_desc = $title;
+	                cbia_log("Image: empty SHORT_DESC in marker, using title as fallback", 'INFO');
+            }
+
+            $section = cbia_detect_marker_section($text_html, (int)$mk['pos'], false);
+            $section_label = function_exists('cbia_section_label') ? cbia_section_label($section) : (string)$section;
+
+            $prompt = cbia_build_image_prompt_for_post(0, 'internal', $short_desc, $i + 1);
+            $alt = cbia_sanitize_alt_from_desc($short_desc);
+            if ($alt === '') $alt = cbia_sanitize_alt_from_desc($title);
+
+            list($img_ok, $attach_id, $img_model, $img_err, $img_meta) = cbia_generate_image_openai_with_prompt($prompt, $section, $title, $alt, $i + 1);
             $image_calls[] = [
                 'context' => 'blog_image',
-                'section' => 'intro',
-                'model'   => (string)$m,
-                'ok'      => $ok ? 1 : 0,
-                'error'   => (string)($e ?: ''),
+                'section' => $section,
+                'model'   => (string)$img_model,
+                'ok'      => $img_ok ? 1 : 0,
+                'error'   => (string)($img_err ?: ''),
                 'attach_id' => (int)$attach_id,
+                'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($img_meta) : array(),
             ];
-            if ($ok && $attach_id) {
-                $featured_attach_id = (int)$attach_id;
-                $img_descs['featured']['attach_id'] = (int)$featured_attach_id;
-                cbia_log('Featured image OK: attach_id=' . (int)$featured_attach_id, 'INFO');
+
+            $img_descs['internal'][] = array(
+                'desc' => $short_desc,
+                'section' => (string)$section,
+                'attach_id' => (int)$attach_id,
+            );
+
+            if ($img_ok && $attach_id) {
+                $url = wp_get_attachment_url((int)$attach_id);
+                $img_tag = cbia_build_content_img_tag_with_meta($url, $alt, $section, (int)$attach_id, $i + 1);
+
+                $text_html = cbia_replace_first_occurrence($text_html, $mk['full'], $img_tag);
+	                cbia_log(sprintf("Image inserted in content: section=%s", (string)$section_label), 'INFO');
             } else {
-                cbia_log("Could not generate featured image for '{$title}': " . ($e ?: ''), 'ERROR');
+                $desc_clean = cbia_sanitize_alt_from_desc($short_desc);
+                $pending_list[] = [
+                    'desc' => $desc_clean,
+                    'section' => $section,
+                    'model' => (string)$img_model,
+                    'status' => 'pending',
+                    'tries' => 0,
+                    'last_error' => (string)($img_err ?: ''),
+                    'attach_id' => 0,
+                ];
+                $placeholder = "<span class='cbia-img-pendiente' style='display:none'>[IMAGE_PENDING: {$desc_clean}]</span>";
+                $text_html = cbia_replace_first_occurrence($text_html, $mk['full'], $placeholder);
+	                cbia_log(sprintf("Pending image left in content: section=%s err=%s", (string)$section_label, (string)($img_err ?: 'unknown')), 'WARN');
             }
+        }
+
+        // Destacada siempre
+        $featured_desc = $title;
+        $img_descs['featured'] = array(
+            'desc' => $featured_desc,
+            'section' => 'intro',
+            'attach_id' => 0,
+        );
+        $prompt_featured = cbia_build_image_prompt_for_post(0, 'featured', $featured_desc, 0);
+        $alt_featured = cbia_sanitize_alt_from_desc($featured_desc);
+        if ($alt_featured === '') $alt_featured = cbia_sanitize_alt_from_desc($title);
+
+        list($ok, $attach_id, $m, $e, $featured_meta) = cbia_generate_image_openai_with_prompt($prompt_featured, 'intro', $title, $alt_featured);
+        $image_calls[] = [
+            'context' => 'blog_image',
+            'section' => 'intro',
+            'model'   => (string)$m,
+            'ok'      => $ok ? 1 : 0,
+            'error'   => (string)($e ?: ''),
+            'attach_id' => (int)$attach_id,
+            'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($featured_meta) : array(),
+        ];
+        if ($ok && $attach_id) {
+            $featured_attach_id = (int)$attach_id;
+            $img_descs['featured']['attach_id'] = (int)$featured_attach_id;
+	            cbia_log(sprintf("Featured image OK: attach_id=%d", (int)$featured_attach_id), 'INFO');
+        } else {
+	            cbia_log(sprintf("Failed to generate featured image for '%s': %s", (string)$title, (string)($e ?: '')), 'ERROR');
         }
 
 		// Limpieza de artefactos antes de guardar
@@ -271,8 +360,8 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		// Crear post en WP
 		list($ok_post, $post_id, $post_err) = cbia_create_post_in_wp_engine($title, $text_html, $featured_attach_id, $post_date_mysql, $force_status);
 		if (!$ok_post) {
-			cbia_log("Could not create post '{$title}': {$post_err}", 'ERROR');
-			return ['ok'=>false,'post_id'=>0,'error'=>$post_err ?: 'Fallo insert'];
+				cbia_log(sprintf("Could not create post '%s': %s", (string)$title, (string)$post_err), 'ERROR');
+			return ['ok'=>false,'post_id'=>0,'error'=>$post_err ?: 'Insert failed'];
 		}
 
 		// Guardar lista de pendientes
@@ -286,8 +375,14 @@ if (!function_exists('cbia_create_single_blog_post')) {
         // Guardar descripciones usadas para prompts (featured + internas)
         update_post_meta($post_id, '_cbia_img_descs', wp_json_encode($img_descs));
 
-		// Guardar uso real (texto + imÃ¡genes) en sistema de costes
+		// Guardar uso real (texto + imágenes) en sistema de costes
 		if (function_exists('cbia_costes_record_usage')) {
+			if (!empty($text_attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+				cbia_costes_record_failed_attempts($post_id, $text_attempts, array(
+					'type' => 'text',
+					'prompt' => $prompt,
+				));
+			}
 			// Texto
 			cbia_costes_record_usage($post_id, array(
 				'type' => 'text',
@@ -297,17 +392,29 @@ if (!function_exists('cbia_create_single_blog_post')) {
 				'cached_input_tokens' => 0,
 				'ok' => 1,
 			));
-			// ImÃ¡genes
+			// Imágenes
 			foreach ($image_calls as $ic) {
-				cbia_costes_record_usage($post_id, array(
-					'type' => 'image',
-					'model' => (string)($ic['model'] ?? ''),
-					'input_tokens' => 0,
-					'output_tokens' => 0,
-					'cached_input_tokens' => 0,
-					'ok' => !empty($ic['ok']) ? 1 : 0,
-					'error' => (string)($ic['error'] ?? ''),
-				));
+				$recorded_attempts = 0;
+				if (!empty($ic['attempts']) && function_exists('cbia_costes_record_failed_attempts')) {
+					$recorded_attempts = cbia_costes_record_failed_attempts($post_id, (array)$ic['attempts'], array(
+						'type' => 'image',
+						'prompt' => isset($ic['context']) && $ic['context'] === 'blog_image' ? $prompt : '',
+						'section' => (string)($ic['section'] ?? ''),
+					));
+				}
+				if (!empty($ic['ok']) || !$recorded_attempts) {
+					cbia_costes_record_usage($post_id, array(
+						'type' => 'image',
+						'model' => (string)($ic['model'] ?? ''),
+						'input_tokens' => 0,
+						'output_tokens' => 0,
+						'cached_input_tokens' => 0,
+						'ok' => !empty($ic['ok']) ? 1 : 0,
+						'error' => (string)($ic['error'] ?? ''),
+						'section' => (string)($ic['section'] ?? ''),
+						'attach_id' => (int)($ic['attach_id'] ?? 0),
+					));
+				}
 			}
 		}
 
@@ -323,10 +430,8 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			cbia_image_append_call($post_id, (string)($ic['section'] ?? ''), (string)($ic['model'] ?? ''), !empty($ic['ok']), (int)($ic['attach_id'] ?? 0), (string)($ic['error'] ?? ''));
 		}
 
-		cbia_log("Post created OK: ID {$post_id} | '{$title}'", 'INFO');
+			cbia_log(sprintf("Post creado OK: ID %d | '%s'", (int)$post_id, (string)$title), 'INFO');
 
 		return ['ok'=>true,'post_id'=>(int)$post_id,'error'=>''];
 	}
 }
-
-

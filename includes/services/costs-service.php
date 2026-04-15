@@ -67,11 +67,12 @@ if (!class_exists('CBIA_Costs_Service')) {
             $notice = '';
             $calibration_info = null;
 
-            if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') {
+            $request_method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_SERVER['REQUEST_METHOD']))) : '';
+            if ($request_method !== 'POST') {
                 return array($cost, $notice, $calibration_info);
             }
 
-            $u = wp_unslash($_POST);
+            $u = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
 
             if (!empty($u['cbia_form']) && $u['cbia_form'] === 'costes_settings' && check_admin_referer('cbia_costes_settings_nonce')) {
                 $cost['usd_to_eur'] = isset($u['usd_to_eur']) ? (float)str_replace(',', '.', (string)$u['usd_to_eur']) : $cost['usd_to_eur'];
@@ -124,8 +125,18 @@ if (!class_exists('CBIA_Costs_Service')) {
                 $cost['real_adjust_multiplier'] = isset($u['real_adjust_multiplier']) ? (float)str_replace(',', '.', (string)$u['real_adjust_multiplier']) : (float)$cost['real_adjust_multiplier'];
                 if ($cost['real_adjust_multiplier'] < 0.5) $cost['real_adjust_multiplier'] = 0.5;
                 if ($cost['real_adjust_multiplier'] > 1.5) $cost['real_adjust_multiplier'] = 1.5;
+                $cost['count_failed_attempt_costs'] = !empty($u['count_failed_attempt_costs']) ? 1 : 0;
+                $cost['failed_text_input_ratio'] = isset($u['failed_text_input_ratio']) ? (float)str_replace(',', '.', (string)$u['failed_text_input_ratio']) : (float)($cost['failed_text_input_ratio'] ?? 1.0);
+                if ($cost['failed_text_input_ratio'] < 0) $cost['failed_text_input_ratio'] = 0.0;
+                if ($cost['failed_text_input_ratio'] > 1) $cost['failed_text_input_ratio'] = 1.0;
+                $cost['failed_text_output_ratio'] = isset($u['failed_text_output_ratio']) ? (float)str_replace(',', '.', (string)$u['failed_text_output_ratio']) : (float)($cost['failed_text_output_ratio'] ?? 0.0);
+                if ($cost['failed_text_output_ratio'] < 0) $cost['failed_text_output_ratio'] = 0.0;
+                if ($cost['failed_text_output_ratio'] > 1) $cost['failed_text_output_ratio'] = 1.0;
+                $cost['failed_image_flat_ratio'] = isset($u['failed_image_flat_ratio']) ? (float)str_replace(',', '.', (string)$u['failed_image_flat_ratio']) : (float)($cost['failed_image_flat_ratio'] ?? 0.35);
+                if ($cost['failed_image_flat_ratio'] < 0) $cost['failed_image_flat_ratio'] = 0.0;
+                if ($cost['failed_image_flat_ratio'] > 1) $cost['failed_image_flat_ratio'] = 1.0;
 
-                // nÃ‚Âº llamadas texto/imagen
+                // nº llamadas texto/imagen
                 $cost['text_calls_per_post'] = isset($u['text_calls_per_post']) ? (int)$u['text_calls_per_post'] : (int)$cost['text_calls_per_post'];
                 if ($cost['text_calls_per_post'] < 1) $cost['text_calls_per_post'] = 1;
                 if ($cost['text_calls_per_post'] > 20) $cost['text_calls_per_post'] = 20;
@@ -134,7 +145,7 @@ if (!class_exists('CBIA_Costs_Service')) {
                 if ($cost['image_calls_per_post'] < 0) $cost['image_calls_per_post'] = 0;
                 if ($cost['image_calls_per_post'] > 20) $cost['image_calls_per_post'] = 20;
 
-                // modelo imagen (solo 2)
+                // modelo imagen (proveedores soportados)
                 $im = isset($u['image_model']) ? sanitize_text_field((string)$u['image_model']) : (string)$cost['image_model'];
                 $allowed_image_models = function_exists('cbia_costes_get_supported_image_models')
                     ? cbia_costes_get_supported_image_models()
@@ -190,10 +201,10 @@ if (!class_exists('CBIA_Costs_Service')) {
 
                     $sum = cbia_costes_calc_last_posts($n, $only_cbia, $use_est_if_missing, $cost, $cbia);
                     if ($sum) {
-                        cbia_costes_log("Calculation last {$n}: posts={$sum['posts']} real={$sum['real_posts']} est={$sum['est_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalEUR=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
+                        cbia_costes_log("Last {$n} calculation: posts={$sum['posts']} real={$sum['real_posts']} est={$sum['est_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} total_eur=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
                         $calibration_info = $sum;
                     } else {
-                        cbia_costes_log("Calculation last {$n}: no results.");
+                        cbia_costes_log("Last {$n} calculation: no results.");
                     }
                     $notice = 'calc';
                 }
@@ -204,10 +215,10 @@ if (!class_exists('CBIA_Costs_Service')) {
                     $only_cbia = !empty($u['calc_only_cbia']) ? true : false;
                     $sum = cbia_costes_calc_last_posts($n, $only_cbia, false, $cost, $cbia);
                     if ($sum) {
-                        cbia_costes_log("Calculation REAL only last {$n}: posts={$sum['posts']} real={$sum['real_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} totalEUR=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
+                        cbia_costes_log("Last {$n} REAL-ONLY calculation: posts={$sum['posts']} real={$sum['real_posts']} real_calls={$sum['real_calls']} real_fails={$sum['real_fails']} tokens_in={$sum['tokens_in']} tokens_out={$sum['tokens_out']} total_eur=" . number_format((float)$sum['eur_total'], 4, ',', '.'));
                         $calibration_info = $sum;
                     } else {
-                        cbia_costes_log("Calculation REAL only last {$n}: no results.");
+                        cbia_costes_log("Last {$n} REAL-ONLY calculation: no results.");
                     }
                     $notice = 'calc';
                 }

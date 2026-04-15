@@ -18,7 +18,7 @@ if (!class_exists('CBIA_Costs_Admin')) {
         }
 
         public function get_label() {
-            return 'Costes';
+            return __('Costs', 'cbiastudio-blogflow-ai');
         }
 
         public function get_priority() {
@@ -37,7 +37,7 @@ if (!class_exists('CBIA_Costs_Admin')) {
                 cbia_render_tab_costes();
                 return;
             }
-            echo '<p>No se pudo cargar Costes.</p>';
+            echo '<p>' . esc_html__('Could not load Costs.', 'cbiastudio-blogflow-ai') . '</p>';
         }
     }
 }

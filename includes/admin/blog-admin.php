@@ -5,8 +5,8 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-if (!class_exists('CBIA_Blog_Admin')) {
-    class CBIA_Blog_Admin implements CBIA_Admin_Tab {
+if (!class_exists('CBIA_Pro_Blog_Admin')) {
+    class CBIA_Pro_Blog_Admin implements CBIA_Admin_Tab {
         private $service;
 
         public function __construct($service = null) {
@@ -37,7 +37,7 @@ if (!class_exists('CBIA_Blog_Admin')) {
                 cbia_render_tab_blog();
                 return;
             }
-            echo '<p>No se pudo cargar Blog.</p>';
+            echo '<p>' . esc_html__('Could not load Blog.', 'cbiastudio-blogflow-ai') . '</p>';
         }
     }
 }

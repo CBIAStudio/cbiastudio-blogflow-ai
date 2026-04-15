@@ -12,4 +12,3 @@ foreach ($cbia_oldposts_files as $cbia_file) {
         require_once $cbia_file;
     }
 }
-

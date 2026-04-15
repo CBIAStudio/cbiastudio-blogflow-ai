@@ -12,4 +12,3 @@ if (!interface_exists('CBIA_Admin_Tab')) {
         public function render();
     }
 }
-

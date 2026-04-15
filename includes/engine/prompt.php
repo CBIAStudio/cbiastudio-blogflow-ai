@@ -281,10 +281,10 @@ if (!function_exists('cbia_prompt_clean_legacy_template')) {
             $text = trim((string)cbia_fix_mojibake($text));
         }
         $looks_broken = (
-            strpos($text, 'Ã') !== false
-            || strpos($text, 'Â') !== false
-            || strpos($text, 'artÃ') !== false
-            || strpos($text, 'descripciÃ') !== false
+            strpos($text, 'Ãƒ') !== false
+            || strpos($text, 'Ã‚') !== false
+            || strpos($text, 'artÃƒ') !== false
+            || strpos($text, 'descripciÃƒ') !== false
             || strpos($text, '(sin )') !== false
         );
         if ($looks_broken) {
@@ -387,7 +387,7 @@ if (!function_exists('cbia_prompt_get_mode')) {
 if (!function_exists('cbia_prompt_get_legacy_template')) {
     function cbia_prompt_get_legacy_template(array $settings): string {
         // Backward compatibility with historical prompt_single_all.
-        $language = (string)($settings['post_language'] ?? 'Spanish');
+        $language = (string)($settings['post_language'] ?? 'English');
         $legacy = trim((string)($settings['legacy_full_prompt'] ?? ''));
         if ($legacy !== '' && function_exists('cbia_prompt_clean_legacy_template')) {
             $legacy = cbia_prompt_clean_legacy_template($legacy, $language);
@@ -404,7 +404,7 @@ if (!function_exists('cbia_prompt_get_legacy_template')) {
 if (!function_exists('cbia_build_prompt_for_title')) {
     function cbia_build_prompt_for_title($title) {
         $s = cbia_get_settings();
-        $idioma_post = trim((string)($s['post_language'] ?? 'Spanish'));
+        $idioma_post = trim((string)($s['post_language'] ?? 'English'));
 
         // Recommended/legacy mode with backward compatibility.
         $mode = cbia_prompt_get_mode($s);

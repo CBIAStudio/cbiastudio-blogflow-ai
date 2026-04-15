@@ -41,4 +41,3 @@ if (!class_exists('CBIA_Log_Service')) {
         }
     }
 }
-

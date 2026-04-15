@@ -1,8 +1,8 @@
 === CBIAStudio BlogFlow with AI ===
 Contributors: webgoh
-Requires at least: 6.9
+Requires at least: 6.9.2
 Tested up to: 6.9.4
-Stable tag: 1.2.2
+Stable tag: 2.0.1
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -156,6 +156,13 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Changelog ==
 
+= 2.0.1 =
+* Major base-edition consolidation: this plugin is now the official base for the Base + Pro Add-on model.
+* Pro gating refined in base UI (clear upgrade paths for advanced modules without breaking base flows).
+* Usage and Update Older Posts base screens refreshed for cleaner upgrade messaging and safer onboarding.
+* Internal image slot handling hardened in Pro-compatible runtime paths while preserving base behavior.
+* Release traceability and packaging flow updated for GitHub + WordPress.org publication readiness.
+
 = 1.2.2 =
 * Release metadata alignment for WordPress 6.9.4 (`Tested up to`) and brand naming consistency.
 * Updated public wording to use `CBIAStudio BlogFlow with AI` as the standard edition name.
@@ -174,6 +181,9 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Upgrade Notice ==
 
+= 2.0.1 =
+Recommended update. This release formalizes the base role in the Base + Pro Add-on model and aligns upgrade flows for advanced modules.
+
 = 1.2.2 =
 Release metadata update for WordPress 6.9.4 compatibility and naming consistency.
 
@@ -184,8 +194,4 @@ Improved the public WordPress.org listing with better documentation and branded 
 Improved provider compatibility, preview behavior, and usage/cost reporting. Recommended update for all users.
 
 = 1.1.7 =
-* Replaced inline `<script>`/`<style>` output with WordPress enqueue APIs (`wp_add_inline_script`, `wp_add_inline_style`).
-* Hardened nonce validation in AJAX stream/start handlers by enforcing `check_ajax_referer()`.
-* Improved POST input handling/sanitization in Config/Blog/Oldposts services.
-* Removed plugin header `Domain Path` entry to match WordPress.org guidance.
-* Clarified external services section with explicit API domains (`api.openai.com`, `generativelanguage.googleapis.com`).
+Plugin hardening release: moved inline assets to enqueue APIs, tightened AJAX nonces, and improved admin input validation/sanitization.

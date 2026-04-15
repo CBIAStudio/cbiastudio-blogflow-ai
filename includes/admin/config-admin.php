@@ -18,7 +18,7 @@ if (!class_exists('CBIA_Config_Admin')) {
         }
 
         public function get_label() {
-            return 'Configuracion';
+            return __('Settings', 'cbiastudio-blogflow-ai');
         }
 
         public function get_priority() {
@@ -37,7 +37,7 @@ if (!class_exists('CBIA_Config_Admin')) {
                 cbia_render_tab_config();
                 return;
             }
-            echo '<p>No se pudo cargar Configuracion.</p>';
+            echo '<p>' . esc_html__('Could not load Settings.', 'cbiastudio-blogflow-ai') . '</p>';
         }
     }
 }

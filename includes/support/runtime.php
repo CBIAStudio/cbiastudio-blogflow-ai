@@ -9,10 +9,15 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_try_unlimited_runtime')) {
     /**
-     * Best-effort runtime handler (no-op to avoid ini_set/set_time_limit warnings).
+     * Best-effort to remove execution time limits.
+     * Safe to call multiple times.
      */
     function cbia_try_unlimited_runtime() {
-        return;
+        if (function_exists('set_time_limit')) {
+            // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Needed for long-running admin batch operations.
+            @set_time_limit(0);
+        }
+        // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Needed for long-running admin batch operations.
+        @ini_set('max_execution_time', '0');
     }
 }
-

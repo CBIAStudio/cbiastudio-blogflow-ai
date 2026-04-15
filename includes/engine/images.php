@@ -19,9 +19,8 @@ if (!function_exists('cbia_image_model_chain')) {
 
         $preferred = trim((string)$preferred);
         if ($preferred !== '') {
-            if (!in_array($preferred, $list, true)) {
-                array_unshift($list, $preferred);
-            } else {
+            // Do not enqueue unknown models: avoid retries with invalid model IDs.
+            if (in_array($preferred, $list, true)) {
                 $list = array_values(array_unique(array_merge([$preferred], $list)));
             }
         }
@@ -101,7 +100,8 @@ if (!function_exists('cbia_build_content_img_tag')) {
         $fmt = cbia_get_image_format_for_section($section, $idx);
 
         $apply_banner = true;
-        if ($section === 'intro') {
+        // Keep featured image (idx=0) without banner class; allow banner class on internal images even in intro section.
+        if ($section === 'intro' && (int)$idx <= 0) {
             $apply_banner = false;
         }
 
@@ -176,6 +176,12 @@ if (!function_exists('cbia_replace_pending_marker')) {
         $pattern = '/<span[^>]*class=("|\')cbia-img-pendiente\1[^>]*>\s*' . preg_quote($token, '/') . '\s*<\/span>/iu';
         $count = 0;
         $new = preg_replace($pattern, (string)$replacement, (string)$html, 1, $count);
+        if ($count > 0 && $new !== null) {
+            $html = $new;
+            return true;
+        }
+        $raw_pattern = '/' . preg_quote($token, '/') . '/iu';
+        $new = preg_replace($raw_pattern, (string)$replacement, (string)$html, 1, $count);
         if ($count > 0 && $new !== null) {
             $html = $new;
             return true;
@@ -313,12 +319,12 @@ if (!function_exists('cbia_build_image_prompt_for_post')) {
         if ($short_desc === '') {
             $short_desc = $title;
             if ($short_desc === '') $short_desc = 'general scene';
-            cbia_log('Image: SHORT_DESC empty, using title fallback', 'INFO');
+	            cbia_log('Imagen: SHORT_DESC vacio, usando fallback por titulo', 'INFO');
         }
 
         $override = cbia_get_img_prompt_override($post_id, $type, $idx);
         if ($override !== '') {
-            cbia_log(sprintf('Image: using prompt override (%s%s)', (string)$type, $idx ? '_' . (string)$idx : ''), 'INFO');
+	            cbia_log(sprintf('Imagen: usando override de prompt (%s%s)', (string)$type, $idx ? '_' . (string)$idx : ''), 'INFO');
             return $override;
         }
 
@@ -459,6 +465,8 @@ if (!function_exists('cbia_upload_image_to_media')) {
             'post_title'     => sanitize_text_field($title . ' - ' . $section),
             'post_content'   => '',
             'post_status'    => 'inherit',
+            'post_author'    => get_current_user_id(),
+            'guid'           => (string) ($upload['url'] ?? ''),
         ];
 
         $attach_id = wp_insert_attachment($attachment, $upload['file']);
@@ -466,12 +474,19 @@ if (!function_exists('cbia_upload_image_to_media')) {
             return [false, 'wp_insert_attachment_error'];
         }
 
+        update_attached_file((int)$attach_id, (string)$upload['file']);
         require_once ABSPATH . 'wp-admin/includes/image.php';
         $attach_data = wp_generate_attachment_metadata($attach_id, $upload['file']);
         wp_update_attachment_metadata($attach_id, $attach_data);
+        wp_update_post(array(
+            'ID' => (int)$attach_id,
+            'guid' => (string) ($upload['url'] ?? ''),
+        ));
+        clean_post_cache((int)$attach_id);
 
         update_post_meta($attach_id, '_wp_attachment_image_alt', $alt_text);
 
         return [$attach_id, ''];
     }
 }
+

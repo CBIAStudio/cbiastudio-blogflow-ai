@@ -306,7 +306,7 @@ if (!function_exists('cbia_providers_get_image_model_list')) {
     function cbia_providers_get_image_model_list(string $provider): array {
         $lists = array(
             // CAMBIO: modelos de imagen requeridos (manteniendo compatibilidad)
-            'openai' => array('gpt-image-1-mini', 'gpt-image-1', 'gpt-image-1-large'),
+            'openai' => array('gpt-image-1-mini', 'gpt-image-1'),
             'google' => array('imagen-3.0-generate-002', 'imagen-4.0-generate-001'),
             'deepseek' => array(),
         );
@@ -344,3 +344,4 @@ if (!function_exists('cbia_providers_get_recommended_image_model')) {
         return 'gpt-image-1-mini';
     }
 }
+

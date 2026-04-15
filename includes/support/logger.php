@@ -16,7 +16,8 @@ if (!class_exists('CBIA_Logger')) {
                 cbia_log((string)$msg, $level);
                 return;
             }
-            // Sin fallback a error_log para evitar advertencias de seguridad.
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Fallback logger for environments without plugin log storage.
+            error_log('[CBIA][' . $level . '] ' . (string)$msg);
         }
 
         public function info($msg) { $this->write('INFO', $msg); }
@@ -24,4 +25,3 @@ if (!class_exists('CBIA_Logger')) {
         public function error($msg) { $this->write('ERROR', $msg); }
     }
 }
-

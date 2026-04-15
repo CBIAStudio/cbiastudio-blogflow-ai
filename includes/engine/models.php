@@ -58,4 +58,3 @@ if (!function_exists('cbia_pick_model')) {
         return $preferred ?: 'gpt-4.1-mini';
     }
 }
-

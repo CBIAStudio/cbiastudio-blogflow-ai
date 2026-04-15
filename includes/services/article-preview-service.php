@@ -17,40 +17,49 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
         private function generate_internal(array $payload, $emit = null) {
             $prev_ignore_stop = !empty($GLOBALS['cbia_ignore_stop']);
-            $prev_skip_images = !empty($GLOBALS['cbia_preview_skip_images']);
             $GLOBALS['cbia_ignore_stop'] = true;
-            // In normal preview we DO generate the featured image.
-            $GLOBALS['cbia_preview_skip_images'] = false;
             try {
             $title = trim((string)($payload['title'] ?? ''));
             if ($title === '') {
-                if (function_exists('cbia_log')) {
-                    cbia_log('[PREVIEW] Empty title.', 'WARN');
-                }
                 return new WP_Error('missing_title', __('You must provide a title to preview.', 'cbiastudio-blogflow-ai'));
             }
-            if (function_exists('cbia_post_exists_by_title') && cbia_post_exists_by_title($title)) {
-                if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] Duplicate title detected: '{$title}'.", 'WARN');
+            $composer_mode = !empty($payload['composer_mode']);
+            $current_post_id = isset($payload['current_post_id']) ? absint($payload['current_post_id']) : 0;
+            if ($composer_mode) {
+                $existing_id = (int)$this->find_existing_post_by_title($title);
+                if ($existing_id > 0 && $existing_id !== $current_post_id) {
+                    return new WP_Error(
+                        'duplicate_title',
+                        sprintf(
+                            /* translators: %s: post title */
+                            __('The post "%s" already exists.', 'cbiastudio-blogflow-ai'),
+                            $title
+                        )
+                    );
                 }
-                // translators: %s is the duplicated post title.
-                return new WP_Error('duplicate_title', sprintf(__('Post "%s" already exists. Change the title before generating preview.', 'cbiastudio-blogflow-ai'), $title));
-            }
-            if (function_exists('cbia_log')) {
-                cbia_log("[PREVIEW] Generating preview for '{$title}'.", 'INFO');
             }
             $this->emit($emit, 'cbia_status', array('message' => __('Preparing prompt...', 'cbiastudio-blogflow-ai')));
 
             $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
-            // Preview always includes images (full mode) and uses the same base flow as create blog.
+            // Preview siempre con imagenes (modo completo) y usando el mismo flujo base que crear blog.
             $preview_mode = 'full';
             $this->emit($emit, 'preview_start', array(
                 'title' => $title,
                 'preview_mode' => $preview_mode,
             ));
 
-            // Normal: only featured image (no in-content)
-            $images_limit = 1;
+            $images_limit = isset($payload['images_limit']) ? (int)$payload['images_limit'] : (int)($settings['images_limit'] ?? 3);
+            $skip_images = !empty($payload['skip_images']);
+            if ($skip_images) {
+                $images_limit = 0;
+            } else {
+                if ($images_limit < 1) $images_limit = 1;
+                if ($images_limit > 4) $images_limit = 4;
+            }
+            $internal_image_style = isset($payload['internal_image_style']) ? sanitize_key((string)$payload['internal_image_style']) : '';
+            if (!in_array($internal_image_style, array('banner', 'normal'), true)) {
+                $internal_image_style = '';
+            }
             $user_id = get_current_user_id();
             $cleanup_warnings = $this->cleanup_previous_preview_media($user_id);
 
@@ -73,125 +82,192 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 $settings['legacy_full_prompt'] = sanitize_textarea_field((string)$payload['legacy_full_prompt']);
             }
 
-            $this->emit($emit, 'cbia_status', array('message' => __('Generating content...', 'cbiastudio-blogflow-ai')));
+            $this->emit($emit, 'cbia_status', array('message' => 'Generating content...'));
+
+            $prompt = $this->build_prompt($title, $settings);
+            list($ok, $text_html, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, $title, 2);
+            $text_attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($raw) : array();
+            if (!$ok) {
+                return new WP_Error('preview_generation_failed', $err ?: 'Could not generate preview.');
+            }
+
+            $text_html = cbia_strip_document_wrappers((string)$text_html);
+            $text_html = cbia_strip_h1_to_h2($text_html);
+            $text_html = cbia_fix_bracket_headings($text_html);
+            $text_html = cbia_normalize_faq_heading($text_html);
             if (function_exists('cbia_log')) {
-                cbia_log("[PREVIEW] Generating content '{$title}'.", 'INFO');
+                cbia_log(sprintf("AI preview text OK: HTML generated for '%s'", (string)$title), 'INFO');
             }
 
-            if (!function_exists('cbia_create_single_blog_post')) {
-                if (function_exists('cbia_log')) {
-                    cbia_log('[PREVIEW] Creation engine unavailable.', 'ERROR');
-                }
-                return new WP_Error('preview_engine_missing', __('Creation engine is unavailable.', 'cbiastudio-blogflow-ai'));
-            }
+            // Empieza a renderizar en cuanto llega el HTML (antes de esperar imagenes).
+            $display_html = $this->normalize_preview_html_for_display($text_html);
+            $this->emit_text_progress($emit, $display_html);
+            $this->emit($emit, 'word_count', array('count' => $this->word_count($text_html)));
+            $this->emit($emit, 'cbia_content', array('html' => $display_html));
 
-            $create = cbia_create_single_blog_post($title, '', 'draft');
-            if (!is_array($create) || empty($create['ok'])) {
-                $err = is_array($create) ? (string)($create['error'] ?? '') : '';
-                if (function_exists('cbia_log')) {
-                cbia_log("[PREVIEW] Error generating '{$title}': " . ($err !== '' ? $err : 'unknown'), 'ERROR');
-                }
-                return new WP_Error('preview_generation_failed', $err !== '' ? $err : __('Preview generation failed.', 'cbiastudio-blogflow-ai'));
-            }
-
-            $draft_id = (int)($create['post_id'] ?? 0);
-            if (!$draft_id) {
-                if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] Could not create draft for '{$title}'.", 'ERROR');
-                }
-                return new WP_Error('preview_generation_failed', __('Could not create preview draft.', 'cbiastudio-blogflow-ai'));
-            }
-
-            $post = get_post($draft_id);
-            if (!$post) {
-                if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] Could not load draft (ID {$draft_id}).", 'ERROR');
-                }
-                return new WP_Error('preview_generation_failed', __('Could not load generated draft.', 'cbiastudio-blogflow-ai'));
-            }
-
-            update_post_meta($draft_id, '_cbia_preview_draft', '1');
-
-            $final_html = (string)($post->post_content ?? '');
-            $display_html = $this->normalize_preview_html_for_display($final_html);
-
-            $this->emit($emit, 'word_count', array('count' => $this->word_count($final_html)));
-            if (is_callable($emit)) {
-                $this->emit_text_progress($emit, $display_html);
-            }
-
-            $this->emit($emit, 'cbia_status', array('message' => __('Rendering preview images...', 'cbiastudio-blogflow-ai')));
-            if (function_exists('cbia_log')) {
-                cbia_log("[PREVIEW] Rendering featured image '{$title}'.", 'INFO');
-            }
-            $this->emit($emit, 'featured_image_status', array(
-                'status' => 'pending',
-                'message' => __('Generating featured image...', 'cbiastudio-blogflow-ai'),
-            ));
-
-            $featured_attach_id = (int)get_post_thumbnail_id($draft_id);
-            $featured_url = $featured_attach_id ? wp_get_attachment_url($featured_attach_id) : '';
-            if ($featured_url) {
-                if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] Featured image OK '{$title}'.", 'INFO');
-                }
+            if (!$skip_images) {
+                $this->emit($emit, 'cbia_status', array('message' => 'Rendering preview images...'));
                 $this->emit($emit, 'featured_image_status', array(
-                    'status' => 'done',
-                    'url' => (string)$featured_url,
-                    'message' => 'Imagen destacada lista.',
+                    'status' => 'pending',
+                    'message' => 'Generating featured image...',
                 ));
             } else {
-                if (function_exists('cbia_log')) {
-                    cbia_log("[PREVIEW] Featured image unavailable '{$title}'.", 'WARN');
-                }
-                $this->emit($emit, 'featured_image_status', array(
-                    'status' => 'error',
-                    'message' => __('Could not generate featured image.', 'cbiastudio-blogflow-ai'),
-                ));
+                $this->emit($emit, 'cbia_status', array('message' => 'No-image mode enabled for this preview.'));
             }
 
-            $this->emit($emit, 'cbia_content', array('html' => $display_html));
-            $this->emit($emit, 'cbia_status', array('message' => 'Calculating metadata...'));
-            if (function_exists('cbia_log')) {
-                cbia_log("[PREVIEW] Calculating metadata '{$title}'.", 'INFO');
+            $featured_attach_id = 0;
+            $featured_model = '';
+            $featured_url = '';
+            $warnings = array();
+            $usage_image_calls = array();
+            if ($preview_mode === 'full' && !$skip_images) {
+                $featured_desc = function_exists('cbia_sanitize_image_short_desc')
+                    ? cbia_sanitize_image_short_desc($title)
+                    : $title;
+                if ($featured_desc === '') $featured_desc = $title;
+                $featured_prompt = function_exists('cbia_build_image_prompt_for_post')
+                    ? cbia_build_image_prompt_for_post(0, 'featured', $featured_desc, 0)
+                    : $featured_desc;
+                $featured_alt = function_exists('cbia_sanitize_alt_from_desc')
+                    ? cbia_sanitize_alt_from_desc($featured_desc)
+                    : $featured_desc;
+                list($ok_featured, $featured_attach_id, $featured_model, $featured_err, $featured_meta) = cbia_generate_image_openai_with_prompt(
+                    $featured_prompt,
+                    'featured',
+                    $title,
+                    $featured_alt,
+                    0
+                );
+                if ($ok_featured && $featured_attach_id) {
+                    $featured_url = (string)wp_get_attachment_url((int)$featured_attach_id);
+                    $usage_image_calls[] = array(
+                        'section' => 'featured',
+                        'model' => (string)$featured_model,
+                        'ok' => 1,
+                        'attach_id' => (int)$featured_attach_id,
+                        'error' => '',
+                        'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($featured_meta) : array(),
+                    );
+                    $this->emit($emit, 'featured_image_status', array(
+                        'status' => 'done',
+                        'url' => $featured_url,
+                        'message' => 'Featured image ready.',
+                    ));
+                } else {
+                    $warnings[] = 'Could not generate featured image: ' . (string)($featured_err ?: 'unknown error');
+                    $usage_image_calls[] = array(
+                        'section' => 'featured',
+                        'model' => (string)$featured_model,
+                        'ok' => 0,
+                        'attach_id' => 0,
+                        'error' => (string)($featured_err ?: ''),
+                        'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($featured_meta) : array(),
+                    );
+                    $this->emit($emit, 'featured_image_status', array(
+                        'status' => 'error',
+                        'message' => 'Could not generate featured image.',
+                    ));
+                }
             }
+
+            $rendered = $this->render_markers($text_html, $title, $images_limit, $preview_mode, $emit, $internal_image_style);
+            $final_html = cbia_cleanup_post_html((string)($rendered['html'] ?? $text_html));
+            $display_html = $this->normalize_preview_html_for_display($final_html);
+            $this->emit($emit, 'word_count', array('count' => $this->word_count($final_html)));
+            $this->emit($emit, 'cbia_content', array('html' => $display_html));
+
+            if ($preview_mode === 'full') {
+                $temp_ids = (array)($rendered['temp_attachment_ids'] ?? array());
+                if ($featured_attach_id > 0) $temp_ids[] = (int)$featured_attach_id;
+                $this->remember_preview_media($user_id, $temp_ids);
+            }
+
+            $this->emit($emit, 'cbia_status', array('message' => 'Calculating metadata...'));
 
             $excerpt = wp_trim_words(wp_strip_all_tags($final_html), 35, '...');
-            $meta = (string)get_post_meta($draft_id, '_yoast_wpseo_metadesc', true);
-            $focus = (string)get_post_meta($draft_id, '_yoast_wpseo_focuskw', true);
-            $tags = array();
-            $post_tags = wp_get_post_tags($draft_id);
-            if (!empty($post_tags)) {
-                foreach ($post_tags as $t) {
-                    if (!empty($t->name)) $tags[] = $t->name;
-                }
-            }
-            $this->emit($emit, 'seo_payload', array(
+            $meta = function_exists('cbia_generate_meta_description')
+                ? cbia_generate_meta_description($title, $final_html)
+                : '';
+            $focus = function_exists('cbia_generate_focus_keyphrase')
+                ? cbia_generate_focus_keyphrase($title, $final_html)
+                : '';
+            $tags = function_exists('cbia_pick_tags_from_content_allowed')
+                ? cbia_pick_tags_from_content_allowed($title, $final_html, 7)
+                : array();
+            $seo = array(
                 'excerpt' => $excerpt,
                 'meta_description' => $meta,
                 'focus_keyphrase' => $focus,
                 'tags' => $tags,
-            ));
+            );
+            $draft_id = 0;
+            $preview_token = '';
+            $category_ids = array();
+            $tag_ids = array();
 
-            $preview_token = $this->store_preview_payload($user_id, array(
-                'title' => $title,
-                'html' => $final_html,
-                'featured_attach_id' => (int)$featured_attach_id,
-                'post_id' => $draft_id,
-            ));
-            if ($draft_id) {
+            if ($composer_mode) {
+                $category_ids = $this->resolve_category_ids($title, $final_html);
+                $tag_ids = $this->resolve_tag_ids($tags);
+                if ($current_post_id > 0) {
+                    $this->persist_preview_usage($current_post_id, array(
+                        'usage' => is_array($usage) ? $usage : array(),
+                        'text_model' => (string)$model_used,
+                        'text_attempts' => $text_attempts,
+                        'image_calls' => array_merge(
+                            $usage_image_calls,
+                            $this->normalize_preview_image_calls((array)($rendered['images'] ?? array()))
+                        ),
+                    ));
+                }
+            } else {
+                $draft_id = $this->upsert_preview_draft($title, $final_html, (int)$featured_attach_id, $seo);
+                if (is_wp_error($draft_id) || !$draft_id) {
+                    $err_msg = is_wp_error($draft_id) ? $draft_id->get_error_message() : 'Could not create preview draft.';
+                    return new WP_Error('preview_draft_failed', $err_msg);
+                }
+                $draft_id = (int)$draft_id;
+
+                $category_ids = wp_get_post_categories((int)$draft_id, array('fields' => 'ids'));
+                if (!is_array($category_ids)) $category_ids = array();
+                $category_ids = array_values(array_map('intval', $category_ids));
+                $tag_ids = wp_get_post_terms((int)$draft_id, 'post_tag', array('fields' => 'ids'));
+                if (!is_array($tag_ids)) $tag_ids = array();
+                $tag_ids = array_values(array_map('intval', $tag_ids));
+
+                $preview_token = $this->store_preview_payload($user_id, array(
+                    'title' => $title,
+                    'html' => $final_html,
+                    'featured_attach_id' => (int)$featured_attach_id,
+                    'post_id' => $draft_id,
+                    'category_ids' => $category_ids,
+                    'tag_ids' => $tag_ids,
+                    'usage' => is_array($usage) ? $usage : array(),
+                    'text_model' => (string)$model_used,
+                    'text_attempts' => $text_attempts,
+                    'image_calls' => array_merge(
+                        $usage_image_calls,
+                        $this->normalize_preview_image_calls((array)($rendered['images'] ?? array()))
+                    ),
+                ));
                 update_post_meta($draft_id, '_cbia_preview_token', (string)$preview_token);
             }
 
-            $images = array();
+            $this->emit($emit, 'seo_payload', $seo);
+
+            $images = (array)($rendered['images'] ?? array());
             if ($featured_url) {
-                $images[] = array(
+                array_unshift($images, array(
                     'url' => (string)$featured_url,
                     'attach_id' => (int)$featured_attach_id,
-                    'section' => 'intro',
+                    'section' => 'featured',
                     'status' => 'done',
-                );
+                ));
             }
+            $warnings = array_values(array_filter(array_merge(
+                $cleanup_warnings,
+                $warnings,
+                (array)($rendered['warnings'] ?? array())
+            )));
 
             return array(
                 'title' => $title,
@@ -201,34 +277,44 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 'meta_description' => $meta,
                 'focus_keyphrase' => $focus,
                 'tags' => $tags,
+                'category_ids' => $category_ids,
+                'tag_ids' => $tag_ids,
                 'images' => $images,
                 'featured_attach_id' => (int)$featured_attach_id,
-                'warnings' => array_values(array_filter($cleanup_warnings)),
+                'warnings' => $warnings,
                 'preview_mode' => $preview_mode,
                 'preview_token' => $preview_token,
                 'post_id' => $draft_id,
                 'word_count' => $this->word_count($final_html),
-                'text_model' => '',
-                'usage' => array(),
+                'text_model' => (string)$model_used,
+                'usage' => is_array($usage) ? $usage : array(),
+                'text_attempts' => $text_attempts,
+                'image_calls' => array_merge(
+                    $usage_image_calls,
+                    $this->normalize_preview_image_calls((array)($rendered['images'] ?? array()))
+                ),
             );
             } finally {
-                if (function_exists('cbia_log')) {
-                    cbia_log('[PREVIEW] End of preview process.', 'INFO');
-                }
                 $GLOBALS['cbia_ignore_stop'] = $prev_ignore_stop;
-                $GLOBALS['cbia_preview_skip_images'] = $prev_skip_images;
             }
         }
 
         public function create_post_from_token($token, array $overrides = array()) {
             $token = trim((string)$token);
             if ($token === '') {
-                return new WP_Error('missing_preview_token', __('Missing preview token.', 'cbiastudio-blogflow-ai'));
+                return new WP_Error('missing_preview_token', 'Preview token is required.');
             }
             $user_id = get_current_user_id();
+            $create_lock_key = 'cbia_preview_create_lock_' . $user_id . '_' . md5($token);
+            if (get_transient($create_lock_key)) {
+                return new WP_Error('preview_in_progress', 'Preview creation is already in progress.');
+            }
+            set_transient($create_lock_key, 1, 30);
+
             $payload = $this->get_preview_payload($user_id, $token);
             if (empty($payload) || !is_array($payload)) {
-                return new WP_Error('invalid_preview_token', __('Preview is no longer available. Generate a new one.', 'cbiastudio-blogflow-ai'));
+                delete_transient($create_lock_key);
+                return new WP_Error('invalid_preview_token', 'Preview is no longer available. Generate a new one.');
             }
 
             $title = trim((string)($payload['title'] ?? ''));
@@ -243,7 +329,8 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 }
             }
             if ($title === '' || $html === '') {
-                return new WP_Error('invalid_preview_payload', __('Incomplete preview payload to create post.', 'cbiastudio-blogflow-ai'));
+                delete_transient($create_lock_key);
+                return new WP_Error('invalid_preview_payload', 'Incomplete preview payload to create post.');
             }
             $post_status = sanitize_key((string)($overrides['post_status'] ?? 'publish'));
             if (!in_array($post_status, array('publish', 'draft', 'future'), true)) {
@@ -253,7 +340,8 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             if ($post_status === 'future') {
                 $raw_date = trim((string)($overrides['post_date_local'] ?? ''));
                 if ($raw_date === '') {
-                    return new WP_Error('missing_schedule_date', __('Provide date/time to schedule.', 'cbiastudio-blogflow-ai'));
+                    delete_transient($create_lock_key);
+                    return new WP_Error('missing_schedule_date', 'Provide a date/time to schedule.');
                 }
                 $raw_date = str_replace('T', ' ', $raw_date);
                 $dt = date_create_from_format('Y-m-d H:i', $raw_date, wp_timezone());
@@ -261,7 +349,8 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     $dt = date_create($raw_date, wp_timezone());
                 }
                 if (!$dt) {
-                    return new WP_Error('invalid_schedule_date', __('Invalid scheduling date/time.', 'cbiastudio-blogflow-ai'));
+                    delete_transient($create_lock_key);
+                    return new WP_Error('invalid_schedule_date', 'Invalid schedule date/time.');
                 }
                 $post_date_mysql = $dt->format('Y-m-d H:i:s');
             }
@@ -280,23 +369,27 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 }
                 $updated_id = wp_update_post($update, true);
                 if (is_wp_error($updated_id) || !$updated_id) {
-                    $err = is_wp_error($updated_id) ? $updated_id->get_error_message() : 'wp_update_post_fallo';
-                    return new WP_Error('create_post_failed', $err ?: __('Could not update post from preview.', 'cbiastudio-blogflow-ai'));
+                    $err = is_wp_error($updated_id) ? $updated_id->get_error_message() : 'wp_update_post_failed';
+                    delete_transient($create_lock_key);
+                    return new WP_Error('create_post_failed', $err ?: 'Could not update post from preview.');
                 }
                 $this->apply_post_meta_tax($post_id, $title, $html, $featured_attach_id, array());
+                $this->persist_preview_usage($post_id, $payload);
                 delete_post_meta($post_id, '_cbia_preview_draft');
                 delete_post_meta($post_id, '_cbia_preview_token');
             } else {
                 if (!function_exists('cbia_create_post_in_wp_engine')) {
-                    return new WP_Error('missing_create_engine', __('Post creation engine is unavailable.', 'cbiastudio-blogflow-ai'));
+                    delete_transient($create_lock_key);
+                    return new WP_Error('missing_create_engine', 'Post creation engine is not available.');
                 }
                 if (function_exists('cbia_post_exists_by_title') && cbia_post_exists_by_title($title)) {
-                    // translators: %s is the duplicated post title.
-                    return new WP_Error('duplicate_title', sprintf(__('Post "%s" already exists.', 'cbiastudio-blogflow-ai'), $title));
+                    delete_transient($create_lock_key);
+                    return new WP_Error('duplicate_title', "Post '{$title}' already exists.");
                 }
                 list($ok_post, $created_id, $post_err) = cbia_create_post_in_wp_engine($title, $html, $featured_attach_id, $post_date_mysql);
                 if (!$ok_post || !$created_id) {
-                    return new WP_Error('create_post_failed', $post_err ?: __('Could not create post from preview.', 'cbiastudio-blogflow-ai'));
+                    delete_transient($create_lock_key);
+                    return new WP_Error('create_post_failed', $post_err ?: 'Could not create post from preview.');
                 }
                 $post_id = (int)$created_id;
                 if ($post_status === 'draft') {
@@ -305,8 +398,10 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'post_status' => 'draft',
                     ));
                 }
+                $this->persist_preview_usage($post_id, $payload);
             }
             $this->delete_preview_payload($user_id, $token);
+            delete_transient($create_lock_key);
             $preview_url = '';
             if (in_array($post_status, array('draft', 'future'), true)) {
                 $preview_url = (string) get_preview_post_link((int) $post_id);
@@ -316,22 +411,22 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 'edit_url' => get_edit_post_link((int)$post_id, ''),
                 'preview_url' => $preview_url,
                 'message' => $post_status === 'future'
-                    ? __('Post scheduled from preview successfully.', 'cbiastudio-blogflow-ai')
+                    ? 'Post scheduled from preview successfully.'
                     : ($post_status === 'draft'
-                        ? __('Draft created from preview successfully.', 'cbiastudio-blogflow-ai')
-                        : __('Post created from preview successfully.', 'cbiastudio-blogflow-ai')),
+                        ? 'Draft created from preview successfully.'
+                        : 'Post created from preview successfully.'),
             );
         }
 
         public function cancel_preview($token) {
             $token = trim((string)$token);
             if ($token === '') {
-                return new WP_Error('missing_preview_token', __('Missing preview token.', 'cbiastudio-blogflow-ai'));
+                return new WP_Error('missing_preview_token', 'Preview token is required.');
             }
             $user_id = get_current_user_id();
             $payload = $this->get_preview_payload($user_id, $token);
             if (empty($payload) || !is_array($payload)) {
-                return new WP_Error('invalid_preview_token', __('Preview is no longer available.', 'cbiastudio-blogflow-ai'));
+                return new WP_Error('invalid_preview_token', 'Preview is no longer available.');
             }
             $post_id = (int)($payload['post_id'] ?? 0);
             $this->delete_preview_payload($user_id, $token);
@@ -360,7 +455,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
         private function normalize_preview_html_for_display(string $html): string {
             $out = (string)$html;
-            $out = preg_replace('/\\[IMAGEN_PENDIENTE:\\s*([^\\]]+)\\]/i', '[IMAGEN: $1]', $out);
+            $out = preg_replace('/\\[(?:IMAGE_PENDING|IMAGEN_PENDIENTE):\\s*([^\\]]+)\\]/i', '[IMAGE: $1]', $out);
             return $out;
         }
 
@@ -372,41 +467,21 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
         }
 
         private function find_existing_post_by_title($title) {
-            $title = trim((string)$title);
+            global $wpdb;
+            $title = (string)$title;
             if ($title === '') return 0;
-
-            $query = new WP_Query(array(
-                'post_type'              => 'post',
-                'post_status'            => 'any',
-                'posts_per_page'         => 1,
-                'fields'                 => 'ids',
-                'no_found_rows'          => true,
-                'update_post_term_cache' => false,
-                'update_post_meta_cache' => false,
-                'title'                  => $title,
+            // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Exact title collision check for preview draft reuse.
+            $found = $wpdb->get_var($wpdb->prepare(
+                "SELECT ID FROM {$wpdb->posts} WHERE post_type='post' AND post_title=%s AND post_status IN ('publish','future','draft','pending','private') LIMIT 1",
+                $title
             ));
-            if (!empty($query->posts[0])) return (int)$query->posts[0];
-
-            $slug = sanitize_title($title);
-            if ($slug === '') return 0;
-
-            $posts = get_posts(array(
-                'name' => $slug,
-                'post_type' => 'post',
-                'post_status' => 'any',
-                'fields' => 'ids',
-                'posts_per_page' => 1,
-                'no_found_rows' => true,
-            ));
-            if (!empty($posts)) return (int)$posts[0];
-
-            return 0;
+            return (int)$found;
         }
 
         private function upsert_preview_draft($title, $final_html, $featured_attach_id, array $seo) {
             $title = trim((string)$title);
             if ($title === '') {
-                return new WP_Error('missing_title', __('Empty title for draft creation.', 'cbiastudio-blogflow-ai'));
+                return new WP_Error('missing_title', 'Empty title to create draft.');
             }
 
             $final_html = cbia_strip_document_wrappers((string)$final_html);
@@ -414,8 +489,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
             $existing_id = $this->find_existing_post_by_title($title);
             if ($existing_id && !$this->is_preview_draft($existing_id)) {
-                // translators: %s is the duplicated post title.
-                return new WP_Error('duplicate_title', sprintf(__('Post "%s" already exists.', 'cbiastudio-blogflow-ai'), $title));
+                return new WP_Error('duplicate_title', "Post '{$title}' already exists.");
             }
 
             $postarr = array(
@@ -434,7 +508,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             }
 
             if (is_wp_error($post_id) || !$post_id) {
-                $err = is_wp_error($post_id) ? $post_id->get_error_message() : 'wp_insert_post_fallo';
+                $err = is_wp_error($post_id) ? $post_id->get_error_message() : 'wp_insert_post_failed';
                 return new WP_Error('preview_draft_failed', $err);
             }
 
@@ -453,7 +527,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 : array();
             if (empty($cats)) {
                 $s = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
-                $default_cat = trim((string)($s['default_category'] ?? 'Noticias'));
+                $default_cat = trim((string)($s['default_category'] ?? 'News'));
                 if ($default_cat !== '') $cats = array($default_cat);
             }
             $cat_ids = array();
@@ -465,6 +539,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             }
             if (!empty($cat_ids)) {
                 wp_set_post_categories($post_id, $cat_ids, false);
+                update_post_meta($post_id, '_yoast_wpseo_primary_category', (int)$cat_ids[0]);
             }
 
             $tags = !empty($seo['tags']) ? $seo['tags'] : (function_exists('cbia_pick_tags_from_content_allowed')
@@ -476,6 +551,10 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
             if ($featured_attach_id) {
                 set_post_thumbnail($post_id, (int)$featured_attach_id);
+                wp_update_post(array(
+                    'ID' => (int)$featured_attach_id,
+                    'post_parent' => (int)$post_id,
+                ));
             }
 
             $metad = (string)($seo['meta_description'] ?? '');
@@ -486,12 +565,153 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             if ($focus === '' && function_exists('cbia_generate_focus_keyphrase')) {
                 $focus = cbia_generate_focus_keyphrase($title, $final_html);
             }
+            $yoast_title = wp_strip_all_tags((string)$title);
 
             update_post_meta($post_id, '_yoast_wpseo_metadesc', $metad);
             update_post_meta($post_id, '_yoast_wpseo_focuskw', $focus);
+            update_post_meta($post_id, '_yoast_wpseo_focuskw_text_input', $focus);
+            update_post_meta($post_id, '_yoast_wpseo_title', $yoast_title);
+            update_post_meta($post_id, '_yoast_wpseo_opengraph-title', $yoast_title);
+            update_post_meta($post_id, '_yoast_wpseo_opengraph-description', $metad);
+            update_post_meta($post_id, '_yoast_wpseo_twitter-title', $yoast_title);
+            update_post_meta($post_id, '_yoast_wpseo_twitter-description', $metad);
+            $extra_yoast_meta = apply_filters('cbia_yoast_extra_meta', array(), $post_id, $title, $final_html, $cat_ids);
+            if (is_array($extra_yoast_meta) && !empty($extra_yoast_meta)) {
+                $allowed = array(
+                    '_yoast_wpseo_canonical',
+                    '_yoast_wpseo_meta-robots-noindex',
+                    '_yoast_wpseo_meta-robots-nofollow',
+                    '_yoast_wpseo_schema_page_type',
+                );
+                foreach ($allowed as $meta_key) {
+                    if (!array_key_exists($meta_key, $extra_yoast_meta)) continue;
+                    update_post_meta($post_id, $meta_key, (string)$extra_yoast_meta[$meta_key]);
+                }
+            }
 
             update_post_meta($post_id, '_cbia_created', '1');
             update_post_meta($post_id, '_cbia_created_at', current_time('mysql'));
+        }
+
+        private function normalize_preview_image_calls(array $images): array {
+            $rows = array();
+            foreach ($images as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $rows[] = array(
+                    'section' => sanitize_key((string)($item['section'] ?? 'internal')),
+                    'model' => sanitize_text_field((string)($item['model'] ?? '')),
+                    'ok' => !empty($item['ok']) ? 1 : 0,
+                    'attach_id' => (int)($item['attach_id'] ?? 0),
+                    'error' => sanitize_text_field((string)($item['error'] ?? '')),
+                    'attempts' => is_array($item['attempts'] ?? null) ? (array)$item['attempts'] : array(),
+                );
+            }
+            return $rows;
+        }
+
+        private function persist_preview_usage($post_id, array $payload): void {
+            $post_id = (int)$post_id;
+            if ($post_id <= 0) {
+                return;
+            }
+
+            $usage = is_array($payload['usage'] ?? null) ? $payload['usage'] : array();
+            $text_model = sanitize_text_field((string)($payload['text_model'] ?? ''));
+            $text_attempts = is_array($payload['text_attempts'] ?? null) ? $payload['text_attempts'] : array();
+
+            if ($text_model !== '' && function_exists('cbia_costes_record_usage')) {
+                if (!empty($text_attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+                    cbia_costes_record_failed_attempts($post_id, $text_attempts, array('type' => 'text'));
+                }
+                cbia_costes_record_usage($post_id, array(
+                    'type' => 'text',
+                    'model' => $text_model,
+                    'input_tokens' => (int)($usage['input_tokens'] ?? 0),
+                    'output_tokens' => (int)($usage['output_tokens'] ?? 0),
+                    'cached_input_tokens' => (int)($usage['cached_input_tokens'] ?? 0),
+                    'ok' => 1,
+                ));
+            }
+            if ($text_model !== '' && function_exists('cbia_usage_append_call')) {
+                cbia_usage_append_call($post_id, 'blog_text', $text_model, $usage, array(
+                    'ok' => 1,
+                    'err' => '',
+                ));
+            }
+
+            $image_calls = is_array($payload['image_calls'] ?? null) ? $payload['image_calls'] : array();
+            foreach ($image_calls as $item) {
+                if (!is_array($item)) {
+                    continue;
+                }
+                $model = sanitize_text_field((string)($item['model'] ?? ''));
+                $section = sanitize_key((string)($item['section'] ?? 'internal'));
+                $ok = !empty($item['ok']) ? 1 : 0;
+                $attach_id = (int)($item['attach_id'] ?? 0);
+                $error = sanitize_text_field((string)($item['error'] ?? ''));
+                $attempts = is_array($item['attempts'] ?? null) ? $item['attempts'] : array();
+
+                $recorded_attempts = 0;
+                if (!empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+                    $recorded_attempts = cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'image', 'section' => $section));
+                }
+                if (function_exists('cbia_costes_record_usage') && ($ok || !$recorded_attempts)) {
+                    cbia_costes_record_usage($post_id, array(
+                        'type' => 'image',
+                        'model' => $model,
+                        'input_tokens' => 0,
+                        'output_tokens' => 0,
+                        'cached_input_tokens' => 0,
+                        'ok' => $ok,
+                        'error' => $error,
+                        'section' => $section,
+                        'attach_id' => $attach_id,
+                    ));
+                }
+                if (function_exists('cbia_image_append_call')) {
+                    cbia_image_append_call($post_id, $section, $model, $ok, $attach_id, $error);
+                }
+            }
+        }
+
+        private function resolve_category_ids(string $title, string $final_html): array {
+            $cats = function_exists('cbia_determine_categories_by_mapping')
+                ? cbia_determine_categories_by_mapping($title, $final_html)
+                : array();
+            if (empty($cats)) {
+                $s = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
+                $default_cat = trim((string)($s['default_category'] ?? 'News'));
+                if ($default_cat !== '') $cats = array($default_cat);
+            }
+            $cat_ids = array();
+            if (!empty($cats) && function_exists('cbia_ensure_category_exists')) {
+                foreach ($cats as $c) {
+                    $id = cbia_ensure_category_exists($c);
+                    if ($id) $cat_ids[] = (int)$id;
+                }
+            }
+            return array_values(array_unique(array_filter($cat_ids)));
+        }
+
+        private function resolve_tag_ids(array $tags): array {
+            $tag_ids = array();
+            foreach ($tags as $tag_name) {
+                $name = trim((string)$tag_name);
+                if ($name === '') continue;
+                $term = get_term_by('name', $name, 'post_tag');
+                if (!$term || is_wp_error($term)) {
+                    $created = wp_insert_term($name, 'post_tag');
+                    if (is_wp_error($created) || empty($created['term_id'])) {
+                        continue;
+                    }
+                    $tag_ids[] = (int)$created['term_id'];
+                } else {
+                    $tag_ids[] = (int)$term->term_id;
+                }
+            }
+            return array_values(array_unique(array_filter($tag_ids)));
         }
 
         private function preview_media_meta_key(): string {
@@ -511,10 +731,13 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 $attach_id = (int)$raw_id;
                 if ($attach_id <= 0) continue;
                 if (get_post_type($attach_id) !== 'attachment') continue;
+                $keep = (string)get_post_meta($attach_id, '_cbia_keep_preview_media', true);
+                if ($keep === '1') {
+                    continue;
+                }
                 $deleted = wp_delete_attachment($attach_id, true);
                 if (!$deleted) {
-                    // translators: %d is an attachment ID.
-                    $warnings[] = sprintf(__('Could not remove temporary preview attachment ID %d.', 'cbiastudio-blogflow-ai'), $attach_id);
+                $warnings[] = 'Could not clean temporary preview attachment ID ' . $attach_id . '.';
                 }
             }
             delete_user_meta($user_id, $this->preview_media_meta_key());
@@ -561,7 +784,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
         }
 
         private function build_prompt($title, array $settings) {
-            $idioma_post = trim((string)($settings['post_language'] ?? 'Spanish'));
+            $idioma_post = trim((string)($settings['post_language'] ?? 'English'));
             $mode = function_exists('cbia_prompt_get_mode')
                 ? cbia_prompt_get_mode($settings)
                 : sanitize_key((string)($settings['blog_prompt_mode'] ?? 'recommended'));
@@ -592,7 +815,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             return (string)$template;
         }
 
-        private function render_markers($html, $title, $images_limit, $preview_mode, $emit = null) {
+        private function render_markers($html, $title, $images_limit, $preview_mode, $emit = null, $internal_image_style = '') {
             $warnings = array();
             $images = array();
             $temp_attachment_ids = array();
@@ -639,11 +862,30 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 if ($preview_mode === 'full') {
                     $prompt = cbia_build_image_prompt_for_post(0, 'internal', $desc, $i);
                     $alt = cbia_sanitize_alt_from_desc($desc);
-                    list($ok_img, $attach_id, $img_model, $img_err) = cbia_generate_image_openai_with_prompt($prompt, $section, $title, $alt, $i);
+                    list($ok_img, $attach_id, $img_model, $img_err, $img_meta) = cbia_generate_image_openai_with_prompt($prompt, $section, $title, $alt, $i);
                     if ($ok_img && $attach_id) {
                         $url = wp_get_attachment_url((int)$attach_id);
                         $img_tag = cbia_build_content_img_tag($url, $alt, $section, $i);
-                        $html = cbia_replace_first_occurrence($html, $mk['full'], $img_tag);
+                        if ($internal_image_style === 'banner') {
+                            if (strpos($img_tag, 'cbia-banner') === false) {
+                                if (preg_match('/class=("|\')([^"\']*)\1/i', $img_tag)) {
+                                    $img_tag = preg_replace('/class=("|\')([^"\']*)\1/i', 'class="$2 cbia-banner lazyloaded"', $img_tag, 1);
+                                } else {
+                                    $img_tag = preg_replace('/<img\s+/i', '<img class="cbia-banner lazyloaded" ', $img_tag, 1);
+                                }
+                            }
+                        } elseif ($internal_image_style === 'normal') {
+                            $img_tag = preg_replace_callback('/\sclass=("|\')([^"\']*)\1/i', function($m) {
+                                $classes = preg_split('/\s+/', trim((string)$m[2]));
+                                if (!is_array($classes)) $classes = array();
+                                $classes = array_values(array_filter($classes, function($c){
+                                    return $c !== 'cbia-banner' && $c !== 'lazyloaded';
+                                }));
+                                return empty($classes) ? '' : ' class="' . esc_attr(implode(' ', $classes)) . '"';
+                            }, $img_tag, 1);
+                        }
+                        $img_markup = '<div class="cbia-inline-image-wrap" style="margin:18px 0;">' . $img_tag . '</div>';
+                        $html = cbia_replace_first_occurrence($html, $mk['full'], $img_markup);
                         $images[] = array(
                             'idx' => $i,
                             'section' => $section,
@@ -652,6 +894,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                             'model' => (string)$img_model,
                             'url' => (string)$url,
                             'attach_id' => (int)$attach_id,
+                            'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($img_meta) : array(),
                         );
                         $temp_attachment_ids[] = (int)$attach_id;
                         $this->emit($emit, 'cbia_content', array('html' => $html));
@@ -665,8 +908,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         ));
                         continue;
                     }
-                    // translators: 1: internal image index, 2: error message.
-                    $warnings[] = sprintf(__('Could not generate internal image %1$d: %2$s', 'cbiastudio-blogflow-ai'), $i, (string)($img_err ?: __('unknown error', 'cbiastudio-blogflow-ai')));
+                    $warnings[] = 'Could not generate internal image ' . $i . ': ' . (string)($img_err ?: 'unknown error');
                     $images[] = array(
                         'idx' => $i,
                         'section' => $section,
@@ -674,6 +916,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'ok' => 0,
                         'model' => (string)$img_model,
                         'error' => (string)($img_err ?: ''),
+                        'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($img_meta) : array(),
                     );
                     $this->emit($emit, 'cbia_image', array(
                         'idx' => $i,
@@ -681,12 +924,11 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'desc' => $desc,
                         'status' => 'error',
                         'ok' => 0,
-                        'error' => (string)($img_err ?: __('unknown error', 'cbiastudio-blogflow-ai')),
+                        'error' => (string)($img_err ?: 'unknown error'),
                     ));
                 }
 
-                // translators: %d is the internal image index in preview mode.
-                $placeholder = '<div class="cbia-preview-image" data-section="' . esc_attr($section) . '"><strong>[' . sprintf(__('Preview internal image %d', 'cbiastudio-blogflow-ai'), $i) . ']</strong> ' . esc_html($desc) . '</div>';
+                $placeholder = '<div class="cbia-preview-image" data-section="' . esc_attr($section) . '"><strong>[Preview internal image ' . $i . ']</strong> ' . esc_html($desc) . '</div>';
                 $html = cbia_replace_first_occurrence($html, $mk['full'], $placeholder);
                 $images[] = array(
                     'idx' => $i,
@@ -716,23 +958,37 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
         private function emit_text_progress($emit, string $html): void {
             if (!is_callable($emit)) return;
-            $parts = preg_split('/(<\/p>|<\/h2>|<\/h3>|<\/h4>|<\/ul>|<\/ol>|<\/li>|<\/figure>|<\/div>|<br\s*\/?>)/i', $html, -1, PREG_SPLIT_DELIM_CAPTURE);
-            if (!is_array($parts) || empty($parts)) return;
             $buffer = '';
-            $idx = 0;
-            foreach ($parts as $part) {
-                $buffer .= $part;
-                if (trim($buffer) === '') continue;
-                $this->emit($emit, 'text_progress', array(
-                    'html' => $buffer,
-                    'word_count' => $this->word_count($buffer),
-                ));
-                if ($idx % 2 === 0) {
-                    $this->emit($emit, 'word_count', array('count' => $this->word_count($buffer)));
+            $step = 0;
+            if (!preg_match_all('/(<[^>]+>|[^<]+)/u', $html, $segments)) return;
+            foreach (($segments[0] ?? array()) as $seg) {
+                if ($seg === '') continue;
+                // Keep tags intact; split only visible text into smaller "typing" chunks.
+                if ($seg[0] === '<') {
+                    $buffer .= $seg;
+                } else {
+                    $tokens = preg_split('/(\s+)/u', $seg, -1, PREG_SPLIT_DELIM_CAPTURE);
+                    if (!is_array($tokens)) $tokens = array($seg);
+                    foreach ($tokens as $token) {
+                        if ($token === '') continue;
+                        $buffer .= $token;
+                        $step++;
+                        if ($step % 4 === 0) {
+                            $this->emit($emit, 'text_progress', array(
+                                'html' => $buffer,
+                                'word_count' => $this->word_count($buffer),
+                            ));
+                            if ($step % 12 === 0) {
+                                $this->emit($emit, 'word_count', array('count' => $this->word_count($buffer)));
+                            }
+                        }
+                    }
                 }
-                $idx++;
-                usleep(120000);
             }
+            $this->emit($emit, 'text_progress', array(
+                'html' => $buffer,
+                'word_count' => $this->word_count($buffer),
+            ));
         }
 
         private function word_count(string $html): int {

@@ -68,4 +68,3 @@ if (!function_exists('cbia_generate_meta_description')) {
 		return $truncated . '...';
 	}
 }
-

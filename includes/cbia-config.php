@@ -12,4 +12,3 @@ foreach ($cbia_config_files as $cbia_file) {
         require_once $cbia_file;
     }
 }
-

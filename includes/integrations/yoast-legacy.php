@@ -42,6 +42,10 @@ if (!function_exists('cbia_yoast_log')) {
 		if (strlen($log) > 250000) $log = substr($log, -250000);
 		update_option(cbia_yoast_log_key(), $log, false);
 
+		if (function_exists('error_log')) {
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Optional debug mirror for Yoast sync traces.
+			error_log('[CBIA-YOAST] ' . $msg);
+		}
 	}
 }
 
@@ -143,10 +147,10 @@ if (!function_exists('cbia_yoast_try_reindex_post')) {
 		$post_id = (int)$post_id;
 		if ($post_id <= 0) return false;
 
-		// Disparos base WP.
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WP hook.
+		// Disparos base WP
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External WordPress core hook.
 		do_action('save_post', $post_id, get_post($post_id), true);
-		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- Core WP hook.
+		// phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound -- External WordPress core hook.
 		do_action('wp_insert_post', $post_id, get_post($post_id), true);
 
 		// Si no hay YoastSEO(), intentamos hooks clÃ¡sicos
@@ -295,7 +299,7 @@ if (!function_exists('cbia_yoast_update_semaphore_scores')) {
 				WPSEO_Meta::save_postdata($post_id);
 			}
 		} catch (Throwable $e) {
-			cbia_yoast_log("WPSEO_Meta::save_postdata fallÃ³ en {$post_id}: " . $e->getMessage());
+			cbia_yoast_log("WPSEO_Meta::save_postdata failed on {$post_id}: " . $e->getMessage());
 		}
 
 		// Forzar update + reindex best-effort
@@ -365,8 +369,9 @@ if (!function_exists('cbia_yoast_query_posts')) {
 		);
 
 		if ($only_cbia) {
-			$args['meta_key'] = '_cbia_created';
-			$args['meta_value'] = '1';
+			$args['meta_query'] = array(
+				array('key' => '_cbia_created', 'value' => '1', 'compare' => '=')
+			);
 		}
 
 		$q = new WP_Query($args);
@@ -395,8 +400,9 @@ if (!function_exists('cbia_yoast_mark_legacy_cbia')) {
 			'fields'         => 'ids',
 			'no_found_rows'  => true,
 			'offset'         => $offset,
-			'meta_key'       => '_cbia_created',
-			'meta_compare'   => 'NOT EXISTS',
+			'meta_query'     => array(
+				array('key' => '_cbia_created', 'compare' => 'NOT EXISTS'),
+			),
 		);
 
 		$date_query = array();
@@ -424,7 +430,12 @@ if (!function_exists('cbia_yoast_mark_legacy_cbia')) {
 				if (!$has) {
 					$p = get_post($post_id);
 					if ($p && is_string($p->post_content)) {
-						if (stripos($p->post_content, '[IMAGEN') !== false || stripos($p->post_content, '[IMAGEN_PENDIENTE') !== false) $has = true;
+						if (
+							stripos($p->post_content, '[IMAGE') !== false
+							|| stripos($p->post_content, '[IMAGE_PENDING') !== false
+							|| stripos($p->post_content, '[IMAGEN') !== false
+							|| stripos($p->post_content, '[IMAGEN_PENDIENTE') !== false
+						) $has = true;
 					}
 				}
 
@@ -452,7 +463,7 @@ if (!function_exists('cbia_yoast_run_batch')) {
 		$ids = cbia_yoast_query_posts($batch, $only_cbia, $offset);
 
 		if (empty($ids)) {
-			cbia_yoast_log("No hay posts para procesar (action={$action}, only_cbia=" . ($only_cbia ? 'sÃ­' : 'no') . ", offset={$offset}).");
+			cbia_yoast_log("No posts to process (action={$action}, only_cbia=" . ($only_cbia ? 'yes' : 'no') . ", offset={$offset}).");
 			return array(0, 0, 0, 0);
 		}
 
@@ -464,19 +475,19 @@ if (!function_exists('cbia_yoast_run_batch')) {
 			$title = get_the_title($post_id);
 
 			if ($action === 'metas' || $action === 'both') {
-				cbia_yoast_log("METAS: post {$post_id} '{$title}' (force=" . ($force ? 'sÃ­' : 'no') . ")");
+				cbia_yoast_log("METAS: post {$post_id} '{$title}' (force=" . ($force ? 'yes' : 'no') . ")");
 				$did = cbia_yoast_recalc_metas($post_id, $force);
 				if ($did) $metas_changed++;
 			}
 
 			if ($action === 'semaphore' || $action === 'both') {
-				cbia_yoast_log("SEMÃFORO: post {$post_id} '{$title}' (force=" . ($force ? 'sÃ­' : 'no') . ")");
+				cbia_yoast_log("TRAFFIC LIGHT: post {$post_id} '{$title}' (force=" . ($force ? 'yes' : 'no') . ")");
 				list($did_scores, $seo, $read) = cbia_yoast_update_semaphore_scores($post_id, $force);
 				if ($did_scores) {
 					$scores_changed++;
-					cbia_yoast_log("SEMÃFORO: scores guardados => SEO={$seo} | LEG={$read}");
+					cbia_yoast_log("TRAFFIC LIGHT: scores saved => SEO={$seo} | LEG={$read}");
 				} else {
-					cbia_yoast_log("SEMÃFORO: ya tenÃ­a scores (o no se pudo calcular).");
+					cbia_yoast_log("TRAFFIC LIGHT: scores already present (or could not be calculated).");
 				}
 			}
 
@@ -488,7 +499,7 @@ if (!function_exists('cbia_yoast_run_batch')) {
 			update_post_meta($post_id, '_cbia_yoast_refreshed', current_time('mysql'));
 		}
 
-		cbia_yoast_log("FIN LOTE: action={$action} processed={$processed} metas_changed={$metas_changed} scores_changed={$scores_changed} reindex_ok={$reindex_ok}");
+		cbia_yoast_log("END BATCH: action={$action} processed={$processed} metas_changed={$metas_changed} scores_changed={$scores_changed} reindex_ok={$reindex_ok}");
 		return array($processed, $metas_changed, $scores_changed, $reindex_ok);
 	}
 }
@@ -503,15 +514,15 @@ if (!function_exists('cbia_yoast_on_post_created')) {
 		if ($post_id <= 0) return;
 
 		// Esto es lo que te faltaba: al crear, actualizar semÃ¡foro inmediato
-		cbia_yoast_log("HOOK: post creado {$post_id}. Recalculando metas + semÃ¡foro...");
+		cbia_yoast_log("HOOK: post created {$post_id}. Recalculating metas + traffic light...");
 
 		$did_metas = cbia_yoast_recalc_metas($post_id, false);
 		list($did_scores, $seo, $read) = cbia_yoast_update_semaphore_scores($post_id, true); // true para que lo rellene siempre al crear
 
 		$re = cbia_yoast_try_reindex_post($post_id);
 
-		cbia_yoast_log("HOOK: post {$post_id} metas=" . ($did_metas ? 'actualizadas' : 'ok') .
-			" | semÃ¡foro=" . ($did_scores ? "OK (SEO={$seo}, LEG={$read})" : 'sin cambios') .
+		cbia_yoast_log("HOOK: post {$post_id} metas=" . ($did_metas ? 'updated' : 'ok') .
+			" | traffic_light=" . ($did_scores ? "OK (SEO={$seo}, LEG={$read})" : 'no changes') .
 			" | reindex=" . ($re ? 'ok' : 'best-effort'));
 	}
 }
@@ -528,8 +539,9 @@ if (!function_exists('cbia_yoast_handle_post')) {
             return array($batch, $offset, $force, $only_cbia);
         }
 
-        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
-            $post_unslashed = wp_unslash($_POST);
+        $request_method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_SERVER['REQUEST_METHOD']))) : '';
+        if ($request_method === 'POST') {
+            $post_unslashed = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
 
             if (!empty($post_unslashed['cbia_yoast_action']) && check_admin_referer('cbia_yoast_nonce_action', 'cbia_yoast_nonce')) {
                 $action = sanitize_text_field((string)$post_unslashed['cbia_yoast_action']);
@@ -545,7 +557,7 @@ if (!function_exists('cbia_yoast_handle_post')) {
 
                 if ($action === 'clear_log') {
                     cbia_yoast_log_clear();
-                    cbia_yoast_log("Log limpiado.");
+                    cbia_yoast_log(__('Log cleared.', 'cbiastudio-blogflow-ai'));
                 } elseif ($action === 'metas' || $action === 'semaphore' || $action === 'both') {
                     cbia_yoast_run_batch($action, $batch, $force, $only_cbia, $offset);
                 } elseif ($action === 'mark_legacy') {
@@ -556,9 +568,9 @@ if (!function_exists('cbia_yoast_handle_post')) {
                     if ($from !== '') { $from = str_replace('T',' ', $from); if (strlen($from) === 16) $from .= ':00'; }
                     if ($to   !== '') { $to   = str_replace('T',' ', $to);   if (strlen($to) === 16) $to   .= ':00'; }
 
-                    cbia_yoast_log("MARCAR legacy: batch={$batch} offset={$offset} from=" . ($from ?: '(none)') . " to=" . ($to ?: '(none)') . " only_signals=" . ($sig ? 'sÃ­' : 'no'));
+                    cbia_yoast_log("MARK legacy: batch={$batch} offset={$offset} from=" . ($from ?: '(none)') . " to=" . ($to ?: '(none)') . " only_signals=" . ($sig ? 'yes' : 'no'));
                     list($marked, $checked) = cbia_yoast_mark_legacy_cbia($batch, $from, $to, $sig, $offset);
-                    cbia_yoast_log("MARCAR legacy: marcados={$marked} revisados={$checked}");
+                    cbia_yoast_log("MARK legacy: marked={$marked} checked={$checked}");
                 }
             }
         }
@@ -577,7 +589,7 @@ if (!function_exists('cbia_render_tab_yoast')) {
             return;
         }
 
-        echo '<p>No se pudo cargar Yoast.</p>';
+        echo '<p>' . esc_html__('Could not load Yoast.', 'cbiastudio-blogflow-ai') . '</p>';
     }
 }
 

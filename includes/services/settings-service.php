@@ -49,4 +49,3 @@ if (!class_exists('CBIA_Settings_Service')) {
         }
     }
 }
-

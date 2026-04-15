@@ -12,7 +12,7 @@ if (!class_exists('CBIA_Diagnostics_Admin')) {
         }
 
         public function get_label() {
-            return 'DiagnÃ³stico';
+            return __('Diagnostics', 'cbiastudio-blogflow-ai');
         }
 
         public function get_priority() {
@@ -26,7 +26,7 @@ if (!class_exists('CBIA_Diagnostics_Admin')) {
                 return;
             }
 
-            echo '<p>No se pudo cargar DiagnÃ³stico.</p>';
+            echo '<p>' . esc_html__('Could not load Diagnostics.', 'cbiastudio-blogflow-ai') . '</p>';
         }
     }
 }

@@ -2,7 +2,7 @@
 /**
  * Scheduler/job hooks.
  *
- * Mantiene compatibilidad con el flujo legacy de cron.
+ * Keeps compatibility with the legacy cron flow.
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
@@ -23,17 +23,17 @@ if (!function_exists('cbia_pending_fill_event_handler')) {
 
         $lock_key = 'cbia_pending_fill_lock';
         if (get_transient($lock_key)) {
-            $log('[WARN] CRON: pending fill ya en ejecuciÃ³n. Se omite.');
+            $log('[WARN] CRON: pending fill already running. Skipped.');
             return;
         }
         set_transient($lock_key, 1, 15 * MINUTE_IN_SECONDS);
 
         try {
             if (function_exists('cbia_run_fill_pending_images')) {
-                $log('[INFO] CRON: ejecutando relleno de pendientes.');
+                $log('[INFO] CRON: running pending fill.');
                 cbia_run_fill_pending_images(10);
             } else {
-                $log('[WARN] CRON: falta cbia_run_fill_pending_images().');
+                $log('[WARN] CRON: missing cbia_run_fill_pending_images().');
             }
         } finally {
             delete_transient($lock_key);
@@ -65,4 +65,3 @@ if (!class_exists('CBIA_Scheduler')) {
         }
     }
 }
-

@@ -6,18 +6,18 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
  * TAB BLOG (v9.2 FIX)
  *
  * FIXES (lo que te fallaba):
- * 1) Si cbia_log_message NO estÃƒÆ’Ã‚Â¡ cargada (por orden de includes),
- *    este archivo ahora trae un logger ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œfallbackÃƒÂ¢Ã¢â€šÂ¬Ã‚Â para que SIEMPRE haya log.
- * 2) El botÃƒÆ’Ã‚Â³n "Crear Blogs" ahora ARRANCA de verdad:
+ * 1) Si cbia_log_message NO estÃ¡ cargada (por orden de includes),
+ *    este archivo ahora trae un logger â€œfallbackâ€ para que SIEMPRE haya log.
+ * 2) El botÃ³n "Crear Blogs" ahora ARRANCA de verdad:
  *    - Ejecuta 1 tanda inmediata (para que veas log al instante)
  *    - y re-encola el evento para continuar en background si queda cola.
- * 3) Log ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œen vivoÃƒÂ¢Ã¢â€šÂ¬Ã‚Â:
- *    - AÃƒÆ’Ã‚Â±ade contador anti-cache y nocache_headers()
+ * 3) Log â€œen vivoâ€:
+ *    - AÃ±ade contador anti-cache y nocache_headers()
  *    - Endpoint wp_ajax_cbia_get_log se registra ahora en core/hooks.php.
  *
  * IMPORTANTE:
- * - Si tu hosting tiene WP-CRON bloqueado, al menos verÃƒÆ’Ã‚Â¡s la primera tanda,
- *   y podrÃƒÆ’Ã‚Â¡s re-lanzar con el botÃƒÆ’Ã‚Â³n para seguir.
+ * - Si tu hosting tiene WP-CRON bloqueado, al menos verÃ¡s la primera tanda,
+ *   y podrÃ¡s re-lanzar con el botÃ³n para seguir.
  */
 
 /* =========================================================
@@ -53,10 +53,14 @@ if (!function_exists('cbia_log_message')) {
         wp_cache_delete(cbia_log_key(), 'options');
         wp_cache_delete(cbia_log_counter_key(), 'options');
 
+        if (function_exists('error_log')) {
+            // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Mirrors plugin log to PHP error log when available.
+            error_log('[CBIA] ' . trim($message));
+        }
     }
 }
 
-// cbia_clear_log y cbia_get_log viven en el nÃƒÆ’Ã‚Âºcleo.
+// cbia_clear_log y cbia_get_log viven en el nÃºcleo.
 
 /* =========================================================
    =================== STOP FLAG (fallback) =================
@@ -108,6 +112,49 @@ if (!function_exists('cbia_checkpoint_get')) {
 if (!function_exists('cbia_checkpoint_save')) {
     function cbia_checkpoint_save($cp){ update_option('cbia_checkpoint', $cp, false); }
 }
+if (!function_exists('cbia_pro_normalize_csv_url')) {
+    function cbia_pro_normalize_csv_url($url){
+        $url = trim((string)$url);
+        if ($url === '') return '';
+        if (preg_match('#^https?://drive\.google\.com/file/d/([^/]+)/#i', $url, $m)) {
+            return 'https://drive.google.com/uc?export=download&id=' . rawurlencode($m[1]);
+        }
+        if (preg_match('#^https?://docs\.google\.com/spreadsheets/d/([^/]+)/#i', $url, $m)) {
+            return 'https://docs.google.com/spreadsheets/d/' . rawurlencode($m[1]) . '/export?format=csv';
+        }
+        return $url;
+    }
+}
+if (!function_exists('cbia_pro_is_public_ip')) {
+    function cbia_pro_is_public_ip($ip) {
+        $ip = trim((string)$ip);
+        if ($ip === '') return false;
+        return filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+    }
+}
+if (!function_exists('cbia_pro_validate_remote_csv_url')) {
+    function cbia_pro_validate_remote_csv_url($url){
+        $url = cbia_pro_normalize_csv_url($url);
+        if ($url === '' || !function_exists('wp_http_validate_url') || !wp_http_validate_url($url)) {
+            return '';
+        }
+        $parts = wp_parse_url($url);
+        if (!is_array($parts)) return '';
+        $scheme = strtolower((string)($parts['scheme'] ?? ''));
+        if (!in_array($scheme, array('http', 'https'), true)) return '';
+        $host = strtolower((string)($parts['host'] ?? ''));
+        if ($host === '' || in_array($host, array('localhost', '127.0.0.1', '::1'), true)) return '';
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            return cbia_pro_is_public_ip($host) ? $url : '';
+        }
+        $ips = @gethostbynamel($host);
+        if (!is_array($ips) || empty($ips)) return '';
+        foreach ($ips as $ip) {
+            if (!cbia_pro_is_public_ip($ip)) return '';
+        }
+        return $url;
+    }
+}
 
 /* =========================================================
    =================== POST HANDLER (BLOG TAB) ==============
@@ -124,7 +171,8 @@ if (!function_exists('cbia_blog_handle_post')) {
             }
         }
         if (!is_admin() || !current_user_can('manage_options')) return '';
-        if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') return '';
+        $request_method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_SERVER['REQUEST_METHOD']))) : '';
+        if ($request_method !== 'POST') return '';
 
         $post_unslashed = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
         $saved_notice = '';
@@ -132,13 +180,13 @@ if (!function_exists('cbia_blog_handle_post')) {
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
 
         if (!empty($post_unslashed['cbia_form']) && $post_unslashed['cbia_form'] === 'blog_save' && check_admin_referer('cbia_blog_save_nonce')) {
-            $mode = sanitize_key((string)($post_unslashed['title_input_mode'] ?? 'manual'));
+            $mode = (string)($post_unslashed['title_input_mode'] ?? 'manual');
             $settings['title_input_mode'] = in_array($mode, array('manual','csv'), true) ? $mode : 'manual';
 
-            $settings['manual_titles'] = sanitize_textarea_field((string)($post_unslashed['manual_titles'] ?? ''));
-            $settings['csv_url'] = esc_url_raw(trim((string)($post_unslashed['csv_url'] ?? '')));
+            $settings['manual_titles'] = (string)($post_unslashed['manual_titles'] ?? '');
+            $settings['csv_url'] = trim((string)($post_unslashed['csv_url'] ?? ''));
 
-            $dt_local = sanitize_text_field(trim((string)($post_unslashed['first_publication_datetime_local'] ?? '')));
+            $dt_local = trim((string)($post_unslashed['first_publication_datetime_local'] ?? ''));
             if ($dt_local !== '') {
                 $dt_local = str_replace('T',' ', $dt_local);
                 if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/', $dt_local)) $dt_local .= ':00';
@@ -152,8 +200,8 @@ if (!function_exists('cbia_blog_handle_post')) {
 
             update_option('cbia_settings', $settings, false);
 
-            cbia_log_message("[INFO] Blog: configuraciÃƒÆ’Ã‚Â³n guardada (tÃƒÆ’Ã‚Â­tulos + automatizaciÃƒÆ’Ã‚Â³n).");
-            $saved_notice = 'guardado';
+            cbia_log_message("[INFO] Blog: settings saved (titles + automation).");
+            $saved_notice = 'saved';
         }
 
         if (!empty($post_unslashed['cbia_form']) && $post_unslashed['cbia_form'] === 'blog_actions' && check_admin_referer('cbia_blog_actions_nonce')) {
@@ -203,14 +251,18 @@ if (!function_exists('cbia_get_titles')) {
         if ($mode === 'manual') {
             $manual = (string)($settings['manual_titles'] ?? '');
             $arr = array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $manual)));
-            cbia_log_message("[INFO] Manual titles loaded: ".count($arr));
+            if (function_exists('cbia_cap_enabled') && !cbia_cap_enabled('runtime_advanced')) {
+                $arr = array_slice(array_values($arr), 0, 1);
+            }
+            cbia_log_message("[INFO] Titles loaded manually: ".count($arr));
             return $arr;
         }
 
         if ($mode === 'csv') {
             $csv_url = trim((string)($settings['csv_url'] ?? ''));
+            $csv_url = cbia_pro_validate_remote_csv_url($csv_url);
             if ($csv_url === '') {
-                cbia_log_message("[ERROR] CSV mode: missing URL.");
+                cbia_log_message("[ERROR] CSV mode: invalid or blocked URL.");
                 return array();
             }
 
@@ -223,11 +275,15 @@ if (!function_exists('cbia_get_titles')) {
             $lines = preg_split('/\r\n|\r|\n/', $body);
 
             $out = array();
-            foreach ($lines as $line) {
-                $line = trim($line);
+            foreach ($lines as $idx => $line) {
+                $line = trim((string)$line);
                 if ($line === '') continue;
-                if (stripos($line, 'titulo') !== false || stripos($line, 'tÃƒÆ’Ã‚Â­tulo') !== false) continue;
-                $out[] = $line;
+                $row = str_getcsv($line);
+                $first = trim((string)($row[0] ?? ''));
+                if ($first === '') continue;
+                $first_l = strtolower($first);
+                if ($idx === 0 && in_array($first_l, array('title', 'titulo', 'título'), true)) continue;
+                $out[] = $first;
             }
             $out = array_values(array_unique(array_filter(array_map('trim', $out))));
             cbia_log_message("[INFO] Titles loaded from CSV: ".count($out));
@@ -250,7 +306,7 @@ if (!function_exists('cbia_prepare_queue_from_titles')) {
             if ($t === '') continue;
 
             if (function_exists('cbia_post_exists_by_title') && cbia_post_exists_by_title($t)) {
-                cbia_log_message("[INFO] El post '{$t}' already exists. Skipped (queue).");
+                cbia_log_message("[INFO] Post '{$t}' already exists. Skipped (queue).");
                 continue;
             }
 
@@ -284,7 +340,7 @@ if (!function_exists('cbia_compute_next_datetime')) {
             $dt->modify('+' . max(1, (int)$interval_days) . ' day');
             return $dt->format('Y-m-d H:i:s');
         } catch (Exception $e) {
-            cbia_log_message("[ERROR] Error calculando prÃƒÆ’Ã‚Â³xima fecha: ".$e->getMessage());
+            cbia_log_message("[ERROR] Error calculating next date: ".$e->getMessage());
             return '';
         }
     }
@@ -303,9 +359,9 @@ if (!function_exists('cbia_schedule_generation_event')) {
 
         if (!wp_next_scheduled('cbia_generation_event')) {
             wp_schedule_single_event(time() + $delay_seconds, 'cbia_generation_event');
-            cbia_log_message("[INFO] Event enqueued in {$delay_seconds}s.");
+            cbia_log_message("[INFO] Event queued in {$delay_seconds}s.");
         } else {
-            cbia_log_message("[DEBUG] Event already in queue (not duplicated).");
+            cbia_log_message("[DEBUG] Event already queued (not duplicated).");
         }
     }
 }
@@ -329,13 +385,13 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
         $cp = cbia_checkpoint_get();
 
         if (!$incoming_titles && !empty($cp) && !empty($cp['running']) && isset($cp['queue']) && is_array($cp['queue'])) {
-            cbia_log_message("[INFO] Resuming from checkpoint: ".count($cp['queue'])." en cola, idx=".intval($cp['idx'] ?? 0).".");
+            cbia_log_message("[INFO] Resuming from checkpoint: ".count($cp['queue'])." in queue, idx=".intval($cp['idx'] ?? 0).".");
             $queue = $cp['queue'];
             $idx   = intval($cp['idx'] ?? 0);
         } else {
             $titles = $incoming_titles ?? cbia_get_titles();
             if (empty($titles)) {
-                cbia_log_message("[INFO] Sin tÃƒÆ’Ã‚Â­tulos. Fin.");
+                cbia_log_message("[INFO] No titles. End.");
                 return array('done'=>true,'processed'=>0);
             }
             $queue = cbia_prepare_queue_from_titles($titles);
@@ -346,7 +402,7 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
         }
 
         if (empty($queue)) {
-            cbia_log_message("[INFO] No hay tÃƒÆ’Ã‚Â­tulos nuevos. Fin.");
+            cbia_log_message("[INFO] No new titles. End.");
             cbia_checkpoint_clear();
             return array('done'=>true,'processed'=>0);
         }
@@ -403,7 +459,7 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
             $processed_this_run++;
 
             if ($processed_this_run >= $max_per_run) {
-                cbia_log_message("[INFO] Batch completed: processed_this_run={$processed_this_run}. Se continuarÃƒÆ’Ã‚Â¡ en el siguiente evento.");
+                cbia_log_message("[INFO] Batch completed: processed_this_run={$processed_this_run}. Will continue in the next event.");
                 break;
             }
         }
@@ -419,7 +475,7 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
             return array('done'=>true,'processed'=>$processed_this_run);
         }
 
-        cbia_log_message("[INFO] Queue pending. Checkpoint idx={$idx_now}/{$queue_count}. Total creados=".intval($cp['created_total']));
+        cbia_log_message("[INFO] Queue pending. Checkpoint idx={$idx_now}/{$queue_count}. Total created=".intval($cp['created_total']));
         return array('done'=>false,'processed'=>$processed_this_run);
     }
 }
@@ -429,26 +485,20 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
    ========================================================= */
 if (!function_exists('cbia_run_generate_blogs')) {
     function cbia_run_generate_blogs($max_per_run = 1){
-        cbia_log_message("[DEBUG] cbia_run_generate_blogs llamada.");
-        cbia_log_message("[INFO] Iniciando creaciÃƒÂ³n de blog (modo single)...");
+        cbia_log_message("[DEBUG] cbia_run_generate_blogs called.");
+        cbia_log_message("[INFO] Starting blog generation (checkpoint)...");
 
-        $titles = cbia_get_titles();
-        if (empty($titles)) {
-            cbia_log_message("[INFO] No titles. End.");
-            return array('done' => true, 'processed' => 0);
+        $max_per_run = max(1, (int)$max_per_run);
+
+        $result = cbia_create_all_posts_checkpointed(null, $max_per_run);
+
+        if (is_array($result) && empty($result['done'])) {
+            cbia_schedule_generation_event(8, true);
+        } else {
+            cbia_log_message("[INFO] Process finished (no pending queue).");
         }
 
-        $title = trim((string) ($titles[0] ?? ''));
-        if ($title === '') {
-            cbia_log_message("[INFO] Empty title. End.");
-            return array('done' => true, 'processed' => 0);
-        }
-
-        cbia_checkpoint_clear();
-        $result = cbia_create_all_posts_checkpointed(array($title), 1);
-        cbia_checkpoint_clear();
-
-        cbia_log_message("[INFO] Call finished (single mode).");
+        cbia_log_message("[INFO] Call finished (if checkpoint is active, it will resume).");
         return $result;
     }
 }
@@ -458,7 +508,7 @@ if (!function_exists('cbia_run_generate_blogs')) {
    ========================================================= */
 if (!has_action('cbia_generation_event')) {
     add_action('cbia_generation_event', function () {
-        cbia_log_message('[INFO] Running batch in event (background)ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦');
+        cbia_log_message('[INFO] Running batch in event (background)...');
         cbia_run_generate_blogs(1);
         cbia_log_message('[INFO] Background event finished.');
     });
@@ -477,6 +527,7 @@ if (!function_exists('cbia_render_tab_blog')) {
             return;
         }
 
-        echo '<p>No se pudo cargar Blog.</p>';
+        echo '<p>Could not load Blog.</p>';
     }
 }
+

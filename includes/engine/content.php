@@ -18,7 +18,7 @@ if (!function_exists('cbia_marker_regex')) {
 
 if (!function_exists('cbia_marker_pending_regex')) {
     function cbia_marker_pending_regex() {
-        return '/\[IMAGEN_PENDIENTE\s*:\s*([^\]]+?)\]/i';
+        return '/\[(?:IMAGE_PENDING|IMAGEN_PENDIENTE)\s*:\s*([^\]]+?)\]/i';
     }
 }
 
@@ -119,17 +119,17 @@ if (!function_exists('cbia_section_label')) {
      */
     function cbia_section_label($section) {
         $section = strtolower((string)$section);
-        if ($section === 'intro' || $section === 'featured' || $section === 'destacada') return 'destacada';
-        if ($section === 'conclusion' || $section === 'cierre') return 'cierre';
+        if ($section === 'intro' || $section === 'featured' || $section === 'destacada') return 'featured';
+        if ($section === 'conclusion' || $section === 'cierre') return 'closing';
         if ($section === 'faq') return 'faq';
-        return 'cuerpo';
+        return 'body';
     }
 }
 
 if (!function_exists('cbia_yoast_faq_block_available')) {
     if (!function_exists('cbia_gutenberg_plugin_active')) {
         function cbia_gutenberg_plugin_active() {
-            // CAMBIO: requisito explÃ­cito solicitado por UX: plugin Gutenberg activo.
+            // CAMBIO: requisito explícito solicitado por UX: plugin Gutenberg activo.
             if (!function_exists('is_plugin_active')) {
                 if (!defined('ABSPATH')) return false;
                 $plugin_file = ABSPATH . 'wp-admin/includes/plugin.php';
@@ -143,16 +143,19 @@ if (!function_exists('cbia_yoast_faq_block_available')) {
 
     if (!function_exists('cbia_yoast_faq_block_unavailable_reason')) {
         function cbia_yoast_faq_block_unavailable_reason() {
-            if (!cbia_gutenberg_plugin_active()) return 'Plugin Gutenberg no activo';
-            if (!defined('WPSEO_VERSION')) return 'Yoast no activo';
-            if (!class_exists('WP_Block_Type_Registry')) return 'Registro de bloques no disponible';
-            if (!function_exists('do_blocks') || !function_exists('parse_blocks')) return 'Motor de bloques no disponible';
+            if (!cbia_gutenberg_plugin_active()) return 'Gutenberg plugin is not active';
+            if (!defined('WPSEO_VERSION')) return 'Yoast is not active';
+            if (!class_exists('WP_Block_Type_Registry')) return 'Block registry is not available';
+            if (!function_exists('do_blocks') || !function_exists('parse_blocks')) return 'Block engine is not available';
 
             $registry = WP_Block_Type_Registry::get_instance();
-            if (!is_object($registry) || !$registry->is_registered('yoast/faq-block')) return 'Bloque yoast/faq-block no registrado';
+            if (!is_object($registry) || !$registry->is_registered('yoast/faq-block')) return 'yoast/faq-block is not registered';
 
             $block = $registry->get_registered('yoast/faq-block');
-            if (!is_object($block)) return 'Bloque yoast/faq-block invÃ¡lido';
+            if (!is_object($block)) return 'yoast/faq-block is invalid';
+            if (empty($block->render_callback) || !is_callable($block->render_callback)) return 'FAQ block has no render callback';
+            return '';
+            if (!is_object($block)) return 'Bloque yoast/faq-block inválido';
             if (empty($block->render_callback) || !is_callable($block->render_callback)) return 'Bloque FAQ sin render callback';
             return '';
         }
@@ -238,7 +241,7 @@ if (!function_exists('cbia_convert_faq_to_yoast_block')) {
      */
     function cbia_convert_faq_to_yoast_block($html) {
         $html = (string)$html;
-        return [$html, false, 'Bloque FAQ Yoast desactivado (se mantiene HTML)'];
+        return [$html, false, 'Yoast FAQ block disabled (HTML kept as-is)'];
     }
 }
 
@@ -246,21 +249,21 @@ if (!function_exists('cbia_detect_marker_section')) {
     function cbia_detect_marker_section($html, $marker_pos, $is_first) {
         $len = strlen((string)$html);
         $html = (string)$html;
-        // Si hay FAQ y el marcador estÃƒÂ¡ despuÃƒÂ©s => faq
+        // Si hay FAQ y el marcador estÃ¡ despuÃ©s => faq
         if (preg_match('/<h2[^>]*>[^<]*(FAQ|Preguntas frecuentes|Questions|FAQs)/i', $html, $m, PREG_OFFSET_CAPTURE)) {
             $faq_pos = (int)($m[0][1] ?? 0);
             if ($faq_pos > 0) {
-                // Si estÃƒÂ¡ justo antes de FAQ (margen razonable), marcar como faq
+                // Si estÃ¡ justo antes de FAQ (margen razonable), marcar como faq
                 if ($marker_pos >= max(0, $faq_pos - 2000) && $marker_pos < $faq_pos) return 'faq';
                 if ($marker_pos > $faq_pos) return 'faq';
             }
         }
-        // Si hay ConclusiÃƒÂ³n/Cierre y el marcador estÃƒÂ¡ despuÃƒÂ©s => conclusion
-        if (preg_match('/<h2[^>]*>[^<]*(ConclusiÃƒÂ³n|Conclusion|Cierre|Final)/i', $html, $m2, PREG_OFFSET_CAPTURE)) {
+        // Si hay ConclusiÃ³n/Cierre y el marcador estÃ¡ despuÃ©s => conclusion
+        if (preg_match('/<h2[^>]*>[^<]*(ConclusiÃ³n|Conclusion|Cierre|Final)/i', $html, $m2, PREG_OFFSET_CAPTURE)) {
             $concl_pos = (int)($m2[0][1] ?? 0);
             if ($concl_pos > 0 && $marker_pos > $concl_pos) return 'conclusion';
         }
-        // Si estÃƒÂ¡ a mitad o cerca del final => conclusion
+        // Si estÃ¡ a mitad o cerca del final => conclusion
         if ($marker_pos > (int)(0.50 * $len)) return 'conclusion';
         return 'body';
     }
@@ -300,7 +303,7 @@ if (!function_exists('cbia_insert_marker_before_conclusion')) {
     function cbia_insert_marker_before_conclusion($html, $marker) {
         $html = (string)$html;
         $marker = (string)$marker;
-        if (preg_match('/<h2[^>]*>[^<]*(ConclusiÃƒÂ³n|Conclusion|Cierre|Final)/i', $html, $m, PREG_OFFSET_CAPTURE)) {
+        if (preg_match('/<h2[^>]*>[^<]*(ConclusiÃ³n|Conclusion|Cierre|Final)/i', $html, $m, PREG_OFFSET_CAPTURE)) {
             $pos = (int)$m[0][1];
             return substr($html, 0, $pos) . "\n\n" . $marker . "\n\n" . substr($html, $pos);
         }
@@ -317,10 +320,10 @@ if (!function_exists('cbia_fix_content_artifacts')) {
         $html = preg_replace('/(<\/p>)\s*\./i', '$1', $html);
         $html = preg_replace('/\s*[\x{2014}\x{2013}]\s*/u', ', ', $html);
 
-        // Eliminar lÃƒÂ­neas con solo un punto
+        // Eliminar lÃ­neas con solo un punto
         $html = preg_replace('/^\s*\.\s*$/m', '', $html);
 
-        // Colapsar mÃƒÂºltiples saltos de lÃƒÂ­nea
+        // Colapsar mÃºltiples saltos de lÃ­nea
         $html = preg_replace("/\n{3,}/", "\n\n", $html);
 
         // Eliminar parrafos vacios
@@ -345,6 +348,7 @@ if (!function_exists('cbia_split_long_paragraph_html')) {
         $inner_html = trim((string)$inner_html);
         if ($inner_html === '') return $inner_html;
 
+        // Skip paragraphs with nested block-like markup; only split text paragraphs.
         if (preg_match('/<(img|ul|ol|li|table|blockquote|iframe|h[1-6]|div|figure|figcaption|pre|code)\b/i', $inner_html)) {
             return $inner_html;
         }
@@ -424,14 +428,14 @@ if (!function_exists('cbia_get_faq_heading')) {
         $custom = trim((string)($s['faq_heading_custom'] ?? ''));
         if ($custom !== '') return $custom;
 
-        $lang = strtolower(trim((string)($s['post_language'] ?? 'espaÃƒÂ±ol')));
+        $lang = strtolower(trim((string)($s['post_language'] ?? 'english')));
         if (strpos($lang, 'ingl') !== false || strpos($lang, 'english') !== false) return 'Frequently Asked Questions';
-        if (strpos($lang, 'fran') !== false || strpos($lang, 'franÃƒÂ§ais') !== false || strpos($lang, 'franc') !== false) return 'Questions frÃƒÂ©quentes';
-        if (strpos($lang, 'deut') !== false || strpos($lang, 'alem') !== false || strpos($lang, 'german') !== false) return 'HÃƒÂ¤ufige Fragen';
+        if (strpos($lang, 'fran') !== false || strpos($lang, 'franÃ§ais') !== false || strpos($lang, 'franc') !== false) return 'Questions frÃ©quentes';
+        if (strpos($lang, 'deut') !== false || strpos($lang, 'alem') !== false || strpos($lang, 'german') !== false) return 'HÃ¤ufige Fragen';
         if (strpos($lang, 'ital') !== false) return 'Domande frequenti';
         if (strpos($lang, 'port') !== false) return 'Perguntas frequentes';
 
-        return 'Preguntas frecuentes';
+        return 'Frequently Asked Questions';
     }
 }
 
@@ -449,7 +453,7 @@ if (!function_exists('cbia_insert_faq_heading_if_missing')) {
 
 if (!function_exists('cbia_normalize_faq_heading')) {
     /**
-     * Normaliza el tÃƒÂ­tulo de FAQ a la versiÃƒÂ³n configurada/idioma.
+     * Normaliza el tÃ­tulo de FAQ a la versiÃ³n configurada/idioma.
      */
     function cbia_normalize_faq_heading($html) {
         $html = (string)$html;

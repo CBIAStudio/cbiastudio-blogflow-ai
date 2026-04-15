@@ -5,14 +5,28 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-if (!class_exists('CBIA_Blog_Service')) {
-    class CBIA_Blog_Service {
+if (!class_exists('CBIA_Pro_Blog_Service')) {
+    class CBIA_Pro_Blog_Service {
+        private function normalize_csv_url($url): string {
+            $url = esc_url_raw(trim((string)$url));
+            if ($url === '') return '';
+
+            if (preg_match('#^https?://drive\.google\.com/file/d/([^/]+)/#i', $url, $m)) {
+                return 'https://drive.google.com/uc?export=download&id=' . rawurlencode($m[1]);
+            }
+            if (preg_match('#^https?://docs\.google\.com/spreadsheets/d/([^/]+)/#i', $url, $m)) {
+                return 'https://docs.google.com/spreadsheets/d/' . rawurlencode($m[1]) . '/export?format=csv';
+            }
+            return $url;
+        }
+
         private function normalize_post_language($value): string {
             $raw = trim((string)$value);
-            if ($raw === '') return 'Spanish';
+            if ($raw === '') return 'English';
             $legacy = array(
                 'Espanol' => 'Spanish', 'espanol' => 'Spanish', 'espaÃ±ol' => 'Spanish',
                 'Portugues' => 'Portuguese', 'Ingles' => 'English', 'Frances' => 'French',
+                'espaÃ±ol' => 'Spanish',
                 'italiano' => 'Italian', 'Aleman' => 'German', 'Holandes' => 'Dutch',
                 'sueco' => 'Swedish', 'Danes' => 'Danish', 'noruego' => 'Norwegian',
                 'Fines' => 'Finnish', 'polaco' => 'Polish', 'checo' => 'Czech',
@@ -35,7 +49,8 @@ if (!class_exists('CBIA_Blog_Service')) {
 
         public function handle_post(): string {
             if (!is_admin() || !current_user_can('manage_options')) return '';
-            if (!isset($_SERVER['REQUEST_METHOD']) || $_SERVER['REQUEST_METHOD'] !== 'POST') return '';
+            $request_method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_SERVER['REQUEST_METHOD']))) : '';
+            if ($request_method !== 'POST') return '';
 
             $post_unslashed = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
             $saved_notice = '';
@@ -45,13 +60,21 @@ if (!class_exists('CBIA_Blog_Service')) {
             if (!empty($post_unslashed['cbia_form']) && $post_unslashed['cbia_form'] === 'blog_save' && check_admin_referer('cbia_blog_save_nonce')) {
                 $prompt_warnings = array();
                 if (array_key_exists('title_input_mode', $post_unslashed)) {
-                    $settings['title_input_mode'] = 'manual';
+                    $mode = (string)($post_unslashed['title_input_mode'] ?? 'manual');
+                    $settings['title_input_mode'] = in_array($mode, array('manual','csv'), true) ? $mode : 'manual';
                 }
 
                 if (array_key_exists('manual_titles', $post_unslashed)) {
-                    $settings['manual_titles'] = sanitize_textarea_field((string)($post_unslashed['manual_titles'] ?? ''));
+                    $manual_titles_raw = sanitize_textarea_field((string)($post_unslashed['manual_titles'] ?? ''));
+                    if (function_exists('cbia_cap_enabled') && !cbia_cap_enabled('runtime_advanced')) {
+                        $manual_titles_list = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $manual_titles_raw))));
+                        $manual_titles_raw = isset($manual_titles_list[0]) ? (string)$manual_titles_list[0] : '';
+                    }
+                    $settings['manual_titles'] = $manual_titles_raw;
                 }
-                $settings['csv_url'] = '';
+                if (array_key_exists('csv_url', $post_unslashed)) {
+                    $settings['csv_url'] = $this->normalize_csv_url((string)($post_unslashed['csv_url'] ?? ''));
+                }
 
                 if (array_key_exists('first_publication_datetime_local', $post_unslashed)) {
                     $dt_local = sanitize_text_field(trim((string)($post_unslashed['first_publication_datetime_local'] ?? '')));
@@ -74,19 +97,19 @@ if (!class_exists('CBIA_Blog_Service')) {
                     $settings['enable_cron_fill'] = 0;
                 }
 
-                // Publication and classification (migrated from Config)
+                // Publicacion y clasificacion (migrado desde Configuracion)
                 if (array_key_exists('default_author_id', $post_unslashed)) {
                     $settings['default_author_id'] = absint($post_unslashed['default_author_id'] ?? 0);
                 }
-                $previous_language = (string)($settings['post_language'] ?? 'Spanish');
+                $previous_language = (string)($settings['post_language'] ?? 'English');
                 if (array_key_exists('post_language', $post_unslashed)) {
                     $settings['post_language'] = $this->normalize_post_language(
-                        sanitize_text_field((string)($post_unslashed['post_language'] ?? ($settings['post_language'] ?? 'Spanish')))
+                        sanitize_text_field((string)($post_unslashed['post_language'] ?? ($settings['post_language'] ?? 'English')))
                     );
                 }
-                $prompt_language = (string)($settings['post_language'] ?? 'Spanish');
+                $prompt_language = (string)($settings['post_language'] ?? 'English');
                 if (array_key_exists('default_category', $post_unslashed)) {
-                    $settings['default_category'] = sanitize_text_field((string)($post_unslashed['default_category'] ?? ($settings['default_category'] ?? 'Noticias')));
+                    $settings['default_category'] = sanitize_text_field((string)($post_unslashed['default_category'] ?? ($settings['default_category'] ?? 'News')));
                 }
                 if (array_key_exists('keywords_to_categories', $post_unslashed)) {
                     $settings['keywords_to_categories'] = sanitize_textarea_field((string)($post_unslashed['keywords_to_categories'] ?? ($settings['keywords_to_categories'] ?? '')));
@@ -96,9 +119,18 @@ if (!class_exists('CBIA_Blog_Service')) {
                 }
 
                 // CAMBIO: Prompt del blog (recommended/legacy) con edicion parcial.
-                $prompt_post_mode = sanitize_key((string)($post_unslashed['blog_prompt_mode'] ?? ($settings['blog_prompt_mode'] ?? 'recommended')));
+                // Prioridad robusta:
+                // 1) radio UI (funciona incluso sin JS)
+                // 2) campo canonico hidden
+                // 3) compat campo legacy
+                $prompt_mode_input = (string)($post_unslashed['blog_prompt_mode_ui'] ?? ($post_unslashed['blog_prompt_mode'] ?? ($post_unslashed['blog_prompt_mode_state'] ?? ($settings['blog_prompt_mode'] ?? 'recommended'))));
+                $prompt_post_mode = sanitize_key($prompt_mode_input);
                 if (!in_array($prompt_post_mode, array('recommended', 'legacy'), true)) $prompt_post_mode = 'recommended';
-                if (array_key_exists('blog_prompt_mode', $post_unslashed)) {
+                if (array_key_exists('blog_prompt_mode_ui', $post_unslashed)) {
+                    $settings['blog_prompt_mode'] = $prompt_post_mode;
+                } elseif (array_key_exists('blog_prompt_mode', $post_unslashed)) {
+                    $settings['blog_prompt_mode'] = $prompt_post_mode;
+                } elseif (array_key_exists('blog_prompt_mode_state', $post_unslashed)) {
                     $settings['blog_prompt_mode'] = $prompt_post_mode;
                 } else {
                     $prompt_post_mode = sanitize_key((string)($settings['blog_prompt_mode'] ?? 'recommended'));
@@ -116,7 +148,7 @@ if (!class_exists('CBIA_Blog_Service')) {
                     $default_editable = function_exists('cbia_prompt_recommended_editable_default_for_language')
                         ? cbia_prompt_recommended_editable_default_for_language($prompt_language)
                         : (function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : '');
-                    $editable_raw = sanitize_textarea_field((string)($post_unslashed['blog_prompt_editable'] ?? ($settings['blog_prompt_editable'] ?? $default_editable)));
+                    $editable_raw = (string)($post_unslashed['blog_prompt_editable'] ?? ($settings['blog_prompt_editable'] ?? $default_editable));
                     if (!empty($post_unslashed['blog_prompt_restore'])) {
                         $editable_raw = $default_editable !== '' ? $default_editable : $editable_raw;
                     }
@@ -153,7 +185,7 @@ if (!class_exists('CBIA_Blog_Service')) {
                     $settings['blog_prompt_editable'] = $editable_raw;
                 }
 
-                $legacy_input = sanitize_textarea_field((string)($post_unslashed['legacy_full_prompt'] ?? ''));
+                $legacy_input = (string)($post_unslashed['legacy_full_prompt'] ?? '');
                 if ($legacy_input !== '') {
                     if (function_exists('cbia_prompt_clean_legacy_template')) {
                         $legacy_input = cbia_prompt_clean_legacy_template($legacy_input, $prompt_language);
@@ -170,10 +202,10 @@ if (!class_exists('CBIA_Blog_Service')) {
                     $settings['prompt_single_all'] = (string)($settings['legacy_full_prompt'] ?? '');
                     $legacy_effective = (string)($settings['legacy_full_prompt'] ?? '');
                     if (strpos($legacy_effective, '{title}') === false) {
-                        $prompt_warnings[] = 'Prompt avanzado: falta la variable {title}.';
+                        $prompt_warnings[] = 'Advanced prompt: missing {title} variable.';
                     }
-                    if (stripos($legacy_effective, '[IMAGEN:') === false) {
-                        $prompt_warnings[] = 'Prompt avanzado: no contiene marcadores [IMAGEN: ...].';
+                    if (stripos($legacy_effective, '[IMAGE:') === false && stripos($legacy_effective, '[IMAGEN:') === false) {
+                        $prompt_warnings[] = 'Advanced prompt: does not include [IMAGE: ...] markers.';
                     }
                 } else {
                     if (function_exists('cbia_prompt_build_recommended_template')) {
@@ -184,14 +216,14 @@ if (!class_exists('CBIA_Blog_Service')) {
                 update_option('cbia_settings', $settings, false);
 
                 if (function_exists('cbia_log_message')) {
-                    cbia_log_message('[INFO] Blog: configuration saved (titles + automation).');
+                    cbia_log_message("[INFO] Blog: settings saved (titles + automation).");
                 }
                 if (!empty($prompt_warnings)) {
                     set_transient('cbia_blog_prompt_warnings', $prompt_warnings, 120);
-                    $saved_notice = 'guardado_warn';
+                    $saved_notice = 'saved_warn';
                 } else {
                     delete_transient('cbia_blog_prompt_warnings');
-                    $saved_notice = 'guardado';
+                    $saved_notice = 'saved';
                 }
             }
 
@@ -270,14 +302,22 @@ if (!class_exists('CBIA_Blog_Service')) {
 
         public function get_checkpoint_status() {
             if (!function_exists('cbia_checkpoint_get')) {
-                return array('status' => 'inactive', 'last' => '(no records)');
+                return array(
+                    'status' => __('idle', 'cbiastudio-blogflow-ai'),
+                    'last' => __('(no records)', 'cbiastudio-blogflow-ai'),
+                );
             }
             $cp = cbia_checkpoint_get();
             $status = (!empty($cp) && !empty($cp['running']))
-                ? ('EN CURSO | idx ' . intval($cp['idx'] ?? 0) . ' de ' . count((array)($cp['queue'] ?? array())))
-                : 'inactive';
+                ? sprintf(
+                    /* translators: 1: current checkpoint index, 2: total queued posts */
+                    __('RUNNING | idx %1$d of %2$d', 'cbiastudio-blogflow-ai'),
+                    intval($cp['idx'] ?? 0),
+                    count((array)($cp['queue'] ?? array()))
+                )
+                : __('idle', 'cbiastudio-blogflow-ai');
             $last = $this->get_last_scheduled_at();
-            $last = $last ?: '(no records)';
+            $last = $last ?: __('(no records)', 'cbiastudio-blogflow-ai');
             return array('status' => $status, 'last' => $last);
         }
     }

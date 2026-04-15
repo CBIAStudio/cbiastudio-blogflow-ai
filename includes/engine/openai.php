@@ -5,6 +5,14 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
+if (!function_exists('cbia_attach_attempts_meta')) {
+	function cbia_attach_attempts_meta($raw, array $attempts) {
+		if (!is_array($raw)) $raw = array();
+		$raw['_cbia_attempts'] = $attempts;
+		return $raw;
+	}
+}
+
 if (!function_exists('cbia_get_current_provider_key')) {
 	function cbia_get_current_provider_key(): string {
 		if (!empty($GLOBALS['cbia_force_text_provider'])) {
@@ -59,8 +67,8 @@ if (!function_exists('cbia_google_generate_image_gemini')) {
 		$cfg = cbia_get_provider_config('google');
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : (string)($cfg['api_key'] ?? '');
 		if ($api_key === '') {
-			cbia_log(('Missing Google API key to generate images (Gemini).'), 'ERROR');
-			return [false, 0, (string)$model, 'No hay API key (Google)'];
+			cbia_log(__('Missing Google API key for image generation (Gemini).', 'cbiastudio-blogflow-ai'), 'ERROR');
+			return [false, 0, (string)$model, __('No API key (Google)', 'cbiastudio-blogflow-ai')];
 		}
 
 		$base_url = rtrim((string)($cfg['base_url'] ?? 'https://generativelanguage.googleapis.com'), '/');
@@ -125,8 +133,8 @@ if (!function_exists('cbia_google_generate_image_gemini')) {
 		}
 
 		if ($bytes === '') {
-			cbia_log(('Google Gemini Image: response without bytes.'), 'ERROR');
-			return [false, 0, (string)$model, 'Respuesta sin imagen'];
+			cbia_log(('Google Gemini Image: response had no bytes.'), 'ERROR');
+			return [false, 0, (string)$model, 'Image response was empty'];
 		}
 
 		$alt = $alt_text !== '' ? (string)$alt_text : cbia_build_img_alt($title, $section, $prompt);
@@ -149,8 +157,8 @@ if (!function_exists('cbia_google_generate_image_imagen')) {
 		$cfg = cbia_get_provider_config('google');
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : (string)($cfg['api_key'] ?? '');
 		if ($api_key === '') {
-			cbia_log(('Missing Google API key to generate images (Imagen).'), 'ERROR');
-			return [false, 0, (string)$model, 'No hay API key (Google)'];
+			cbia_log(__('Missing Google API key for image generation (Imagen).', 'cbiastudio-blogflow-ai'), 'ERROR');
+			return [false, 0, (string)$model, __('No API key (Google)', 'cbiastudio-blogflow-ai')];
 		}
 
 		$base_url = rtrim((string)($cfg['base_url'] ?? 'https://generativelanguage.googleapis.com'), '/');
@@ -204,8 +212,8 @@ if (!function_exists('cbia_google_generate_image_imagen')) {
 		}
 
 		if ($bytes === '') {
-			cbia_log(('Google Imagen: response without bytes.'), 'ERROR');
-			return [false, 0, (string)$model, 'Respuesta sin imagen'];
+			cbia_log(('Google Imagen: response had no bytes.'), 'ERROR');
+			return [false, 0, (string)$model, 'Image response was empty'];
 		}
 
 		$alt = $alt_text !== '' ? (string)$alt_text : cbia_build_img_alt($title, $section, $prompt);
@@ -229,7 +237,7 @@ if (!function_exists('cbia_google_generate_image_with_prompt')) {
 			: 'imagen-3.0-generate-002';
 		$model = cbia_google_imagen_model_id((string)$model);
 
-		// Fallback automÃ¡tico para cuota/disponibilidad.
+		// Fallback automÃƒÂ¡tico para cuota/disponibilidad.
 		$chain = array_values(array_unique(array_filter(array(
 			(string)$model,
 			'gemini-2.5-flash-image',
@@ -244,10 +252,10 @@ if (!function_exists('cbia_google_generate_image_with_prompt')) {
 			}
 			if ($ok) return [$ok, $attach_id, $model_used, $err];
 			$last_err = (string)$err;
-			cbia_log(sprintf("Google image fallback: model failed=%s, probando siguiente si existe.", (string)$model_try), 'WARN');
+			cbia_log(sprintf("Google image fallback: failed model=%s, trying next if available.", (string)$model_try), 'WARN');
 		}
 
-		return [false, 0, '', $last_err !== '' ? $last_err : 'No se pudo generar imagen (Google)'];
+		return [false, 0, '', $last_err !== '' ? $last_err : __('Could not generate image (Google).', 'cbiastudio-blogflow-ai')];
 	}
 }
 
@@ -269,10 +277,11 @@ if (!function_exists('cbia_openai_responses_call')) {
 	 */
 		function cbia_openai_responses_call($prompt, $title_for_log = '', $tries = 2) {
 			cbia_try_unlimited_runtime();
+			$attempts = array();
 			// CAMBIO: proveedor de texto
 			$provider = cbia_get_current_provider_key();
 		if (!cbia_openai_consent_ok()) {
-			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'Consentimiento OpenAI no aceptado', []];
+			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', __('OpenAI consent not accepted', 'cbiastudio-blogflow-ai'), []];
 		}
 
 		$s = cbia_get_settings();
@@ -280,9 +289,14 @@ if (!function_exists('cbia_openai_responses_call')) {
 		$model_preferred = function_exists('cbia_get_text_model_for_provider')
 			? cbia_get_text_model_for_provider($provider, cbia_pick_model())
 			: cbia_pick_model();
-		$chain = cbia_model_fallback_chain($model_preferred);
+		$disable_model_fallback = !empty($GLOBALS['cbia_disable_text_model_fallback']);
+		$chain = $disable_model_fallback
+			? array_values(array_filter(array(trim((string)$model_preferred))))
+			: cbia_model_fallback_chain($model_preferred);
 
 		$system = "Eres un redactor editorial. Devuelve HTML simple con <h2>, <h3>, <p>, <ul>, <li>. NO uses <h1> ni envolturas <html>/<head>/<body>. No uses <table>, <iframe> ni <blockquote>.";
+		$global_last_error = __('Could not get a streaming response.', 'cbiastudio-blogflow-ai');
+		$last_err = __('Could not get a response.', 'cbiastudio-blogflow-ai');
 		$input = [
 			['role' => 'system', 'content' => $system],
 			['role' => 'user', 'content' => (string)$prompt],
@@ -297,7 +311,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 				return $deepseek_result;
 			}
 
-			$last_err = (string)($deepseek_result[4] ?? 'No se pudo obtener respuesta');
+			$last_err = (string)($deepseek_result[4] ?? __('Could not get a response.', 'cbiastudio-blogflow-ai'));
 			$prev_forced = isset($GLOBALS['cbia_force_text_provider']) ? (string)$GLOBALS['cbia_force_text_provider'] : '';
 
 			$google_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : '';
@@ -327,8 +341,8 @@ if (!function_exists('cbia_openai_responses_call')) {
 		// CAMBIO: key OpenAI desde settings por proveedor
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();
 		if (!$api_key) {
-			cbia_log(('Missing OpenAI API key to generate text.'), 'ERROR');
-			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No hay API key', []];
+			cbia_log(__('Missing OpenAI API key for text generation.', 'cbiastudio-blogflow-ai'), 'ERROR');
+			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', __('No API key', 'cbiastudio-blogflow-ai'), []];
 		}
 
 		foreach ($chain as $model) {
@@ -336,10 +350,10 @@ if (!function_exists('cbia_openai_responses_call')) {
 
 			for ($t = 1; $t <= max(1, (int)$tries); $t++) {
 				if (cbia_is_stop_requested()) {
-					return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, 'STOP activado', []];
+					return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Stop enabled', 'cbiastudio-blogflow-ai'), []];
 				}
 
-				cbia_log(("OpenAI Responses: modelo={$model} intento {$t}/{$tries} ") . ($title_for_log ? "| '{$title_for_log}'" : ''), 'INFO');
+				cbia_log(("OpenAI Responses: model={$model} attempt {$t}/{$tries} ") . ($title_for_log ? "| '{$title_for_log}'" : ''), 'INFO');
 
 				$max_out = (int)($s['responses_max_output_tokens'] ?? 6000);
 				if ($max_out < 1500) $max_out = 1500;
@@ -361,6 +375,8 @@ if (!function_exists('cbia_openai_responses_call')) {
 				if (is_wp_error($resp)) {
 					$err = $resp->get_error_message();
 					cbia_log(("HTTP error: {$err}"), 'ERROR');
+					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
+					$last_err = (string)$err;
 					continue;
 				}
 
@@ -373,12 +389,22 @@ if (!function_exists('cbia_openai_responses_call')) {
 					if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
 					$err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 					cbia_log(("OpenAI error: {$err}"), 'ERROR');
+					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
+					$last_err = (string)$err;
+					if (in_array($code, array(401, 403, 404), true)) {
+						return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, $last_err, cbia_attach_attempts_meta(array(), $attempts)];
+					}
 					continue;
 				}
 
 				if (is_array($data) && !empty($data['error']['message'])) {
 					$err = (string)$data['error']['message'];
 					cbia_log(("OpenAI error payload: {$err}"), 'ERROR');
+					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
+					$last_err = (string)$err;
+					if (stripos($err, 'incorrect api key') !== false || stripos($err, 'unauthorized') !== false || stripos($err, 'forbidden') !== false) {
+						return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, $last_err, cbia_attach_attempts_meta(array(), $attempts)];
+					}
 					continue;
 				}
 
@@ -387,16 +413,18 @@ if (!function_exists('cbia_openai_responses_call')) {
 
 				if ($text === '') {
 					cbia_log(("Response without text (model={$model})"), 'ERROR');
+					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => 'Response without text');
+					$last_err = 'Response without text';
 					continue;
 				}
 
-				cbia_log(("OpenAI Responses OK: modelo={$model} tokens_in=") . (int)($usage['input_tokens'] ?? 0) . " tokens_out=" . (int)($usage['output_tokens'] ?? 0), 'INFO');
+				cbia_log(("OpenAI Responses OK: model={$model} tokens_in=") . (int)($usage['input_tokens'] ?? 0) . " tokens_out=" . (int)($usage['output_tokens'] ?? 0), 'INFO');
 
-				return [true, $text, $usage, $model, '', $data];
+				return [true, $text, $usage, $model, '', cbia_attach_attempts_meta($data, $attempts)];
 			}
 		}
 
-		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No se pudo obtener respuesta', []];
+		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', $last_err, cbia_attach_attempts_meta(array(), $attempts)];
 	}
 }
 
@@ -412,18 +440,21 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 			return cbia_openai_responses_call($prompt, $title_for_log, $tries);
 		}
 		if (!cbia_openai_consent_ok()) {
-			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'Consentimiento OpenAI no aceptado', []];
+			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', __('OpenAI consent not accepted', 'cbiastudio-blogflow-ai'), []];
 		}
 
 		$s = cbia_get_settings();
 		$model_preferred = function_exists('cbia_get_text_model_for_provider')
 			? cbia_get_text_model_for_provider($provider, cbia_pick_model())
 			: cbia_pick_model();
-		$chain = cbia_model_fallback_chain($model_preferred);
+		$disable_model_fallback = !empty($GLOBALS['cbia_disable_text_model_fallback']);
+		$chain = $disable_model_fallback
+			? array_values(array_filter(array(trim((string)$model_preferred))))
+			: cbia_model_fallback_chain($model_preferred);
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();
 		if (!$api_key) {
-			cbia_log(('Missing OpenAI API key to generate text.'), 'ERROR');
-			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No hay API key', []];
+			cbia_log(__('Missing OpenAI API key for text generation.', 'cbiastudio-blogflow-ai'), 'ERROR');
+			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', __('No API key', 'cbiastudio-blogflow-ai'), []];
 		}
 
 		$system = "Eres un redactor editorial. Devuelve HTML simple con <h2>, <h3>, <p>, <ul>, <li>. NO uses <h1> ni envolturas <html>/<head>/<body>. No uses <table>, <iframe> ni <blockquote>.";
@@ -436,10 +467,10 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 			if (!cbia_is_responses_model($model)) continue;
 			for ($t = 1; $t <= max(1, (int)$tries); $t++) {
 				if (cbia_is_stop_requested()) {
-					return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, 'STOP activado', []];
+					return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Stop enabled', 'cbiastudio-blogflow-ai'), []];
 				}
 
-				cbia_log(("OpenAI Responses STREAM: modelo={$model} intento {$t}/{$tries} ") . ($title_for_log ? "| '{$title_for_log}'" : ''), 'INFO');
+				cbia_log(("OpenAI Responses STREAM: model={$model} attempt {$t}/{$tries} ") . ($title_for_log ? "| '{$title_for_log}'" : ''), 'INFO');
 
 				$max_out = (int)($s['responses_max_output_tokens'] ?? 6000);
 				if ($max_out < 1500) $max_out = 1500;
@@ -468,6 +499,7 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 				]);
 				if (is_wp_error($resp)) {
 					$last_error = $resp->get_error_message();
+					$global_last_error = $last_error;
 					cbia_log(sprintf('HTTP stream error: %s', $last_error), 'ERROR');
 					continue;
 				}
@@ -509,27 +541,36 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 				}
 				if ($http_code < 200 || $http_code >= 300) {
 					$last_error = 'HTTP ' . $http_code . ($last_error ? (' | ' . $last_error) : '');
+					$global_last_error = $last_error;
 					cbia_log(("OpenAI stream error: {$last_error}"), 'ERROR');
+					if (in_array($http_code, array(401, 403, 404), true)) {
+						return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, $last_error, $last_event];
+					}
 					continue;
 				}
 				if ($last_error !== '') {
+					$global_last_error = $last_error;
 					cbia_log(("OpenAI stream payload error: {$last_error}"), 'ERROR');
+					if (stripos($last_error, 'incorrect api key') !== false || stripos($last_error, 'unauthorized') !== false || stripos($last_error, 'forbidden') !== false) {
+						return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, $last_error, $last_event];
+					}
 					continue;
 				}
 				if ($acc_text === '') {
-					cbia_log(("Respuesta streaming sin texto (modelo={$model})"), 'ERROR');
+					cbia_log(("Streaming response without text (model={$model})"), 'ERROR');
+					$global_last_error = 'Streaming response without text';
 					continue;
 				}
 
-				cbia_log(("OpenAI Responses STREAM OK: modelo={$model} tokens_in=") . (int)($last_usage['input_tokens'] ?? 0) . " tokens_out=" . (int)($last_usage['output_tokens'] ?? 0), 'INFO');
+				cbia_log(("OpenAI Responses STREAM OK: model={$model} tokens_in=") . (int)($last_usage['input_tokens'] ?? 0) . " tokens_out=" . (int)($last_usage['output_tokens'] ?? 0), 'INFO');
 				return [true, $acc_text, $last_usage, $model, '', $last_event];
 			}
 		}
-		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No se pudo obtener respuesta en streaming', []];
+		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', $global_last_error, []];
 	}
 }
 /* =========================================================
-   ================== OPENAI: IMÃƒÆ’Ã‚ÂGENES ======================
+   ================== OPENAI: IMÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂGENES ======================
    ========================================================= */
 
 if (!function_exists('cbia_generate_image_openai')) {
@@ -538,21 +579,23 @@ if (!function_exists('cbia_generate_image_openai')) {
 	 */
 	function cbia_generate_image_openai($desc, $section, $title, $idx = 0) {
 			cbia_try_unlimited_runtime();
+			$attempts = array();
 			// CAMBIO: proveedor de imagen segun settings
 			$img_provider = function_exists('cbia_get_image_provider') ? cbia_get_image_provider() : 'openai';
 			if ($img_provider === 'google' || $img_provider === 'gemini') {
 				return cbia_google_generate_image($desc, $section, $title, $idx);
 			}
 			if ($img_provider !== 'openai') {
-				cbia_log(sprintf(('Proveedor de imagen "%s" not supported.'), (string)$img_provider), 'ERROR');
-				return [false, 0, '', 'Proveedor de imagen no soportado'];
+				/* translators: %s is the selected image provider key. */
+				cbia_log(sprintf(__('Image provider "%s" is not supported.', 'cbiastudio-blogflow-ai'), (string)$img_provider), 'ERROR');
+				return [false, 0, '', __('Unsupported image provider', 'cbiastudio-blogflow-ai')];
 			}
 			// CAMBIO: key OpenAI desde settings por proveedor
 			$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();
-			if (!$api_key) return [false, 0, '', 'No hay API key'];
-		if (!cbia_openai_consent_ok()) return [false, 0, '', 'Consentimiento OpenAI no aceptado'];
+			if (!$api_key) return [false, 0, '', __('No API key', 'cbiastudio-blogflow-ai')];
+		if (!cbia_openai_consent_ok()) return [false, 0, '', __('OpenAI consent not accepted', 'cbiastudio-blogflow-ai')];
 
-		if (cbia_is_stop_requested()) return [false, 0, '', 'STOP activado'];
+		if (cbia_is_stop_requested()) return [false, 0, '', __('Stop enabled', 'cbiastudio-blogflow-ai')];
 
 		$s = cbia_get_settings();
 		$image_failover = isset($s['image_failover']) ? (string)$s['image_failover'] : 'continue';
@@ -570,12 +613,13 @@ if (!function_exists('cbia_generate_image_openai')) {
 		foreach (cbia_image_model_chain('openai', $preferred_model) as $model) {
 			$tries = 2;
 			for ($t = 1; $t <= $tries; $t++) {
-				if (cbia_is_stop_requested()) return [false, 0, $model, 'STOP activado'];
+				if (cbia_is_stop_requested()) return [false, 0, $model, __('Stop enabled', 'cbiastudio-blogflow-ai')];
 
 				$delay = function_exists('cbia_get_image_request_delay') ? cbia_get_image_request_delay() : 0;
 				if ($delay > 0) sleep($delay);
 
-				cbia_log(("Imagen IA: modelo={$model} seccion={$section_label} intento {$t}/{$tries}"), 'INFO');
+				/* translators: 1: image model, 2: section label, 3: current attempt, 4: total attempts. */
+				cbia_log((sprintf(__('AI image: model=%1$s section=%2$s attempt %3$d/%4$d', 'cbiastudio-blogflow-ai'), (string)$model, (string)$section_label, (int)$t, (int)$tries)), 'INFO');
 
 				$payload = [
 					'model'  => $model,
@@ -587,11 +631,16 @@ if (!function_exists('cbia_generate_image_openai')) {
 				$resp = wp_remote_post('https://api.openai.com/v1/images/generations', [
 					'headers' => cbia_http_headers_openai($api_key),
 					'body'    => wp_json_encode($payload),
-					'timeout' => 60,
+					'timeout' => cbia_image_api_timeout_seconds(),
 				]);
 
 				if (is_wp_error($resp)) {
-					cbia_log(("Imagen IA HTTP error: ") . $resp->get_error_message(), 'ERROR');
+					$http_err = (string)$resp->get_error_message();
+					if (strpos($http_err, 'cURL error 28') !== false) {
+						$http_err .= sprintf(' (timeout=%ss, download_timeout=%ss)', (string)cbia_image_api_timeout_seconds(), (string)cbia_image_download_timeout_seconds());
+					}
+					cbia_log((__('AI image HTTP error: ', 'cbiastudio-blogflow-ai')) . $http_err, 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $http_err);
 					continue;
 				}
 
@@ -602,12 +651,23 @@ if (!function_exists('cbia_generate_image_openai')) {
 				if ($code < 200 || $code >= 300) {
 					$msg = '';
 					if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
-					cbia_log(("Imagen IA error HTTP {$code}") . ($msg ? " | {$msg}" : ''), 'ERROR');
+					$http_err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
+					/* translators: %d is the HTTP status code returned by the image API. */
+					cbia_log((sprintf(__('AI image HTTP %d error', 'cbiastudio-blogflow-ai'), (int)$code)) . ($msg ? " | {$msg}" : ''), 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $http_err);
+					if (in_array($code, array(401, 403, 404), true)) {
+						return [false, 0, $model, $http_err, cbia_attach_attempts_meta(array(), $attempts)];
+					}
 					continue;
 				}
 
 				if (is_array($data) && !empty($data['error']['message'])) {
-					cbia_log(("Imagen IA error payload: ") . (string)$data['error']['message'], 'ERROR');
+					$payload_err = (string)$data['error']['message'];
+					cbia_log((__('AI image payload error: ', 'cbiastudio-blogflow-ai')) . $payload_err, 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $payload_err);
+					if (stripos($payload_err, 'incorrect api key') !== false || stripos($payload_err, 'unauthorized') !== false || stripos($payload_err, 'forbidden') !== false) {
+						return [false, 0, $model, $payload_err, cbia_attach_attempts_meta(array(), $attempts)];
+					}
 					continue;
 				}
 
@@ -615,33 +675,39 @@ if (!function_exists('cbia_generate_image_openai')) {
 				if (!empty($data['data'][0]['b64_json'])) {
 					$bytes = base64_decode((string)$data['data'][0]['b64_json']);
 				} elseif (!empty($data['data'][0]['url'])) {
-					$img = wp_remote_get((string)$data['data'][0]['url'], ['timeout' => 60]);
+					$img = wp_remote_get((string)$data['data'][0]['url'], ['timeout' => cbia_image_download_timeout_seconds()]);
 					if (!is_wp_error($img) && (int)wp_remote_retrieve_response_code($img) === 200) {
 						$bytes = (string)wp_remote_retrieve_body($img);
 					}
 				}
 
 				if ($bytes === '') {
-					cbia_log(("Imagen IA: respuesta sin bytes (modelo={$model})"), 'ERROR');
+					/* translators: %s is the image model name. */
+					cbia_log((sprintf(__('AI image: response without bytes (model=%s)', 'cbiastudio-blogflow-ai'), (string)$model)), 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => __('Response without bytes', 'cbiastudio-blogflow-ai'));
 					continue;
 				}
 
 				list($attach_id, $uerr) = cbia_upload_image_to_media($bytes, $title, $section, $alt);
 				if (!$attach_id) {
-					cbia_log(("AI image: failed uploading to Media Library: {$uerr}"), 'ERROR');
+					/* translators: %s is the upload error message from WordPress media handling. */
+					cbia_log((sprintf(__('AI image: upload to Media Library failed: %s', 'cbiastudio-blogflow-ai'), (string)$uerr)), 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$uerr, 'billable' => 1);
 					continue;
 				}
 
-				cbia_log(("Imagen IA OK: seccion={$section_label} attach_id={$attach_id}"), 'INFO');
-				return [true, (int)$attach_id, $model, ''];
+				/* translators: 1: section label, 2: attachment ID. */
+				cbia_log((sprintf(__('AI image OK: section=%1$s attach_id=%2$d', 'cbiastudio-blogflow-ai'), (string)$section_label, (int)$attach_id)), 'INFO');
+				return [true, (int)$attach_id, $model, '', cbia_attach_attempts_meta(array(), $attempts)];
 			}
 			if ($image_failover === 'stop') {
-				cbia_log(sprintf(('Imagen IA: modelo=%s fallÃƒÆ’Ã‚Â³; proceso detenido por configuraciÃƒÆ’Ã‚Â³n.'), (string)$model), 'ERROR');
-				return [false, 0, (string)$model, 'Detenido por configuraciÃƒÆ’Ã‚Â³n de fallo'];
+				/* translators: %s is the image model name that failed. */
+				cbia_log(sprintf(__('AI image: model=%s failed; process stopped by configuration.', 'cbiastudio-blogflow-ai'), (string)$model), 'ERROR');
+				return [false, 0, (string)$model, __('Stopped by failover configuration', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts)];
 			}
 		}
 
-		return [false, 0, '', 'No se pudo generar imagen tras reintentos'];
+		return [false, 0, '', __('Image generation failed after retries', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts)];
 	}
 }
 
@@ -651,20 +717,22 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 	 */
 	function cbia_generate_image_openai_with_prompt($prompt, $section, $title, $alt_text = '', $idx = 0) {
 		cbia_try_unlimited_runtime();
+		$attempts = array();
 		// CAMBIO: proveedor de imagen segun settings
 		$img_provider = function_exists('cbia_get_image_provider') ? cbia_get_image_provider() : 'openai';
 		if ($img_provider === 'google' || $img_provider === 'gemini') {
 			return cbia_google_generate_image_with_prompt($prompt, $section, $title, $alt_text, $idx);
 		}
 		if ($img_provider !== 'openai') {
-			cbia_log(sprintf(('Proveedor de imagen "%s" not supported.'), (string)$img_provider), 'ERROR');
-			return [false, 0, '', 'Proveedor de imagen no soportado'];
+			/* translators: %s is the selected image provider key. */
+			cbia_log(sprintf(__('Image provider "%s" not supported for this flow; using OpenAI fallback.', 'cbiastudio-blogflow-ai'), (string)$img_provider), 'WARN');
+			$img_provider = 'openai';
 		}
 		// CAMBIO: key OpenAI desde settings por proveedor
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();
-		if (!$api_key) return [false, 0, '', 'No hay API key'];
-		if (!cbia_openai_consent_ok()) return [false, 0, '', 'Consentimiento OpenAI no aceptado'];
-		if (cbia_is_stop_requested()) return [false, 0, '', 'STOP activado'];
+		if (!$api_key) return [false, 0, '', __('No API key', 'cbiastudio-blogflow-ai')];
+		if (!cbia_openai_consent_ok()) return [false, 0, '', __('OpenAI consent not accepted', 'cbiastudio-blogflow-ai')];
+		if (cbia_is_stop_requested()) return [false, 0, '', __('Stop enabled', 'cbiastudio-blogflow-ai')];
 
 		$s = cbia_get_settings();
 		$image_failover = isset($s['image_failover']) ? (string)$s['image_failover'] : 'continue';
@@ -681,12 +749,13 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 		foreach (cbia_image_model_chain('openai', $preferred_model) as $model) {
 			$tries = 2;
 			for ($t = 1; $t <= $tries; $t++) {
-				if (cbia_is_stop_requested()) return [false, 0, $model, 'STOP activado'];
+				if (cbia_is_stop_requested()) return [false, 0, $model, __('Stop enabled', 'cbiastudio-blogflow-ai')];
 
 				$delay = function_exists('cbia_get_image_request_delay') ? cbia_get_image_request_delay() : 0;
 				if ($delay > 0) sleep($delay);
 
-				cbia_log(("Imagen IA: modelo={$model} seccion={$section_label} intento {$t}/{$tries}"), 'INFO');
+				/* translators: 1: image model, 2: section label, 3: current attempt, 4: total attempts. */
+				cbia_log((sprintf(__('AI image: model=%1$s section=%2$s attempt %3$d/%4$d', 'cbiastudio-blogflow-ai'), (string)$model, (string)$section_label, (int)$t, (int)$tries)), 'INFO');
 
 				$payload = [
 					'model'  => $model,
@@ -698,11 +767,16 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 				$resp = wp_remote_post('https://api.openai.com/v1/images/generations', [
 					'headers' => cbia_http_headers_openai($api_key),
 					'body'    => wp_json_encode($payload),
-					'timeout' => 60,
+					'timeout' => cbia_image_api_timeout_seconds(),
 				]);
 
 				if (is_wp_error($resp)) {
-					cbia_log(("Imagen IA HTTP error: ") . $resp->get_error_message(), 'ERROR');
+					$http_err = (string)$resp->get_error_message();
+					if (strpos($http_err, 'cURL error 28') !== false) {
+						$http_err .= sprintf(' (timeout=%ss, download_timeout=%ss)', (string)cbia_image_api_timeout_seconds(), (string)cbia_image_download_timeout_seconds());
+					}
+					cbia_log((__('AI image HTTP error: ', 'cbiastudio-blogflow-ai')) . $http_err, 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $http_err);
 					continue;
 				}
 
@@ -713,12 +787,23 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 				if ($code < 200 || $code >= 300) {
 					$msg = '';
 					if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
-					cbia_log(("Imagen IA error HTTP {$code}") . ($msg ? " | {$msg}" : ''), 'ERROR');
+					$http_err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
+					/* translators: %d is the HTTP status code returned by the image API. */
+					cbia_log((sprintf(__('AI image HTTP %d error', 'cbiastudio-blogflow-ai'), (int)$code)) . ($msg ? " | {$msg}" : ''), 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $http_err);
+					if (in_array($code, array(401, 403, 404), true)) {
+						return [false, 0, $model, $http_err, cbia_attach_attempts_meta(array(), $attempts)];
+					}
 					continue;
 				}
 
 				if (is_array($data) && !empty($data['error']['message'])) {
-					cbia_log(("Imagen IA error payload: ") . (string)$data['error']['message'], 'ERROR');
+					$payload_err = (string)$data['error']['message'];
+					cbia_log((__('AI image payload error: ', 'cbiastudio-blogflow-ai')) . $payload_err, 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $payload_err);
+					if (stripos($payload_err, 'incorrect api key') !== false || stripos($payload_err, 'unauthorized') !== false || stripos($payload_err, 'forbidden') !== false) {
+						return [false, 0, $model, $payload_err, cbia_attach_attempts_meta(array(), $attempts)];
+					}
 					continue;
 				}
 
@@ -726,33 +811,39 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 				if (!empty($data['data'][0]['b64_json'])) {
 					$bytes = base64_decode((string)$data['data'][0]['b64_json']);
 				} elseif (!empty($data['data'][0]['url'])) {
-					$img = wp_remote_get((string)$data['data'][0]['url'], ['timeout' => 60]);
+					$img = wp_remote_get((string)$data['data'][0]['url'], ['timeout' => cbia_image_download_timeout_seconds()]);
 					if (!is_wp_error($img) && (int)wp_remote_retrieve_response_code($img) === 200) {
 						$bytes = (string)wp_remote_retrieve_body($img);
 					}
 				}
 
 				if ($bytes === '') {
-					cbia_log(("Imagen IA: respuesta sin bytes (modelo={$model})"), 'ERROR');
+					/* translators: %s is the image model name. */
+					cbia_log((sprintf(__('AI image: response without bytes (model=%s)', 'cbiastudio-blogflow-ai'), (string)$model)), 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => __('Response without bytes', 'cbiastudio-blogflow-ai'));
 					continue;
 				}
 
 				list($attach_id, $uerr) = cbia_upload_image_to_media($bytes, $title, $section, $alt);
 				if (!$attach_id) {
-					cbia_log(("AI image: failed uploading to Media Library: {$uerr}"), 'ERROR');
+					/* translators: %s is the upload error message from WordPress media handling. */
+					cbia_log((sprintf(__('AI image: upload to Media Library failed: %s', 'cbiastudio-blogflow-ai'), (string)$uerr)), 'ERROR');
+					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$uerr, 'billable' => 1);
 					continue;
 				}
 
-				cbia_log(("Imagen IA OK: seccion={$section_label} attach_id={$attach_id}"), 'INFO');
-				return [true, (int)$attach_id, $model, ''];
+				/* translators: 1: section label, 2: attachment ID. */
+				cbia_log((sprintf(__('AI image OK: section=%1$s attach_id=%2$d', 'cbiastudio-blogflow-ai'), (string)$section_label, (int)$attach_id)), 'INFO');
+				return [true, (int)$attach_id, $model, '', cbia_attach_attempts_meta(array(), $attempts)];
 			}
 			if ($image_failover === 'stop') {
-				cbia_log(sprintf(('Imagen IA: modelo=%s fallÃƒÆ’Ã‚Â³; proceso detenido por configuraciÃƒÆ’Ã‚Â³n.'), (string)$model), 'ERROR');
-				return [false, 0, (string)$model, 'Detenido por configuraciÃƒÆ’Ã‚Â³n de fallo'];
+				/* translators: %s is the image model name that failed. */
+				cbia_log(sprintf(__('AI image: model=%s failed; process stopped by configuration.', 'cbiastudio-blogflow-ai'), (string)$model), 'ERROR');
+				return [false, 0, (string)$model, __('Stopped by failover configuration', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts)];
 			}
 		}
 
-		return [false, 0, '', 'No se pudo generar imagen tras reintentos'];
+		return [false, 0, '', __('Image generation failed after retries', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts)];
 	}
 }
 
@@ -773,18 +864,39 @@ if (!function_exists('cbia_get_provider_model')) {
 	}
 }
 
+if (!function_exists('cbia_image_api_timeout_seconds')) {
+	function cbia_image_api_timeout_seconds(): int {
+		$s = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
+		$timeout = isset($s['image_timeout_seconds']) ? (int)$s['image_timeout_seconds'] : 90;
+		if ($timeout < 30) $timeout = 30;
+		if ($timeout > 180) $timeout = 180;
+		return $timeout;
+	}
+}
+
+if (!function_exists('cbia_image_download_timeout_seconds')) {
+	function cbia_image_download_timeout_seconds(): int {
+		$s = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
+		$timeout = isset($s['image_download_timeout_seconds']) ? (int)$s['image_download_timeout_seconds'] : 90;
+		if ($timeout < 20) $timeout = 20;
+		if ($timeout > 180) $timeout = 180;
+		return $timeout;
+	}
+}
+
 if (!function_exists('cbia_google_generate_content_call')) {
 	/**
 	 * Google Gemini generateContent (REST).
 	 * Returns [ok, text, usage, model, err, raw]
 	 */
 	function cbia_google_generate_content_call($prompt, $system = '', $tries = 2) {
+		$attempts = array();
 		$cfg = cbia_get_provider_config('google');
 		// CAMBIO: key y modelo segun settings de texto
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : (string)($cfg['api_key'] ?? '');
 		if ($api_key === '') {
-			cbia_log(('Missing Google API key to generate text.'), 'ERROR');
-			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No hay API key (Google)', []];
+			cbia_log(__('Missing Google API key for text generation.', 'cbiastudio-blogflow-ai'), 'ERROR');
+			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', __('No API key (Google)', 'cbiastudio-blogflow-ai'), []];
 		}
 
 		$model = function_exists('cbia_get_text_model_for_provider')
@@ -822,10 +934,11 @@ if (!function_exists('cbia_google_generate_content_call')) {
 
 		for ($t = 1; $t <= max(1, (int)$tries); $t++) {
 			if (cbia_is_stop_requested()) {
-				return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, 'STOP activado', []];
+				return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Stop enabled', 'cbiastudio-blogflow-ai'), []];
 			}
 
-			cbia_log(("Google Gemini: modelo={$model} intento {$t}/{$tries}"), 'INFO');
+			/* translators: 1: text model name, 2: current attempt, 3: total attempts. */
+			cbia_log((sprintf(__('Google Gemini: model=%1$s attempt %2$d/%3$d', 'cbiastudio-blogflow-ai'), (string)$model, (int)$t, (int)$tries)), 'INFO');
 
 			$resp = wp_remote_post($url, [
 				'headers' => [
@@ -837,7 +950,9 @@ if (!function_exists('cbia_google_generate_content_call')) {
 			]);
 
 			if (is_wp_error($resp)) {
-				cbia_log(("Google Gemini HTTP error: ") . $resp->get_error_message(), 'ERROR');
+				$err = (string)$resp->get_error_message();
+				cbia_log(("Google Gemini HTTP error: ") . $err, 'ERROR');
+				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $err);
 				continue;
 			}
 
@@ -850,11 +965,13 @@ if (!function_exists('cbia_google_generate_content_call')) {
 				if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
 				$err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 				cbia_log(("Google Gemini error: {$err}"), 'ERROR');
+				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
 				continue;
 			}
 
 			if (!is_array($data)) {
 				cbia_log(("Google Gemini: invalid response"), 'ERROR');
+				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => 'Invalid response');
 				continue;
 			}
 
@@ -868,7 +985,8 @@ if (!function_exists('cbia_google_generate_content_call')) {
 			}
 
 			if ($text === '') {
-				cbia_log(("Google Gemini: respuesta sin texto (modelo={$model})"), 'ERROR');
+				cbia_log(("Google Gemini: response without text (model={$model})"), 'ERROR');
+				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => 'Response without text');
 				continue;
 			}
 
@@ -879,11 +997,11 @@ if (!function_exists('cbia_google_generate_content_call')) {
 				$usage['total_tokens'] = (int)($data['usageMetadata']['totalTokenCount'] ?? 0);
 			}
 
-			cbia_log(("Google Gemini OK: modelo={$model} tokens_in=") . (int)$usage['input_tokens'] . " tokens_out=" . (int)$usage['output_tokens'], 'INFO');
-			return [true, $text, $usage, $model, '', $data];
+			cbia_log(("Google Gemini OK: model={$model} tokens_in=") . (int)$usage['input_tokens'] . " tokens_out=" . (int)$usage['output_tokens'], 'INFO');
+			return [true, $text, $usage, $model, '', cbia_attach_attempts_meta($data, $attempts)];
 		}
 
-		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, 'No se pudo obtener respuesta', []];
+		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Could not get a response.', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts)];
 	}
 }
 
@@ -893,12 +1011,13 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 	 * Returns [ok, text, usage, model, err, raw]
 	 */
 	function cbia_deepseek_chat_call($prompt, $system = '', $tries = 2) {
+		$attempts = array();
 		$cfg = cbia_get_provider_config('deepseek');
 		// CAMBIO: key y modelo segun settings de texto
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('deepseek') : (string)($cfg['api_key'] ?? '');
 		if ($api_key === '') {
-			cbia_log(('Missing DeepSeek API key to generate text.'), 'ERROR');
-			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', 'No hay API key (DeepSeek)', []];
+			cbia_log(__('Missing DeepSeek API key for text generation.', 'cbiastudio-blogflow-ai'), 'ERROR');
+			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', __('No API key (DeepSeek)', 'cbiastudio-blogflow-ai'), []];
 		}
 
 		$model = function_exists('cbia_get_text_model_for_provider')
@@ -929,10 +1048,10 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 
 		for ($t = 1; $t <= max(1, (int)$tries); $t++) {
 			if (cbia_is_stop_requested()) {
-				return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, 'STOP activado', []];
+				return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Stop enabled', 'cbiastudio-blogflow-ai'), []];
 			}
 
-			cbia_log(("DeepSeek: modelo={$model} intento {$t}/{$tries}"), 'INFO');
+			cbia_log(("DeepSeek: model={$model} attempt {$t}/{$tries}"), 'INFO');
 
 			$resp = wp_remote_post($url, [
 				'headers' => [
@@ -944,7 +1063,9 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 			]);
 
 			if (is_wp_error($resp)) {
-				cbia_log(("DeepSeek HTTP error: ") . $resp->get_error_message(), 'ERROR');
+				$err = (string)$resp->get_error_message();
+				cbia_log(("DeepSeek HTTP error: ") . $err, 'ERROR');
+				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $err);
 				continue;
 			}
 
@@ -957,11 +1078,13 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 				if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
 				$err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 				cbia_log(("DeepSeek error: {$err}"), 'ERROR');
+				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
 				continue;
 			}
 
 			if (!is_array($data) || empty($data['choices'][0]['message']['content'])) {
-				cbia_log(("DeepSeek: respuesta sin texto (modelo={$model})"), 'ERROR');
+				cbia_log(("DeepSeek: response without text (model={$model})"), 'ERROR');
+				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => 'Response without text');
 				continue;
 			}
 
@@ -973,10 +1096,13 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 				$usage['total_tokens'] = (int)($data['usage']['total_tokens'] ?? 0);
 			}
 
-			cbia_log(("DeepSeek OK: modelo={$model} tokens_in=") . (int)$usage['input_tokens'] . " tokens_out=" . (int)$usage['output_tokens'], 'INFO');
-			return [true, $text, $usage, $model, '', $data];
+			cbia_log(("DeepSeek OK: model={$model} tokens_in=") . (int)$usage['input_tokens'] . " tokens_out=" . (int)$usage['output_tokens'], 'INFO');
+			return [true, $text, $usage, $model, '', cbia_attach_attempts_meta($data, $attempts)];
 		}
 
-		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, 'No se pudo obtener respuesta', []];
+		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Could not get a response.', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts)];
 	}
 }
+
+
+

@@ -1,25 +1,25 @@
 <?php
 /**
- * CBIA - Old Posts (ActualizaciÃƒÆ’Ã‚Â³n avanzada de posts antiguos)
+ * CBIA - Old Posts (ActualizaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n avanzada de posts antiguos)
  * v3 (UI limpia + acciones sin duplicidad + Yoast por campos)
  *
  * UX:
  * - Se guardan "Acciones por defecto" (presets).
- * - En "EjecuciÃƒÆ’Ã‚Â³n", por defecto usa esos presets SIN duplicar checkboxes.
- * - BotÃƒÆ’Ã‚Â³n/checkbox "Personalizar esta ejecuciÃƒÆ’Ã‚Â³n" muestra overrides puntuales.
+ * - En "EjecuciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n", por defecto usa esos presets SIN duplicar checkboxes.
+ * - BotÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n/checkbox "Personalizar esta ejecuciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n" muestra overrides puntuales.
  *
  * Acciones soportadas:
  * - Nota "Actualizado el..." (sin tocar post_date)
  * - Yoast: metadesc / focuskw / title (por separado) + forzar
  * - Yoast reindex best-effort (si existe cbia_yoast_try_reindex_post)
- * - TÃƒÆ’Ã‚Â­tulo con IA (SEO/CTR) + forzar
+ * - TÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­tulo con IA (SEO/CTR) + forzar
  * - Contenido con IA + forzar
- * - ImÃƒÆ’Ã‚Â¡genes: reset pendientes + forzar + opcional quitar destacada
- * - CategorÃƒÆ’Ã‚Â­as (mapping plugin) + forzar
+ * - ImÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡genes: reset pendientes + forzar + opcional quitar destacada
+ * - CategorÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­as (mapping plugin) + forzar
  * - Etiquetas (lista permitida plugin) + forzar
  *
  * Filtrado:
- * - MÃƒÆ’Ã‚Â¡s antiguos que X dÃƒÆ’Ã‚Â­as (post_date_gmt)
+ * - MÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡s antiguos que X dÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­as (post_date_gmt)
  * - Rango de fechas (post_date_gmt)
  *
  * Archivo: includes/engine/oldposts.php
@@ -35,7 +35,7 @@ if (!function_exists('cbia_oldposts_log_key')) {
 }
 if (!function_exists('cbia_oldposts_fix_mojibake')) {
     /**
-     * Corrige mojibake comÃƒÆ’Ã‚Âºn en mensajes de log sin tocar la lÃƒÆ’Ã‚Â³gica.
+     * Corrige mojibake comÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºn en mensajes de log sin tocar la lÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³gica.
      */
     function cbia_oldposts_fix_mojibake($text) {
         $text = (string)$text;
@@ -46,7 +46,7 @@ if (!function_exists('cbia_oldposts_fix_mojibake')) {
             $fixed = cbia_fix_mojibake($fixed);
         }
 
-        // Intento adicional: UTF-8 leÃƒÆ’Ã‚Â­do como Latin-1/Windows-1252.
+        // Intento adicional: UTF-8 leÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­do como Latin-1/Windows-1252.
         if (function_exists('mb_convert_encoding') && preg_match('/[\x{00C3}\x{00C2}\x{00E2}]/u', $fixed)) {
             $try = @mb_convert_encoding($fixed, 'UTF-8', 'Windows-1252');
             if (is_string($try) && $try !== '') {
@@ -60,7 +60,7 @@ if (!function_exists('cbia_oldposts_fix_mojibake')) {
 if (!function_exists('cbia_oldposts_log_message')) {
     function cbia_oldposts_log_message($message) {
         $message = cbia_oldposts_fix_mojibake($message);
-        // Evita duplicados consecutivos (muy ÃƒÆ’Ã‚Âºtil con mojibake/lineas repetidas).
+        // Evita duplicados consecutivos (muy ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºtil con mojibake/lineas repetidas).
         static $last_message = null;
         if ($last_message !== null && (string)$last_message === (string)$message) {
             return;
@@ -81,9 +81,9 @@ if (!function_exists('cbia_oldposts_clear_log')) {
     function cbia_oldposts_clear_log() {
         if (function_exists('cbia_clear_log')) {
             cbia_clear_log();
-            return;
         }
         delete_option(cbia_oldposts_log_key());
+        wp_cache_delete(cbia_oldposts_log_key(), 'options');
     }
 }
 if (!function_exists('cbia_oldposts_get_log')) {
@@ -130,27 +130,19 @@ if (!function_exists('cbia_oldposts_get_settings')) {
     }
 }
 if (!function_exists('cbia_oldposts_register_settings')) {
+    if (!function_exists('cbia_oldposts_sanitize_settings')) {
+        function cbia_oldposts_sanitize_settings($value) {
+            return is_array($value) ? $value : array();
+        }
+    }
     function cbia_oldposts_register_settings() {
         register_setting('cbia_oldposts_settings_group', cbia_oldposts_settings_key(), array(
+            'type' => 'array',
             'sanitize_callback' => 'cbia_oldposts_sanitize_settings',
+            'default' => array(),
         ));
     }
     add_action('admin_init', 'cbia_oldposts_register_settings');
-}
-
-if (!function_exists('cbia_oldposts_sanitize_settings')) {
-    function cbia_oldposts_sanitize_settings($settings) {
-        if (!is_array($settings)) return array();
-        $out = array();
-        foreach ($settings as $key => $value) {
-            if (is_array($value)) {
-                $out[$key] = array_map('sanitize_text_field', $value);
-            } else {
-                $out[$key] = is_numeric($value) ? (float)$value : sanitize_text_field((string)$value);
-            }
-        }
-        return $out;
-    }
 }
 
 /* =========================================================
@@ -180,6 +172,25 @@ if (!function_exists('cbia_oldposts_parse_ids_csv')) {
         return array_values($ids);
     }
 }
+if (!function_exists('cbia_oldposts_normalize_title_text')) {
+    function cbia_oldposts_normalize_title_text($title) {
+        $title = wp_specialchars_decode((string)$title, ENT_QUOTES);
+        $title = html_entity_decode($title, ENT_QUOTES, 'UTF-8');
+        return trim((string)$title);
+    }
+}
+if (!function_exists('cbia_oldposts_is_elementor_post')) {
+    function cbia_oldposts_is_elementor_post($post_id) {
+        $post_id = (int)$post_id;
+        if ($post_id <= 0) return false;
+        $edit_mode = (string)get_post_meta($post_id, '_elementor_edit_mode', true);
+        $data = get_post_meta($post_id, '_elementor_data', true);
+        if ($edit_mode !== '') return true;
+        if (is_string($data) && trim($data) !== '') return true;
+        if (is_array($data) && !empty($data)) return true;
+        return false;
+    }
+}
 if (!function_exists('cbia_oldposts_remove_h1')) {
     function cbia_oldposts_remove_h1($html) {
         $html = (string)$html;
@@ -189,14 +200,14 @@ if (!function_exists('cbia_oldposts_remove_h1')) {
 }
 if (!function_exists('cbia_oldposts_has_any_image_marker')) {
     function cbia_oldposts_has_any_image_marker($html) {
-        return (bool)preg_match('/\[(IMAGEN|IMAGEN_PENDIENTE)\s*:\s*[^\]]+\]/i', (string)$html);
+        return (bool)preg_match('/\[(IMAGE|IMAGEN)(?:_(?:PENDING|PENDIENTE))?\s*:\s*[^\]]+\]/i', (string)$html);
     }
 }
 if (!function_exists('cbia_oldposts_extract_image_markers_any')) {
     function cbia_oldposts_extract_image_markers_any($html) {
         $html = (string)$html;
         $markers = array();
-        if (preg_match_all('/\[(?:IMAGEN|IMAGEN_PENDIENTE)\s*:\s*([^\]]+)\]/i', $html, $m)) {
+        if (preg_match_all('/\[(?:IMAGE|IMAGEN)(?:_(?:PENDING|PENDIENTE))?\s*:\s*([^\]]+)\]/i', $html, $m)) {
             foreach ((array)$m[1] as $desc) {
                 $desc = trim((string)$desc);
                 if ($desc === '') continue;
@@ -210,7 +221,61 @@ if (!function_exists('cbia_oldposts_extract_image_markers_any')) {
 if (!function_exists('cbia_oldposts_mark_all_as_pending')) {
     function cbia_oldposts_mark_all_as_pending($html) {
         $html = (string)$html;
-        $html = preg_replace('/\[IMAGEN\s*:\s*([^\]]+)\]/i', '[IMAGEN_PENDIENTE: $1]', $html);
+        $html = preg_replace('/\[(?:IMAGE|IMAGEN)\s*:\s*([^\]]+)\]/i', '[IMAGE_PENDING: $1]', $html);
+        return $html;
+    }
+}
+if (!function_exists('cbia_oldposts_insert_missing_internal_markers')) {
+    function cbia_oldposts_insert_missing_internal_markers($html, $title, $images_limit) {
+        $html = (string)$html;
+        $title = (string)$title;
+        $images_limit = max(0, min(3, (int)$images_limit));
+        if ($images_limit <= 0) {
+            return $html;
+        }
+        if (function_exists('cbia_normalize_image_markers')) {
+            $html = cbia_normalize_image_markers($html);
+        }
+        if (function_exists('cbia_force_insert_markers')) {
+            $html = cbia_force_insert_markers($html, $title, $images_limit);
+        }
+        return cbia_oldposts_mark_all_as_pending($html);
+    }
+}
+if (!function_exists('cbia_oldposts_enforce_pending_limit')) {
+    /**
+     * Enforce a hard cap of pending internal image markers in HTML.
+     * Returns normalized HTML and provides the resulting pending list by reference.
+     */
+    function cbia_oldposts_enforce_pending_limit($html, $images_limit, &$pending_list = array()) {
+        $html = (string)$html;
+        $images_limit = max(0, min(3, (int)$images_limit));
+        $pending_list = array();
+
+        if ($images_limit <= 0) {
+            $html = preg_replace('/\[(?:IMAGE|IMAGEN)(?:_(?:PENDING|PENDIENTE))?\s*:\s*[^\]]+\]/i', '', $html);
+            return $html;
+        }
+
+        $kept = 0;
+        $html = preg_replace_callback(
+            '/\[(?:IMAGE|IMAGEN)(?:_(?:PENDING|PENDIENTE))?\s*:\s*([^\]]+)\]/i',
+            function ($m) use (&$kept, $images_limit, &$pending_list) {
+                if ($kept >= $images_limit) {
+                    return '';
+                }
+                $desc = trim((string)($m[1] ?? ''));
+                if ($desc === '') {
+                    return '';
+                }
+                $kept++;
+                $pending_list[] = $desc;
+                return '[IMAGE_PENDING: ' . $desc . ']';
+            },
+            $html
+        );
+
+        $pending_list = array_values(array_filter(array_map('trim', (array)$pending_list)));
         return $html;
     }
 }
@@ -243,7 +308,7 @@ if (!function_exists('cbia_oldposts_generate_meta_description_fallback')) {
         $base = cbia_oldposts_first_paragraph_text((string)$content);
         $t = trim(wp_strip_all_tags((string)$title));
         if ($t !== '') {
-            $pattern = '/^' . preg_quote($t, '/') . '\s*[:\-ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â]?\s*/iu';
+            $pattern = '/^' . preg_quote($t, '/') . '\s*[:\-ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã…â€œÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â]?\s*/iu';
             $base = preg_replace($pattern, '', $base);
         }
         $desc = trim(mb_substr((string)$base, 0, 155));
@@ -260,7 +325,7 @@ if (!function_exists('cbia_oldposts_generate_focus_keyphrase_fallback')) {
 if (!function_exists('cbia_oldposts_generate_yoast_title_fallback')) {
     function cbia_oldposts_generate_yoast_title_fallback($title) {
         $t = trim(wp_strip_all_tags((string)$title));
-        // Yoast title suele aceptar variables, pero aquÃƒÆ’Ã‚Â­ dejamos un tÃƒÆ’Ã‚Â­tulo simple.
+        // Yoast title suele aceptar variables, pero aquÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ dejamos un tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­tulo simple.
         return $t;
     }
 }
@@ -276,7 +341,7 @@ if (!function_exists('cbia_oldposts_recalc_yoast_fields')) {
         $post = get_post($post_id);
         if (!$post) return false;
 
-        $title   = get_the_title($post_id);
+        $title   = cbia_oldposts_normalize_title_text(get_the_title($post_id));
         $content = (string)$post->post_content;
 
         $did = false;
@@ -310,7 +375,7 @@ if (!function_exists('cbia_oldposts_recalc_yoast_fields')) {
         if ($do_title) {
             $yt = get_post_meta($post_id, '_yoast_wpseo_title', true);
             if ($force || $yt === '' || $yt === null) {
-                // Si tienes una funciÃƒÆ’Ã‚Â³n propia, ÃƒÆ’Ã‚Âºsala; si no, fallback
+                // Si tienes una funciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n propia, ÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºsala; si no, fallback
                 if (function_exists('cbia_generate_yoast_title')) {
                     $new_yt = cbia_generate_yoast_title($title, $content);
                 } else {
@@ -336,6 +401,51 @@ if (!function_exists('cbia_oldposts_recalc_yoast_fields')) {
     }
 }
 
+if (!function_exists('cbia_oldposts_yoast_plan')) {
+    function cbia_oldposts_yoast_plan($post_id, $do_metadesc=true, $do_focuskw=true, $do_title=true, $force=false) {
+        $plan = array(
+            'selected'      => array(),
+            'will_update'   => array(),
+            'skip_existing' => array(),
+            'force'         => !empty($force),
+        );
+
+        $fields = array(
+            'metadesc' => array(
+                'enabled' => !empty($do_metadesc),
+                'meta'    => '_yoast_wpseo_metadesc',
+            ),
+            'focuskw' => array(
+                'enabled' => !empty($do_focuskw),
+                'meta'    => '_yoast_wpseo_focuskw',
+            ),
+            'title' => array(
+                'enabled' => !empty($do_title),
+                'meta'    => '_yoast_wpseo_title',
+            ),
+        );
+
+        foreach ($fields as $label => $cfg) {
+            if (empty($cfg['enabled'])) continue;
+            $plan['selected'][] = $label;
+
+            if (!empty($force)) {
+                $plan['will_update'][] = $label;
+                continue;
+            }
+
+            $current = get_post_meta($post_id, $cfg['meta'], true);
+            if ($current === '' || $current === null) {
+                $plan['will_update'][] = $label;
+            } else {
+                $plan['skip_existing'][] = $label;
+            }
+        }
+
+        return $plan;
+    }
+}
+
 /* =========================================================
    =================== NOTA "ACTUALIZADO" ===================
    ========================================================= */
@@ -343,12 +453,12 @@ if (!function_exists('cbia_oldposts_build_note_html')) {
     function cbia_oldposts_build_note_html($date_ymd) {
         $date_ymd = preg_replace('/[^0-9\-]/', '', (string)$date_ymd);
         if ($date_ymd === '') $date_ymd = current_time('Y-m-d');
-        return '<p><em>Actualizado el ' . esc_html($date_ymd) . '</em></p>' . "\n";
+        return '<p><em>' . esc_html__('Updated on', 'cbiastudio-blogflow-ai') . ' ' . esc_html($date_ymd) . '</em></p>' . "\n";
     }
 }
 if (!function_exists('cbia_oldposts_has_note')) {
     function cbia_oldposts_has_note($content) {
-        return (bool)preg_match('/<p>\s*<em>\s*actualizado\s+el\s+[0-9]{4}\-[0-9]{2}\-[0-9]{2}\s*<\/em>\s*<\/p>/i', (string)$content);
+        return (bool)preg_match('/<p>\s*<em>\s*(?:updated\s+on|actualizado\s+el)\s+[0-9]{4}\-[0-9]{2}\-[0-9]{2}\s*<\/em>\s*<\/p>/i', (string)$content);
     }
 }
 if (!function_exists('cbia_oldposts_add_updated_note')) {
@@ -372,7 +482,7 @@ if (!function_exists('cbia_oldposts_add_updated_note')) {
         if ($force && cbia_oldposts_has_note($content)) {
             $new_note = cbia_oldposts_build_note_html($date_ymd);
             $new_content = preg_replace(
-                '/<p>\s*<em>\s*actualizado\s+el\s+[0-9]{4}\-[0-9]{2}\-[0-9]{2}\s*<\/em>\s*<\/p>\s*/i',
+                '/<p>\s*<em>\s*(?:updated\s+on|actualizado\s+el)\s+[0-9]{4}\-[0-9]{2}\-[0-9]{2}\s*<\/em>\s*<\/p>\s*/i',
                 $new_note,
                 $content,
                 1
@@ -380,12 +490,14 @@ if (!function_exists('cbia_oldposts_add_updated_note')) {
             wp_update_post(array('ID'=>$post_id, 'post_content'=>$new_content));
             update_post_meta($post_id, '_cbia_updated_note_date', $date_ymd);
             update_post_meta($post_id, '_cbia_oldposts_note_refreshed', current_time('mysql'));
-            cbia_oldposts_log_message("Nota (forzar) actualizada en post {$post_id} ({$date_ymd}).");
+            /* translators: 1: post ID, 2: date in Y-m-d format. */
+            cbia_oldposts_log_message(sprintf(__('Update note (force) refreshed on post %1$d (%2$s).', 'cbiastudio-blogflow-ai'), $post_id, $date_ymd));
             return true;
         }
 
         $note = cbia_oldposts_build_note_html($date_ymd);
-        $new  = $note . $content;
+        $trimmed_content = trim((string)$content);
+        $new  = $trimmed_content === '' ? $note : ($trimmed_content . "\n\n" . $note);
 
         wp_update_post(array(
             'ID'           => $post_id,
@@ -394,14 +506,15 @@ if (!function_exists('cbia_oldposts_add_updated_note')) {
 
         update_post_meta($post_id, '_cbia_updated_note_date', $date_ymd);
         update_post_meta($post_id, '_cbia_oldposts_note_added', current_time('mysql'));
-        cbia_oldposts_log_message("Nota aÃƒÆ’Ã‚Â±adida en post {$post_id} ({$date_ymd}).");
+        /* translators: 1: post ID, 2: date in Y-m-d format. */
+        cbia_oldposts_log_message(sprintf(__('Update note added on post %1$d (%2$s).', 'cbiastudio-blogflow-ai'), $post_id, $date_ymd));
 
         return true;
     }
 }
 
 /* =========================================================
-   ================= CATEGORÃƒÆ’Ã‚ÂAS / ETIQUETAS =================
+   ================= CATEGORÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂAS / ETIQUETAS =================
    ========================================================= */
 if (!function_exists('cbia_oldposts_parse_keywords_to_categories')) {
     function cbia_oldposts_parse_keywords_to_categories($raw) {
@@ -444,7 +557,7 @@ if (!function_exists('cbia_oldposts_ensure_category_id')) {
 if (!function_exists('cbia_oldposts_assign_categories_only')) {
     function cbia_oldposts_assign_categories_only($post_id, $title, $content_html, $force=false) {
         if (!function_exists('cbia_get_settings')) {
-            cbia_oldposts_log_message("[WARN] No existe cbia_get_settings(). No se pueden aplicar categorÃƒÆ’Ã‚Â­as dinÃƒÆ’Ã‚Â¡micas.");
+            cbia_oldposts_log_message(__("[WARN] cbia_get_settings() is unavailable. Dynamic categories cannot be applied.", 'cbiastudio-blogflow-ai'));
             return false;
         }
 
@@ -454,8 +567,8 @@ if (!function_exists('cbia_oldposts_assign_categories_only')) {
         }
 
         $s = cbia_get_settings();
-        $default_cat = trim((string)($s['default_category'] ?? 'Noticias'));
-        if ($default_cat === '') $default_cat = 'Noticias';
+        $default_cat = trim((string)($s['default_category'] ?? 'News'));
+        if ($default_cat === '') $default_cat = 'News';
 
         $map_raw = (string)($s['keywords_to_categories'] ?? '');
         $map = cbia_oldposts_parse_keywords_to_categories($map_raw);
@@ -498,7 +611,7 @@ if (!function_exists('cbia_oldposts_assign_categories_only')) {
 if (!function_exists('cbia_oldposts_assign_tags_only')) {
     function cbia_oldposts_assign_tags_only($post_id, $title, $content_html, $force=false) {
         if (!function_exists('cbia_get_settings')) {
-            cbia_oldposts_log_message("[WARN] No existe cbia_get_settings(). No se pueden aplicar etiquetas dinÃƒÆ’Ã‚Â¡micas.");
+            cbia_oldposts_log_message(__("[WARN] cbia_get_settings() is unavailable. Dynamic tags cannot be applied.", 'cbiastudio-blogflow-ai'));
             return false;
         }
 
@@ -544,7 +657,7 @@ if (!function_exists('cbia_oldposts_assign_tags_only')) {
 }
 
 /* =========================================================
-   ======================= IA: TÃƒÆ’Ã‚Â­TULO =======================
+   ======================= IA: TÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­TULO =======================
    ========================================================= */
 if (!function_exists('cbia_oldposts_ai_optimize_title')) {
     function cbia_oldposts_ai_optimize_title($post_id, $force=false) {
@@ -557,23 +670,31 @@ if (!function_exists('cbia_oldposts_ai_optimize_title')) {
         }
 
         if (!function_exists('cbia_openai_responses_call') || !function_exists('cbia_pick_model')) {
-            cbia_oldposts_log_message("[ERROR] Falta motor IA (cbia_openai_responses_call / cbia_pick_model). No puedo optimizar tÃƒÆ’Ã‚Â­tulo.");
+            cbia_oldposts_log_message(__("[ERROR] AI engine is missing (cbia_openai_responses_call / cbia_pick_model). Title cannot be optimized.", 'cbiastudio-blogflow-ai'));
             return false;
         }
 
-        $old_title = get_the_title($post_id);
+        $old_title = cbia_oldposts_normalize_title_text(get_the_title($post_id));
         $content   = (string)$post->post_content;
 
-        $prompt = "Optimiza este tÃƒÆ’Ã‚Â­tulo para SEO y CTR manteniendo la misma intenciÃƒÆ’Ã‚Â³n de bÃƒÆ’Ã‚Âºsqueda y el tema.\n".
-                  "Devuelve SOLO el tÃƒÆ’Ã‚Â­tulo final, sin comillas, sin listas, sin explicaciones.\n\n".
-                  "TÃƒÆ’Ã‚Â­tulo actual: {$old_title}\n\n".
-                  "Contexto (extracto): ".mb_substr(wp_strip_all_tags($content), 0, 600);
+        $prompt = "Optimize this title for SEO and CTR while preserving the same search intent and topic.\n".
+                  "Return ONLY the final title, without quotes, lists, or explanations.\n\n".
+                  "Current title: {$old_title}\n\n".
+                  "Context (excerpt): ".mb_substr(wp_strip_all_tags($content), 0, 600);
 
-        $model = cbia_pick_model();
-        list($ok, $text, $usage, $model_used, $err) = cbia_openai_responses_call($prompt, 'OLDPOSTS_TITLE', 1);
+        $provider = function_exists('cbia_get_current_provider_key') ? cbia_get_current_provider_key() : 'openai';
+        $model = function_exists('cbia_get_text_model_for_provider')
+            ? cbia_get_text_model_for_provider((string)$provider, cbia_pick_model())
+            : cbia_pick_model();
+        list($ok, $text, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, 'OLDPOSTS_TITLE', 2);
+        $attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($raw) : array();
+        if (!$ok && !empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+            cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'seo', 'prompt' => $prompt));
+        }
 
         if (!$ok) {
-            cbia_oldposts_log_message("[ERROR] AI title failed post {$post_id}: {$err}");
+            /* translators: 1: post ID, 2: provider error message. */
+            cbia_oldposts_log_message(sprintf(__('[ERROR] AI title failed on post %1$d: %2$s', 'cbiastudio-blogflow-ai'), $post_id, (string)$err));
             return false;
         }
 
@@ -581,13 +702,15 @@ if (!function_exists('cbia_oldposts_ai_optimize_title')) {
         $new_title = preg_replace('/\s+/', ' ', $new_title);
 
         if ($new_title === '' || mb_strlen($new_title) < 12) {
-            cbia_oldposts_log_message("[WARN] IA devolviÃƒÆ’Ã‚Â³ tÃƒÆ’Ã‚Â­tulo invÃƒÆ’Ã‚Â¡lido en post {$post_id}. Se omite.");
+            /* translators: %d is the post ID. */
+            cbia_oldposts_log_message(sprintf(__("[WARN] AI returned an invalid title on post %d. Skipped.", 'cbiastudio-blogflow-ai'), $post_id));
             return false;
         }
 
         if (mb_strtolower($new_title) === mb_strtolower($old_title)) {
             update_post_meta($post_id, '_cbia_oldposts_title_done', current_time('mysql'));
-            cbia_oldposts_log_message("[INFO] IA tÃƒÆ’Ã‚Â­tulo: no cambiÃƒÆ’Ã‚Â³ (igual) en post {$post_id}.");
+            /* translators: %d is the post ID. */
+            cbia_oldposts_log_message(sprintf(__("[INFO] AI title unchanged on post %d.", 'cbiastudio-blogflow-ai'), $post_id));
             return 'skipped';
         }
 
@@ -600,11 +723,29 @@ if (!function_exists('cbia_oldposts_ai_optimize_title')) {
         update_post_meta($post_id, '_cbia_oldposts_title_old', $old_title);
         update_post_meta($post_id, '_cbia_oldposts_title_new', $new_title);
 
-        if (function_exists('cbia_store_usage_meta')) {
-            cbia_store_usage_meta($post_id, $usage, $model_used);
+        if (function_exists('cbia_costes_record_usage')) {
+            if (!empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+                cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'seo', 'prompt' => $prompt));
+            }
+            cbia_costes_record_usage($post_id, array(
+                'type' => 'seo',
+                'model' => (string)$model_used,
+                'input_tokens' => (int)($usage['input_tokens'] ?? 0),
+                'output_tokens' => (int)($usage['output_tokens'] ?? 0),
+                'cached_input_tokens' => (int)($usage['cached_input_tokens'] ?? 0),
+                'ok' => 1,
+                'error' => '',
+            ));
+        }
+        if (function_exists('cbia_usage_append_call')) {
+            cbia_usage_append_call($post_id, 'oldposts_title', (string)$model_used, (array)$usage, array(
+                'ok' => 1,
+                'err' => '',
+            ));
         }
 
-        cbia_oldposts_log_message("[OK] Title updated post {$post_id}: '{$old_title}' => '{$new_title}'");
+        /* translators: 1: post ID, 2: old title, 3: new title. */
+        cbia_oldposts_log_message(sprintf(__("[OK] Title updated on post %1\$d: '%2\$s' => '%3\$s'", 'cbiastudio-blogflow-ai'), $post_id, (string)$old_title, (string)$new_title));
         return true;
     }
 }
@@ -619,43 +760,60 @@ if (!function_exists('cbia_oldposts_ai_regenerate_content')) {
 
         if (!$force) {
             $done = get_post_meta($post_id, '_cbia_oldposts_content_done', true);
-            if ($done !== '') return 'skipped';
+            if ($done !== '') {
+                /* translators: %d is the post ID. */
+                cbia_oldposts_log_message(sprintf(__("[SKIP] AI content omitted for post %d | reason=already_processed | suggestion=enable 'Reprocess text'.", 'cbiastudio-blogflow-ai'), $post_id));
+                return 'skipped';
+            }
         }
 
         if (!function_exists('cbia_openai_responses_call') || !function_exists('cbia_build_prompt_for_title') || !function_exists('cbia_pick_model')) {
-            cbia_oldposts_log_message("[ERROR] Falta motor IA (cbia_openai_responses_call/cbia_build_prompt_for_title/cbia_pick_model). No puedo regenerar contenido.");
+            cbia_oldposts_log_message(__("[ERROR] AI engine is missing (cbia_openai_responses_call/cbia_build_prompt_for_title/cbia_pick_model). Content cannot be regenerated.", 'cbiastudio-blogflow-ai'));
             return false;
         }
 
-        $title = get_the_title($post_id);
+        $title = cbia_oldposts_normalize_title_text(get_the_title($post_id));
         $s = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
-        $images_limit = max(0, min(10, (int)$images_limit));
-        if ($images_limit <= 0) $images_limit = max(1, min(4, (int)($s['images_limit'] ?? 3)));
+        $images_limit = max(1, min(3, (int)$images_limit));
+        if ($images_limit <= 0) $images_limit = max(1, min(3, (int)($s['images_limit'] ?? 3)));
 
         if (cbia_check_stop_flag()) {
-            cbia_oldposts_log_message("[INFO] Stop activo: no se regenera contenido en post {$post_id}.");
+            /* translators: %d is the post ID. */
+            cbia_oldposts_log_message(sprintf(__("[INFO] Stop flag is active: content will not be regenerated on post %d.", 'cbiastudio-blogflow-ai'), $post_id));
             return false;
         }
 
         $prompt = cbia_build_prompt_for_title($title);
 
-        $model = cbia_pick_model();
-        cbia_oldposts_log_message("[INFO] IA contenido: llamando OpenAI post {$post_id} model={$model} images_limit={$images_limit}ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦");
+        $provider = function_exists('cbia_get_current_provider_key') ? cbia_get_current_provider_key() : 'openai';
+        $model = function_exists('cbia_get_text_model_for_provider')
+            ? cbia_get_text_model_for_provider((string)$provider, cbia_pick_model())
+            : cbia_pick_model();
+        /* translators: 1: post ID, 2: text model, 3: internal images limit. */
+        cbia_oldposts_log_message(sprintf(__('[INFO] AI content: calling OpenAI on post %1$d model=%2$s images_limit=%3$d...', 'cbiastudio-blogflow-ai'), $post_id, $model, $images_limit));
 
-        list($ok, $text, $usage, $model_used, $err) = cbia_openai_responses_call($prompt, 'OLDPOSTS_CONTENT', 1);
+        list($ok, $text, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, 'OLDPOSTS_CONTENT', 2);
+        $attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($raw) : array();
+        if (!$ok && !empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+            cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'text', 'prompt' => $prompt));
+        }
 
         if (!$ok) {
-            cbia_oldposts_log_message("[ERROR] AI content failed post {$post_id}: {$err}");
+            /* translators: 1: post ID, 2: provider error message. */
+            cbia_oldposts_log_message(sprintf(__('[ERROR] AI content failed on post %1$d: %2$s', 'cbiastudio-blogflow-ai'), $post_id, $err));
             return false;
         }
 
         $html = (string)$text;
+        if (function_exists('cbia_normalize_image_markers')) {
+            $html = cbia_normalize_image_markers($html);
+        }
         $html = cbia_oldposts_remove_h1($html);
 
         $pending_list = array();
         if (!empty($skip_images)) {
             // Modo "solo contenido": elimina cualquier marcador de imagen.
-            $final_html = preg_replace('/\[IMAGEN(?:_PENDIENTE)?\s*:\s*[^\]]+\]/i', '', $html);
+            $final_html = preg_replace('/\[(?:IMAGE|IMAGEN)(?:_(?:PENDING|PENDIENTE))?\s*:\s*[^\]]+\]/i', '', $html);
             $pending_list = array();
         } elseif (function_exists('cbia_replace_markers_with_pending')) {
             $final_html = cbia_replace_markers_with_pending($html, $images_limit, $pending_list);
@@ -663,36 +821,74 @@ if (!function_exists('cbia_oldposts_ai_regenerate_content')) {
             $final_html = cbia_oldposts_mark_all_as_pending($html);
             $pending_list = cbia_oldposts_extract_image_markers_any($final_html);
         }
+        if (empty($skip_images) && empty($pending_list) && $images_limit > 0) {
+            $final_html = cbia_oldposts_insert_missing_internal_markers($final_html, $title, $images_limit);
+            $pending_list = cbia_oldposts_extract_image_markers_any($final_html);
+        }
+        $final_html = cbia_oldposts_enforce_pending_limit($final_html, $images_limit, $pending_list);
         if (function_exists('cbia_cleanup_post_html')) {
             $final_html = cbia_cleanup_post_html($final_html);
         }
 
-        wp_update_post(array(
+        $updated = wp_update_post(array(
             'ID'           => $post_id,
             'post_content' => $final_html,
-        ));
+        ), true);
+        if (is_wp_error($updated)) {
+            /* translators: 1: post ID, 2: wp_update_post error message. */
+            cbia_oldposts_log_message(sprintf(__('[ERROR] AI content could not be saved for post %1$d: %2$s', 'cbiastudio-blogflow-ai'), $post_id, $updated->get_error_message()));
+            return false;
+        }
         clean_post_cache($post_id);
 
         cbia_oldposts_set_pending_images_meta($post_id, $pending_list);
+        if (empty($skip_images)) {
+            delete_post_meta($post_id, '_cbia_oldposts_images_done');
+            delete_post_meta($post_id, '_cbia_oldposts_images_content_done');
+            delete_post_meta($post_id, '_cbia_oldposts_featured_done');
+        }
 
-        if (function_exists('cbia_store_usage_meta')) {
-            cbia_store_usage_meta($post_id, $usage, $model_used);
+        if (function_exists('cbia_costes_record_usage')) {
+            if (!empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+                cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'text', 'prompt' => $prompt));
+            }
+            cbia_costes_record_usage($post_id, array(
+                'type' => 'text',
+                'model' => (string)$model_used,
+                'input_tokens' => (int)($usage['input_tokens'] ?? 0),
+                'output_tokens' => (int)($usage['output_tokens'] ?? 0),
+                'cached_input_tokens' => (int)($usage['cached_input_tokens'] ?? 0),
+                'ok' => 1,
+                'error' => '',
+            ));
+        }
+        if (function_exists('cbia_usage_append_call')) {
+            cbia_usage_append_call($post_id, 'oldposts_content', (string)$model_used, (array)$usage, array(
+                'ok' => 1,
+                'err' => '',
+            ));
         }
 
         update_post_meta($post_id, '_cbia_oldposts_content_done', current_time('mysql'));
         if (!empty($skip_images)) {
             update_post_meta($post_id, '_cbia_oldposts_content_noimg_done', current_time('mysql'));
-            cbia_oldposts_log_message("[OK] Content regenerated (without images) in post {$post_id}.");
+            /* translators: %d is the post ID. */
+            cbia_oldposts_log_message(sprintf(__("[OK] Content regenerated (without images) on post %d.", 'cbiastudio-blogflow-ai'), $post_id));
         } else {
-            cbia_oldposts_log_message("[OK] Content regenerated in post {$post_id}. Pending images=" . count($pending_list));
+            /* translators: 1: post ID, 2: number of pending internal images. */
+            cbia_oldposts_log_message(sprintf(__('[OK] Content regenerated on post %1$d. Pending images=%2$d', 'cbiastudio-blogflow-ai'), $post_id, count($pending_list)));
         }
 
+        if (cbia_oldposts_is_elementor_post($post_id)) {
+            /* translators: %d is the post ID. */
+            cbia_oldposts_log_message(sprintf(__('[WARN] Post %d uses Elementor. post_content was updated, but the visible output may still come from _elementor_data.', 'cbiastudio-blogflow-ai'), $post_id));
+        }
         return true;
     }
 }
 
 /* =========================================================
-   =================== IMÃƒÆ’Ã‚ÂGENES: RESET ======================
+   =================== IMÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂGENES: RESET ======================
    ========================================================= */
 if (!function_exists('cbia_oldposts_images_reset_pending')) {
     function cbia_oldposts_images_reset_pending($post_id, $images_limit=3, $force=false, $clear_featured=false) {
@@ -701,32 +897,41 @@ if (!function_exists('cbia_oldposts_images_reset_pending')) {
 
         if (!$force) {
             $done = get_post_meta($post_id, '_cbia_oldposts_images_done', true);
-            if ($done !== '') return 'skipped';
+            if ($done !== '') {
+                /* translators: %d is the post ID. */
+                cbia_oldposts_log_message(sprintf(__("[SKIP] Image reset omitted for post %d | reason=already_processed | suggestion=enable 'Reprocess images'.", 'cbiastudio-blogflow-ai'), $post_id));
+                return 'skipped';
+            }
         }
 
         $s = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
-        $images_limit = max(1, min(10, (int)$images_limit));
-        if ($images_limit <= 0) $images_limit = max(1, min(4, (int)($s['images_limit'] ?? 3)));
+        $images_limit = max(1, min(3, (int)$images_limit));
+        if ($images_limit <= 0) $images_limit = max(1, min(3, (int)($s['images_limit'] ?? 3)));
 
         $content = (string)$post->post_content;
+        if (function_exists('cbia_normalize_image_markers')) {
+            $content = cbia_normalize_image_markers($content);
+        }
+
+        if (!cbia_oldposts_has_any_image_marker($content)) {
+            $content = cbia_oldposts_insert_missing_internal_markers($content, cbia_oldposts_normalize_title_text(get_the_title($post_id)), $images_limit);
+        }
 
         if (!cbia_oldposts_has_any_image_marker($content)) {
             if ($clear_featured) {
                 delete_post_thumbnail($post_id);
                 update_post_meta($post_id, '_cbia_oldposts_images_done', current_time('mysql'));
-                cbia_oldposts_log_message("[OK] Images reset: no markers found, but featured image removed post {$post_id}.");
+                /* translators: %d is the post ID. */
+                cbia_oldposts_log_message(sprintf(__("[OK] Image reset: no markers found, but featured image was removed on post %d.", 'cbiastudio-blogflow-ai'), $post_id));
                 return true;
             }
-            cbia_oldposts_log_message("[INFO] ImÃƒÆ’Ã‚Â¡genes reset: no hay marcadores en post {$post_id}. SKIP.");
+            /* translators: %d is the post ID. */
+            cbia_oldposts_log_message(sprintf(__("[INFO] Image reset: no markers found on post %d. SKIP.", 'cbiastudio-blogflow-ai'), $post_id));
             return 'skipped';
         }
 
         $new_content = cbia_oldposts_mark_all_as_pending($content);
-
-        $pending_list = cbia_oldposts_extract_image_markers_any($new_content);
-        if (!empty($pending_list) && count($pending_list) > $images_limit) {
-            $pending_list = array_slice($pending_list, 0, $images_limit);
-        }
+        $new_content = cbia_oldposts_enforce_pending_limit($new_content, $images_limit, $pending_list);
 
         wp_update_post(array(
             'ID'           => $post_id,
@@ -741,14 +946,22 @@ if (!function_exists('cbia_oldposts_images_reset_pending')) {
         }
 
         update_post_meta($post_id, '_cbia_oldposts_images_done', current_time('mysql'));
-        cbia_oldposts_log_message("[OK] Images reset post {$post_id}. Pending=" . count($pending_list) . ($clear_featured ? " | featured removed" : ""));
+        cbia_oldposts_log_message(
+            sprintf(
+                /* translators: 1: post ID, 2: pending markers count, 3: optional suffix about featured image removal. */
+                __('[OK] Image reset on post %1$d. Pending=%2$d%3$s', 'cbiastudio-blogflow-ai'),
+                $post_id,
+                count($pending_list),
+                $clear_featured ? " | featured removed" : ""
+            )
+        );
 
         return true;
     }
 }
 
 /* =========================================================
-   ============ IMÃƒÆ’Ã‚ÂGENES: SOLO CONTENIDO (reset) ============
+   ============ IMÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂGENES: SOLO CONTENIDO (reset) ============
    ========================================================= */
 if (!function_exists('cbia_oldposts_images_reset_content_only')) {
     function cbia_oldposts_images_reset_content_only($post_id, $images_limit=3, $force=false) {
@@ -757,17 +970,42 @@ if (!function_exists('cbia_oldposts_images_reset_content_only')) {
 
         if (!$force) {
             $done = get_post_meta($post_id, '_cbia_oldposts_images_content_done', true);
-            if ($done !== '') return 'skipped';
+            if ($done !== '') {
+                /* translators: %d is the post ID. */
+                cbia_oldposts_log_message(sprintf(__("[SKIP] Internal images omitted for post %d | reason=already_processed | suggestion=enable 'Reprocess images'.", 'cbiastudio-blogflow-ai'), $post_id));
+                return 'skipped';
+            }
         }
 
         // Reutiliza el reset existente, pero sin tocar destacada.
         $r = cbia_oldposts_images_reset_pending($post_id, $images_limit, true, false);
         if ($r === true) {
             update_post_meta($post_id, '_cbia_oldposts_images_content_done', current_time('mysql'));
-            cbia_oldposts_log_message("[OK] ImÃƒÆ’Ã‚Â¡genes (solo contenido) reseteadas en post {$post_id}.");
+            /* translators: %d is the post ID. */
+            cbia_oldposts_log_message(sprintf(__("[OK] Images (content only) reset on post %d.", 'cbiastudio-blogflow-ai'), $post_id));
             return true;
         }
         return $r;
+    }
+}
+
+if (!function_exists('cbia_oldposts_generate_internal_images')) {
+    function cbia_oldposts_generate_internal_images($post_id, $images_limit = 3) {
+        $post_id = (int)$post_id;
+        if ($post_id <= 0) return 0;
+        $images_limit = max(0, min(3, (int)$images_limit));
+        if ($images_limit <= 0) return 0;
+        if (!function_exists('cbia_fill_pending_images_for_post')) {
+            cbia_oldposts_log_message(__("[ERROR] cbia_fill_pending_images_for_post() is unavailable. Internal images cannot be generated.", 'cbiastudio-blogflow-ai'));
+            return 0;
+        }
+        $filled = (int) cbia_fill_pending_images_for_post($post_id, $images_limit, array(
+            'fill_featured' => false,
+        ));
+        /* translators: 1: post ID, 2: generated internal images count. */
+        cbia_oldposts_log_message(sprintf(__('[INFO] Internal images generated on post %1$d: %2$d', 'cbiastudio-blogflow-ai'), $post_id, (int)$filled));
+        update_post_meta($post_id, '_cbia_oldposts_images_content_done', current_time('mysql'));
+        return $filled;
     }
 }
 
@@ -781,46 +1019,64 @@ if (!function_exists('cbia_oldposts_regenerate_featured_image')) {
 
         if (!$force) {
             $done = get_post_meta($post_id, '_cbia_oldposts_featured_done', true);
-            if ($done !== '') return 'skipped';
+            if ($done !== '') {
+                /* translators: %d is the post ID. */
+                cbia_oldposts_log_message(sprintf(__("[SKIP] Featured image omitted for post %d | reason=already_processed | suggestion=enable 'Reprocess images'.", 'cbiastudio-blogflow-ai'), $post_id));
+                return 'skipped';
+            }
         }
 
         if (!function_exists('cbia_generate_image_openai')) {
-            cbia_oldposts_log_message("[ERROR] cbia_generate_image_openai() does not exist. Cannot regenerate featured image.");
+            cbia_oldposts_log_message(__("[ERROR] cbia_generate_image_openai() is unavailable. Featured image cannot be regenerated.", 'cbiastudio-blogflow-ai'));
             return false;
         }
 
-        $title = get_the_title($post_id);
+        $title = cbia_oldposts_normalize_title_text(get_the_title($post_id));
         $content = (string)$post->post_content;
 
-        // Intentamos usar el primer marcador si existe; si no, usamos el tÃƒÆ’Ã‚Â­tulo.
+        // Intentamos usar el primer marcador si existe; si no, usamos el tÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­tulo.
         $desc = $title;
         $markers = cbia_oldposts_extract_image_markers_any($content);
-        if (!empty($markers) && !empty($markers[0]['desc'])) {
-            $desc = (string)$markers[0]['desc'];
+        if (!empty($markers) && !empty($markers[0])) {
+            $desc = (string)$markers[0];
         }
 
         if ($remove_old) {
             delete_post_thumbnail($post_id);
         }
 
-        list($ok, $attach_id, $model, $err) = cbia_generate_image_openai($desc, 'intro', $title);
+        list($ok, $attach_id, $model, $err, $meta) = cbia_generate_image_openai($desc, 'intro', $title);
+        $attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($meta) : array();
+        if (!$ok && !empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+            cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'image', 'prompt' => $desc, 'section' => 'intro'));
+        }
         if ($ok && $attach_id) {
+        if (!empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+            cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'image', 'prompt' => $desc, 'section' => 'intro'));
+        }
             set_post_thumbnail($post_id, (int)$attach_id);
+            wp_update_post(array(
+                'ID' => (int)$attach_id,
+                'post_parent' => (int)$post_id,
+            ));
             update_post_meta($post_id, '_cbia_oldposts_featured_done', current_time('mysql'));
             update_post_meta($post_id, '_cbia_oldposts_featured_attach_id', (int)$attach_id);
-            cbia_oldposts_log_message("[OK] Destacada regenerada post {$post_id} (attach_id={$attach_id}).");
+            /* translators: 1: post ID, 2: attachment ID. */
+            cbia_oldposts_log_message(sprintf(__('[OK] Featured image regenerated on post %1$d (attach_id=%2$d).', 'cbiastudio-blogflow-ai'), $post_id, (int)$attach_id));
 
-            if (function_exists('cbia_costes_record_usage')) {
-                cbia_costes_record_usage($post_id, array(
-                    'type' => 'image',
-                    'model' => (string)$model,
-                    'input_tokens' => 0,
-                    'output_tokens' => 0,
-                    'cached_input_tokens' => 0,
-                    'ok' => 1,
-                    'error' => '',
-                ));
-            }
+        if (function_exists('cbia_costes_record_usage')) {
+            cbia_costes_record_usage($post_id, array(
+                'type' => 'image',
+                'model' => (string)$model,
+                'input_tokens' => 0,
+                'output_tokens' => 0,
+                'cached_input_tokens' => 0,
+                'ok' => 1,
+                'error' => '',
+                'section' => 'intro',
+                'attach_id' => (int)$attach_id,
+            ));
+        }
 
             if (function_exists('cbia_image_append_call')) {
                 cbia_image_append_call($post_id, 'intro', (string)$model, true, (int)$attach_id, '');
@@ -829,8 +1085,9 @@ if (!function_exists('cbia_oldposts_regenerate_featured_image')) {
             return true;
         }
 
-        cbia_oldposts_log_message("[ERROR] Featured image failed post {$post_id}: " . (string)($err ?: ''));
-        if (function_exists('cbia_costes_record_usage')) {
+        /* translators: 1: post ID, 2: provider error message. */
+        cbia_oldposts_log_message(sprintf(__('[ERROR] Featured image failed on post %1$d: %2$s', 'cbiastudio-blogflow-ai'), $post_id, (string)($err ?: '')));
+        if (function_exists('cbia_costes_record_usage') && empty($attempts)) {
             cbia_costes_record_usage($post_id, array(
                 'type' => 'image',
                 'model' => (string)$model,
@@ -839,6 +1096,7 @@ if (!function_exists('cbia_oldposts_regenerate_featured_image')) {
                 'cached_input_tokens' => 0,
                 'ok' => 0,
                 'error' => (string)($err ?: ''),
+                'section' => 'intro',
             ));
         }
         if (function_exists('cbia_image_append_call')) {
@@ -880,7 +1138,9 @@ if (!function_exists('cbia_oldposts_build_query_args')) {
             $args['orderby'] = 'post__in';
         }
 
-        $filter_mode = ($filter_mode === 'range') ? 'range' : 'older';
+        $filter_mode = in_array($filter_mode, array('all', 'range', 'older'), true)
+            ? $filter_mode
+            : 'all';
 
         if (empty($post_ids) && $filter_mode === 'range') {
             $from = cbia_oldposts_sanitize_ymd($date_from);
@@ -903,7 +1163,7 @@ if (!function_exists('cbia_oldposts_build_query_args')) {
             }
             if (!empty($date_query)) $args['date_query'] = $date_query;
 
-        } elseif (empty($post_ids)) {
+        } elseif (empty($post_ids) && $filter_mode === 'older') {
             $older_than_days = max(1, (int)$older_than_days);
             $cutoff_gmt = gmdate('Y-m-d H:i:s', time() - ($older_than_days * DAY_IN_SECONDS));
             $args['date_query'] = array(
@@ -916,8 +1176,9 @@ if (!function_exists('cbia_oldposts_build_query_args')) {
         }
 
         if ($scope === 'plugin') {
-            $args['meta_key'] = '_cbia_created';
-            $args['meta_value'] = '1';
+            $args['meta_query'] = array(
+                array('key' => '_cbia_created', 'value' => '1', 'compare' => '='),
+            );
         }
 
         if ($category_id > 0) {
@@ -931,15 +1192,100 @@ if (!function_exists('cbia_oldposts_build_query_args')) {
     }
 }
 
+if (!function_exists('cbia_oldposts_collect_runtime_overrides')) {
+    function cbia_oldposts_collect_runtime_overrides($opts = array()) {
+        $opts = is_array($opts) ? $opts : array();
+        $out = array();
+
+        $tpl = sanitize_key((string)($opts['run_post_length_variant'] ?? ''));
+        if (in_array($tpl, array('short', 'medium', 'long'), true)) {
+            $out['post_length_variant'] = $tpl;
+        }
+
+        $text_provider = sanitize_key((string)($opts['run_text_provider'] ?? ''));
+        if ($text_provider !== '') {
+            $out['text_provider'] = $text_provider;
+        }
+        $text_model = sanitize_text_field((string)($opts['run_text_model'] ?? ''));
+        if ($text_model !== '') {
+            $out['text_model'] = $text_model;
+        }
+
+        $image_provider = sanitize_key((string)($opts['run_image_provider'] ?? ''));
+        if ($image_provider !== '') {
+            $out['image_provider'] = $image_provider;
+        }
+        $image_model = sanitize_text_field((string)($opts['run_image_model'] ?? ''));
+        if ($image_model !== '') {
+            $out['image_model'] = $image_model;
+        }
+
+        return $out;
+    }
+}
+
+if (!function_exists('cbia_oldposts_run_batch_with_overrides')) {
+    function cbia_oldposts_run_batch_with_overrides($opts = array()) {
+        $overrides = cbia_oldposts_collect_runtime_overrides($opts);
+        $prev = isset($GLOBALS['cbia_runtime_settings_overrides']) && is_array($GLOBALS['cbia_runtime_settings_overrides'])
+            ? $GLOBALS['cbia_runtime_settings_overrides']
+            : null;
+        $prev_disable_fallback = !empty($GLOBALS['cbia_disable_text_model_fallback']);
+
+        if (!empty($overrides)) {
+            $GLOBALS['cbia_runtime_settings_overrides'] = is_array($prev)
+                ? array_replace_recursive($prev, $overrides)
+                : $overrides;
+
+            cbia_oldposts_log_message(sprintf(
+                /* translators: 1: post length template, 2: text provider, 3: text model, 4: image provider, 5: image model. */
+                __('RUNTIME profile | template=%1$s | text=%2$s/%3$s | image=%4$s/%5$s', 'cbiastudio-blogflow-ai'),
+                (string)($overrides['post_length_variant'] ?? '-'),
+                (string)($overrides['text_provider'] ?? '-'),
+                (string)($overrides['text_model'] ?? '-'),
+                (string)($overrides['image_provider'] ?? '-'),
+                (string)($overrides['image_model'] ?? '-')
+            ));
+        }
+
+        $GLOBALS['cbia_disable_text_model_fallback'] = 1;
+
+        try {
+            return cbia_oldposts_run_batch_v3($opts);
+        } finally {
+            if (is_array($prev)) {
+                $GLOBALS['cbia_runtime_settings_overrides'] = $prev;
+            } else {
+                unset($GLOBALS['cbia_runtime_settings_overrides']);
+            }
+            if ($prev_disable_fallback) {
+                $GLOBALS['cbia_disable_text_model_fallback'] = 1;
+            } else {
+                unset($GLOBALS['cbia_disable_text_model_fallback']);
+            }
+        }
+    }
+}
+
 /* =========================================================
    ================== PROCESO POR LOTES (v3) =================
    ========================================================= */
 if (!function_exists('cbia_oldposts_run_batch_v3')) {
     function cbia_oldposts_run_batch_v3($opts = array()) {
+        if (function_exists('ignore_user_abort')) {
+            @ignore_user_abort(true);
+        }
+        if (function_exists('set_time_limit')) {
+            // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Needed for long-running oldposts batches.
+            @set_time_limit(0);
+        }
+        // phpcs:ignore Squiz.PHP.DiscouragedFunctions.Discouraged -- Needed for long-running oldposts batches.
+        @ini_set('max_execution_time', '0');
+
         $defaults = array(
             'batch_size'         => 20,
             'scope'              => 'all',
-            'filter_mode'        => 'older',
+            'filter_mode'        => 'all',
             'older_than_days'    => 180,
             'date_from'          => '',
             'date_to'            => '',
@@ -949,12 +1295,15 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
             'author_id'          => 0,
             'dry_run'            => 0,
 
-            'do_note'            => 1,
+            'do_note'            => 0,
             'force_note'         => 0,
+            'reprocess_text'     => 0,
+            'reprocess_images'   => 0,
+            'reprocess_meta'     => 0,
 
             // Yoast por campos
-            'do_yoast_metadesc'  => 1,
-            'do_yoast_focuskw'   => 1,
+            'do_yoast_metadesc'  => 0,
+            'do_yoast_focuskw'   => 0,
             'do_yoast_title'     => 0,
             'force_yoast'        => 0,
 
@@ -965,14 +1314,14 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
 
             'do_content'         => 0,
             'force_content'      => 0,
-            // Variante: contenido sin tocar imÃƒÆ’Ã‚Â¡genes
+            // Variante: contenido sin tocar imÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡genes
             'do_content_no_images'    => 0,
             'force_content_no_images' => 0,
 
             'do_images_reset'    => 0,
             'force_images_reset' => 0,
             'clear_featured'     => 0,
-            // Variante: solo imÃƒÆ’Ã‚Â¡genes del contenido (sin destacada)
+            // Variante: solo imÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡genes del contenido (sin destacada)
             'do_images_content_only'    => 0,
             'force_images_content_only' => 0,
 
@@ -986,16 +1335,20 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
 
             'do_tags'            => 0,
             'force_tags'         => 0,
+            'suppress_batch_header' => 0,
+            'suppress_batch_footer' => 0,
         );
         $opts = array_merge($defaults, is_array($opts) ? $opts : array());
 
         $batch_size      = max(1, min(200, (int)$opts['batch_size']));
         $scope           = ($opts['scope'] === 'plugin') ? 'plugin' : 'all';
-        $filter_mode     = ($opts['filter_mode'] === 'range') ? 'range' : 'older';
+        $filter_mode     = in_array(($opts['filter_mode'] ?? ''), array('all', 'range', 'older'), true)
+            ? (string)$opts['filter_mode']
+            : 'all';
         $older_than_days = max(1, (int)$opts['older_than_days']);
         $date_from       = (string)$opts['date_from'];
         $date_to         = (string)$opts['date_to'];
-        $images_limit    = max(1, min(10, (int)$opts['images_limit']));
+        $images_limit    = max(1, min(3, (int)$opts['images_limit']));
         $post_ids        = is_array($opts['post_ids']) ? $opts['post_ids'] : cbia_oldposts_parse_ids_csv($opts['post_ids'] ?? '');
         $post_ids        = array_values(array_filter(array_map('intval', $post_ids)));
         $category_id     = (int)($opts['category_id'] ?? 0);
@@ -1003,50 +1356,85 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
         $dry_run         = !empty($opts['dry_run']) ? 1 : 0;
 
         $date_ymd = current_time('Y-m-d');
+        $log_batch_header = empty($opts['suppress_batch_header']);
+        $log_batch_footer = empty($opts['suppress_batch_footer']);
 
         $ids_txt = !empty($post_ids) ? implode(',', array_slice($post_ids, 0, 20)) : '';
-        if ($ids_txt !== '' && count($post_ids) > 20) $ids_txt .= ',ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦';
+        if ($ids_txt !== '' && count($post_ids) > 20) $ids_txt .= ',ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€šÃ‚Â¦';
+        if ($log_batch_header) {
         cbia_oldposts_log_message(
-            "INICIO v3 | lote={$batch_size} | scope={$scope} | filtro={$filter_mode} | older_than_days={$older_than_days} | from={$date_from} | to={$date_to} | images_limit={$images_limit}" .
-            " | ids=" . (!empty($post_ids) ? $ids_txt : '(auto)') .
-            " | cat={$category_id} | author={$author_id} | dry_run=" . ($dry_run ? 'SI' : 'NO')
+            sprintf(
+                /* translators: 1: batch size, 2: scope, 3: filter mode, 4: older-than days, 5: from date, 6: to date, 7: images limit, 8: selected IDs summary, 9: category ID, 10: author ID, 11: dry-run flag. */
+                __('START v3 | batch=%1$d | scope=%2$s | filter=%3$s | older_than_days=%4$d | from=%5$s | to=%6$s | images_limit=%7$d | ids=%8$s | category=%9$d | author=%10$d | dry_run=%11$s', 'cbiastudio-blogflow-ai'),
+                $batch_size,
+                $scope,
+                $filter_mode,
+                $older_than_days,
+                $date_from,
+                $date_to,
+                $images_limit,
+                (!empty($post_ids) ? $ids_txt : '(auto)'),
+                $category_id,
+                $author_id,
+                ($dry_run ? 'YES' : 'NO')
+            )
         );
 
         cbia_oldposts_log_message(
-            "ACCIONES | note=".(!empty($opts['do_note'])?'SI':'NO')."(force=".(!empty($opts['force_note'])?'SI':'NO').")".
-            " | yoast(metadesc=".(!empty($opts['do_yoast_metadesc'])?'SI':'NO').",focuskw=".(!empty($opts['do_yoast_focuskw'])?'SI':'NO').",title=".(!empty($opts['do_yoast_title'])?'SI':'NO').",force=".(!empty($opts['force_yoast'])?'SI':'NO').")".
-            " | yoast_reindex=".(!empty($opts['do_yoast_reindex'])?'SI':'NO').
-            " | titleIA=".(!empty($opts['do_title'])?'SI':'NO')."(force=".(!empty($opts['force_title'])?'SI':'NO').")".
-            " | contentIA=".(!empty($opts['do_content'])?'SI':'NO')."(force=".(!empty($opts['force_content'])?'SI':'NO').")".
-            " | contentIA_noimg=".(!empty($opts['do_content_no_images'])?'SI':'NO')."(force=".(!empty($opts['force_content_no_images'])?'SI':'NO').")".
-            " | images_reset=".(!empty($opts['do_images_reset'])?'SI':'NO')."(force=".(!empty($opts['force_images_reset'])?'SI':'NO').",clear_featured=".(!empty($opts['clear_featured'])?'SI':'NO').")".
-            " | images_content_only=".(!empty($opts['do_images_content_only'])?'SI':'NO')."(force=".(!empty($opts['force_images_content_only'])?'SI':'NO').")".
-            " | featured_only=".(!empty($opts['do_featured_only'])?'SI':'NO')."(force=".(!empty($opts['force_featured_only'])?'SI':'NO').",remove_old=".(!empty($opts['featured_remove_old'])?'SI':'NO').")".
-            " | categories=".(!empty($opts['do_categories'])?'SI':'NO')."(force=".(!empty($opts['force_categories'])?'SI':'NO').")".
-            " | tags=".(!empty($opts['do_tags'])?'SI':'NO')."(force=".(!empty($opts['force_tags'])?'SI':'NO').")"
+            sprintf(
+                /* translators: 1-25 are YES/NO flags for selected actions and force modes in oldposts execution. */
+                __('ACTIONS | note=%1$s(force=%2$s) | yoast(metadesc=%3$s,focuskw=%4$s,title=%5$s,force=%6$s) | yoast_reindex=%7$s | titleIA=%8$s(force=%9$s) | contentIA=%10$s(force=%11$s) | contentIA_noimg=%12$s(force=%13$s) | images_reset=%14$s(force=%15$s,clear_featured=%16$s) | images_content_only=%17$s(force=%18$s) | featured_only=%19$s(force=%20$s,remove_old=%21$s) | categories=%22$s(force=%23$s) | tags=%24$s(force=%25$s)', 'cbiastudio-blogflow-ai'),
+                (!empty($opts['do_note']) ? 'YES' : 'NO'),
+                (!empty($opts['force_note']) ? 'YES' : 'NO'),
+                (!empty($opts['do_yoast_metadesc']) ? 'YES' : 'NO'),
+                (!empty($opts['do_yoast_focuskw']) ? 'YES' : 'NO'),
+                (!empty($opts['do_yoast_title']) ? 'YES' : 'NO'),
+                (!empty($opts['force_yoast']) ? 'YES' : 'NO'),
+                (!empty($opts['do_yoast_reindex']) ? 'YES' : 'NO'),
+                (!empty($opts['do_title']) ? 'YES' : 'NO'),
+                (!empty($opts['force_title']) ? 'YES' : 'NO'),
+                (!empty($opts['do_content']) ? 'YES' : 'NO'),
+                (!empty($opts['force_content']) ? 'YES' : 'NO'),
+                (!empty($opts['do_content_no_images']) ? 'YES' : 'NO'),
+                (!empty($opts['force_content_no_images']) ? 'YES' : 'NO'),
+                (!empty($opts['do_images_reset']) ? 'YES' : 'NO'),
+                (!empty($opts['force_images_reset']) ? 'YES' : 'NO'),
+                (!empty($opts['clear_featured']) ? 'YES' : 'NO'),
+                (!empty($opts['do_images_content_only']) ? 'YES' : 'NO'),
+                (!empty($opts['force_images_content_only']) ? 'YES' : 'NO'),
+                (!empty($opts['do_featured_only']) ? 'YES' : 'NO'),
+                (!empty($opts['force_featured_only']) ? 'YES' : 'NO'),
+                (!empty($opts['featured_remove_old']) ? 'YES' : 'NO'),
+                (!empty($opts['do_categories']) ? 'YES' : 'NO'),
+                (!empty($opts['force_categories']) ? 'YES' : 'NO'),
+                (!empty($opts['do_tags']) ? 'YES' : 'NO'),
+                (!empty($opts['force_tags']) ? 'YES' : 'NO')
+            )
         );
 
         if (!empty($post_ids)) {
-            cbia_oldposts_log_message("NOTA: Se han indicado IDs concretos. Se ignoran los filtros por fecha.");
+            cbia_oldposts_log_message(__("NOTE: specific IDs were provided. Date filters are ignored.", 'cbiastudio-blogflow-ai'));
+        }
         }
 
         $args = cbia_oldposts_build_query_args($batch_size, $scope, $filter_mode, $older_than_days, $date_from, $date_to, $post_ids, $category_id, $author_id, $dry_run);
 
         $q = new WP_Query($args);
         if (!$q->have_posts()) {
-            cbia_oldposts_log_message("No hay posts que cumplan condiciones.");
+            cbia_oldposts_log_message(__("No posts matched the current filters.", 'cbiastudio-blogflow-ai'));
             return array(0,0,0,0); // processed, ok, skipped, fail
         }
 
         if (!empty($dry_run)) {
             $ids = is_array($q->posts) ? $q->posts : array();
             $count = count($ids);
-            cbia_oldposts_log_message("DRY RUN: se procesarÃƒÆ’Ã‚Â­an {$count} posts (sin cambios).");
+            /* translators: %d is the number of posts matching the dry-run query. */
+            cbia_oldposts_log_message(sprintf(__("DRY RUN: %d posts would be processed (no changes).", 'cbiastudio-blogflow-ai'), $count));
 
             $max_list = min(20, $count);
             for ($i = 0; $i < $max_list; $i++) {
                 $pid = (int)$ids[$i];
-                $t = get_the_title($pid);
+                $t = cbia_oldposts_normalize_title_text(get_the_title($pid));
                 cbia_oldposts_log_message("DRY RUN: post {$pid} | '" . (string)$t . "'");
             }
 
@@ -1060,7 +1448,8 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                     $est = cbia_costes_estimate_for_post((int)$pid, $cost_settings, $cbia_settings);
                     if ($est !== null) $sum_est += (float)$est;
                 }
-                cbia_oldposts_log_message("DRY RUN: coste IA estimado (aprox)ÃƒÂ¢Ã¢â‚¬Â°Ã‹â€  " . number_format((float)$sum_est, 4, ',', '.') . " ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬");
+                /* translators: %s is the estimated total cost formatted as decimal text. */
+                cbia_oldposts_log_message(sprintf(__("DRY RUN: estimated AI cost (approx) ~ %s EUR", 'cbiastudio-blogflow-ai'), number_format((float)$sum_est, 4, '.', ',')));
             }
 
             return array($count, 0, $count, 0);
@@ -1074,14 +1463,14 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
             $processed++;
 
             if (cbia_check_stop_flag()) {
-                cbia_oldposts_log_message("Detenido por usuario durante el lote.");
+                cbia_oldposts_log_message(__("Stopped by user during batch processing.", 'cbiastudio-blogflow-ai'));
                 break;
             }
 
             $post = get_post($pid);
             if (!$post) { $fail++; continue; }
 
-            $title   = get_the_title($pid);
+            $title   = cbia_oldposts_normalize_title_text(get_the_title($pid));
             $content = (string)$post->post_content;
 
             cbia_oldposts_log_message("---- Post {$pid} | '{$title}' ----");
@@ -1089,14 +1478,17 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
             $did_any = false;
             $did_fail = false;
             $did_skip_all = true;
+            $failed_actions = array();
+            $yoast_scores_done = false;
+            $content_refreshed_with_images = false;
 
-            // 1) TÃƒÆ’Ã‚Â­TULO (IA)
+            // 1) TÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­TULO (IA)
             if (!empty($opts['do_title'])) {
                 $r = cbia_oldposts_ai_optimize_title($pid, !empty($opts['force_title']));
                 if ($r === true) { $did_any = true; $did_skip_all=false; }
                 elseif ($r === 'skipped') { /* */ }
-                else { $did_fail = true; }
-                $title = get_the_title($pid);
+                else { $did_fail = true; $failed_actions[] = 'AI title'; }
+                $title = cbia_oldposts_normalize_title_text(get_the_title($pid));
             }
 
             // 2) CONTENIDO (IA)
@@ -1104,16 +1496,18 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                 $r = cbia_oldposts_ai_regenerate_content($pid, $images_limit, !empty($opts['force_content']));
                 if ($r === true) {
                     $did_any = true; $did_skip_all=false;
+                    $content_refreshed_with_images = true;
                     $post = get_post($pid);
                     $content = $post ? (string)$post->post_content : $content;
                 } elseif ($r === 'skipped') {
                     // no
                 } else {
                     $did_fail = true;
+                    $failed_actions[] = 'AI content';
                 }
             }
 
-            // 2.1) CONTENIDO (IA) SIN IMÃƒÆ’Ã‚Â­GENES
+            // 2.1) CONTENIDO (IA) SIN IMÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­GENES
             if (!empty($opts['do_content_no_images'])) {
                 $r = cbia_oldposts_ai_regenerate_content($pid, $images_limit, !empty($opts['force_content_no_images']), true);
                 if ($r === true) {
@@ -1124,6 +1518,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                     // no
                 } else {
                     $did_fail = true;
+                    $failed_actions[] = 'AI content without images';
                 }
             }
 
@@ -1138,10 +1533,11 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                     // no
                 } else {
                     $did_fail = true;
+                    $failed_actions[] = 'update note';
                 }
             }
 
-            // 4) IMÃƒÆ’Ã‚Â­GENES reset
+            // 4) IMÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­GENES reset
             if (!empty($opts['do_images_reset'])) {
                 $r = cbia_oldposts_images_reset_pending($pid, $images_limit, !empty($opts['force_images_reset']), !empty($opts['clear_featured']));
                 if ($r === true) {
@@ -1152,53 +1548,104 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                     // no
                 } else {
                     $did_fail = true;
+                    $failed_actions[] = 'prepare images for regeneration';
                 }
             }
 
-            // 4.1) IMÃƒÆ’Ã‚ÂGENES: solo contenido (sin tocar destacada)
+            // 4.1) IMÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂGENES: solo contenido (sin tocar destacada)
             if (!empty($opts['do_images_content_only'])) {
-                $r = cbia_oldposts_images_reset_content_only($pid, $images_limit, !empty($opts['force_images_content_only']));
-                if ($r === true) {
-                    $did_any = true; $did_skip_all=false;
+                if ($content_refreshed_with_images) {
+                    /* translators: %d is the post ID. */
+                    cbia_oldposts_log_message(sprintf(__("[INFO] Internal images will use the freshly regenerated content for post %d.", 'cbiastudio-blogflow-ai'), $pid));
+                    $filled = cbia_oldposts_generate_internal_images($pid, $images_limit);
+                    if ($filled > 0) {
+                        $did_any = true; $did_skip_all=false;
+                    } else {
+                        $did_fail = true;
+                        $failed_actions[] = 'internal images';
+                    }
                     $post = get_post($pid);
                     $content = $post ? (string)$post->post_content : $content;
-                } elseif ($r === 'skipped') {
-                    // no
                 } else {
-                    $did_fail = true;
+                    $r = cbia_oldposts_images_reset_content_only($pid, $images_limit, !empty($opts['force_images_content_only']));
+                    if ($r === true) {
+                        $did_any = true; $did_skip_all=false;
+                        $post = get_post($pid);
+                        $content = $post ? (string)$post->post_content : $content;
+                        $filled = cbia_oldposts_generate_internal_images($pid, $images_limit);
+                        if ($filled > 0) {
+                            $did_any = true; $did_skip_all=false;
+                            $post = get_post($pid);
+                            $content = $post ? (string)$post->post_content : $content;
+                        }
+                    } elseif ($r === 'skipped') {
+                        // no
+                    } else {
+                        $did_fail = true;
+                        $failed_actions[] = 'internal images';
+                    }
                 }
             }
 
             // 4.2) IMAGEN DESTACADA: solo destacada
             if (!empty($opts['do_featured_only'])) {
-                $r = cbia_oldposts_regenerate_featured_image($pid, !empty($opts['force_featured_only']), !empty($opts['featured_remove_old']));
+                $force_featured = !empty($opts['force_featured_only']) || $content_refreshed_with_images;
+                if ($content_refreshed_with_images && empty($opts['force_featured_only'])) {
+                    /* translators: %d is the post ID. */
+                    cbia_oldposts_log_message(sprintf(__("[INFO] Featured image will use the freshly regenerated content for post %d.", 'cbiastudio-blogflow-ai'), $pid));
+                }
+                $r = cbia_oldposts_regenerate_featured_image($pid, $force_featured, !empty($opts['featured_remove_old']));
                 if ($r === true) {
                     $did_any = true; $did_skip_all=false;
                 } elseif ($r === 'skipped') {
                     // no
                 } else {
                     $did_fail = true;
+                    $failed_actions[] = 'featured image';
                 }
             }
-            // 5) CATEGORÃƒÆ’Ã‚Â­AS
+            // 5) CATEGORÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­AS
             if (!empty($opts['do_categories'])) {
                 $r = cbia_oldposts_assign_categories_only($pid, $title, $content, !empty($opts['force_categories']));
-                if ($r === true) { $did_any = true; $did_skip_all=false; cbia_oldposts_log_message("[OK] CategorÃƒÆ’Ã‚Â­as aplicadas en post {$pid}."); }
-                elseif ($r === 'skipped') { /* */ }
-                else { cbia_oldposts_log_message("[WARN] CategorÃƒÆ’Ã‚Â­as no aplicadas en post {$pid}."); }
+                if ($r === true) {
+                    $did_any = true;
+                    $did_skip_all=false;
+                    /* translators: %d is the post ID. */
+                    cbia_oldposts_log_message(sprintf(__("[OK] Categories applied on post %d.", 'cbiastudio-blogflow-ai'), $pid));
+                } elseif ($r === 'skipped') {
+                    /* */ 
+                } else {
+                    /* translators: %d is the post ID. */
+                    cbia_oldposts_log_message(sprintf(__("[WARN] Categories were not applied on post %d.", 'cbiastudio-blogflow-ai'), $pid));
+                }
             }
 
             // 6) ETIQUETAS
             if (!empty($opts['do_tags'])) {
                 $r = cbia_oldposts_assign_tags_only($pid, $title, $content, !empty($opts['force_tags']));
-                if ($r === true) { $did_any = true; $did_skip_all=false; cbia_oldposts_log_message("[OK] Etiquetas aplicadas en post {$pid}."); }
-                elseif ($r === 'skipped') { /* */ }
-                else { cbia_oldposts_log_message("[WARN] Etiquetas no aplicadas en post {$pid}."); }
+                if ($r === true) {
+                    $did_any = true;
+                    $did_skip_all=false;
+                    /* translators: %d is the post ID. */
+                    cbia_oldposts_log_message(sprintf(__("[OK] Tags applied on post %d.", 'cbiastudio-blogflow-ai'), $pid));
+                } elseif ($r === 'skipped') {
+                    /* */ 
+                } else {
+                    /* translators: %d is the post ID. */
+                    cbia_oldposts_log_message(sprintf(__("[WARN] Tags were not applied on post %d.", 'cbiastudio-blogflow-ai'), $pid));
+                }
             }
 
             // 7) YOAST CAMPOS
             $do_any_yoast = (!empty($opts['do_yoast_metadesc']) || !empty($opts['do_yoast_focuskw']) || !empty($opts['do_yoast_title']));
             if ($do_any_yoast) {
+                $yoast_plan = cbia_oldposts_yoast_plan(
+                    $pid,
+                    !empty($opts['do_yoast_metadesc']),
+                    !empty($opts['do_yoast_focuskw']),
+                    !empty($opts['do_yoast_title']),
+                    !empty($opts['force_yoast'])
+                );
                 $r = cbia_oldposts_recalc_yoast_fields(
                     $pid,
                     !empty($opts['do_yoast_metadesc']),
@@ -1206,35 +1653,89 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                     !empty($opts['do_yoast_title']),
                     !empty($opts['force_yoast'])
                 );
-                if ($r) { $did_any = true; $did_skip_all=false; cbia_oldposts_log_message("[OK] Yoast campos recalculados en post {$pid}."); }
-                else { cbia_oldposts_log_message("[INFO] Yoast campos no cambiados en post {$pid}."); }
+                if ($r) {
+                    $did_any = true;
+                    $did_skip_all=false;
+                    $changed = !empty($yoast_plan['will_update']) ? implode(',', $yoast_plan['will_update']) : implode(',', $yoast_plan['selected']);
+                    /* translators: 1: post ID, 2: comma-separated Yoast fields, 3: optional suffix with execution mode. */
+                    cbia_oldposts_log_message(sprintf(__('[OK] Yoast updated on post %1$d | fields=%2$s%3$s', 'cbiastudio-blogflow-ai'), $pid, $changed, (!empty($yoast_plan['force']) ? " | mode=force" : "")));
+                } else {
+                    if (!empty($yoast_plan['skip_existing'])) {
+                        /* translators: 1: post ID, 2: comma-separated Yoast fields that already existed. */
+                        cbia_oldposts_log_message(sprintf(__('[SKIP] Yoast unchanged on post %1$d | already_exists=%2$s', 'cbiastudio-blogflow-ai'), $pid, implode(',', $yoast_plan['skip_existing'])));
+                    } else {
+                        /* translators: %d is the post ID. */
+                        cbia_oldposts_log_message(sprintf(__("[SKIP] Yoast unchanged on post %d.", 'cbiastudio-blogflow-ai'), $pid));
+                    }
+                }
+                if (function_exists('cbia_yoast_update_semaphore_scores')) {
+                    list($did_scores, $seo_score, $read_score) = cbia_yoast_update_semaphore_scores($pid, true);
+                    if ($seo_score !== null && $read_score !== null) {
+                        $yoast_scores_done = true;
+                        $did_any = true;
+                        $did_skip_all = false;
+                        /* translators: 1: post ID, 2: SEO score, 3: readability score, 4: optional suffix when existing scores are reused. */
+                        cbia_oldposts_log_message(sprintf(__('[OK] Yoast traffic lights updated post %1$d | SEO=%2$d | READ=%3$d%4$s', 'cbiastudio-blogflow-ai'), $pid, (int)$seo_score, (int)$read_score, ($did_scores ? "" : " | using existing scores")));
+                    }
+                }
             }
 
             // 8) YOAST REINDEX best effort
             if (!empty($opts['do_yoast_reindex'])) {
+                if (!$yoast_scores_done && function_exists('cbia_yoast_update_semaphore_scores')) {
+                    list($did_scores, $seo_score, $read_score) = cbia_yoast_update_semaphore_scores($pid, true);
+                    if ($seo_score !== null && $read_score !== null) {
+                        $yoast_scores_done = true;
+                        $did_any = true;
+                        $did_skip_all = false;
+                        /* translators: 1: post ID, 2: SEO score, 3: readability score, 4: optional suffix when existing scores are reused. */
+                        cbia_oldposts_log_message(sprintf(__('[OK] Yoast traffic lights updated post %1$d | SEO=%2$d | READ=%3$d%4$s', 'cbiastudio-blogflow-ai'), $pid, (int)$seo_score, (int)$read_score, ($did_scores ? "" : " | using existing scores")));
+                    }
+                }
                 if (function_exists('cbia_yoast_try_reindex_post')) {
                     $r = cbia_yoast_try_reindex_post($pid);
-                    if ($r) { $did_any = true; $did_skip_all=false; cbia_oldposts_log_message("[OK] Yoast reindex best-effort post {$pid}."); }
-                    else { cbia_oldposts_log_message("[WARN] Yoast reindex no aplicado post {$pid}."); }
+                    if ($r) {
+                        $did_any = true;
+                        $did_skip_all=false;
+                        /* translators: %d is the post ID. */
+                        cbia_oldposts_log_message(sprintf(__("[OK] Yoast reindex applied post %d.", 'cbiastudio-blogflow-ai'), $pid));
+                    } else {
+                        /* translators: %d is the post ID. */
+                        cbia_oldposts_log_message(sprintf(__("[SKIP] Yoast reindex skipped post %d | reason=callback_false", 'cbiastudio-blogflow-ai'), $pid));
+                    }
                 } else {
-                    cbia_oldposts_log_message("[WARN] No existe cbia_yoast_try_reindex_post(). Reindex no disponible.");
+                    /* translators: %d is the post ID. */
+                    cbia_oldposts_log_message(sprintf(__("[SKIP] Yoast reindex skipped post %d | reason=function_not_available", 'cbiastudio-blogflow-ai'), $pid));
                 }
             }
 
             if ($did_fail) {
                 $fail++;
-                cbia_oldposts_log_message("RESULTADO post {$pid}: FALLO (alguna acciÃƒÆ’Ã‚Â³n fallÃƒÆ’Ã‚Â³).");
+                $failed_actions = array_values(array_unique(array_filter($failed_actions)));
+                $failed_summary = !empty($failed_actions) ? " | failed=" . implode(', ', $failed_actions) : '';
+                if ($did_any) {
+                    /* translators: 1: post ID, 2: optional failure summary suffix. */
+                    cbia_oldposts_log_message(sprintf(__('RESULT post %1$d: PARTIAL FAILURE (some changes were applied, but some actions failed).%2$s', 'cbiastudio-blogflow-ai'), $pid, $failed_summary));
+                } else {
+                    /* translators: 1: post ID, 2: optional failure summary suffix. */
+                    cbia_oldposts_log_message(sprintf(__('RESULT post %1$d: FULL FAILURE (no main action was completed).%2$s', 'cbiastudio-blogflow-ai'), $pid, $failed_summary));
+                }
             } elseif ($did_skip_all && !$did_any) {
                 $sk++;
-                cbia_oldposts_log_message("RESULTADO post {$pid}: SKIP (nothing to do / already done).");
+                /* translators: %d is the post ID. */
+                cbia_oldposts_log_message(sprintf(__("RESULT post %d: SKIP (nothing to do / already done).", 'cbiastudio-blogflow-ai'), $pid));
             } else {
                 $ok++;
-                cbia_oldposts_log_message("RESULTADO post {$pid}: OK (hubo cambios).");
+                /* translators: %d is the post ID. */
+                cbia_oldposts_log_message(sprintf(__("RESULT post %d: OK (changes applied).", 'cbiastudio-blogflow-ai'), $pid));
             }
         }
 
         wp_reset_postdata();
-        cbia_oldposts_log_message("FIN v3 | processed={$processed} | ok={$ok} | skipped={$sk} | fail={$fail}");
+        if ($log_batch_footer) {
+            /* translators: 1: processed posts, 2: successful posts, 3: skipped posts, 4: failed posts. */
+            cbia_oldposts_log_message(sprintf(__('END v3 | processed=%1$d | ok=%2$d | skipped=%3$d | fail=%4$d', 'cbiastudio-blogflow-ai'), $processed, $ok, $sk, $fail));
+        }
 
         return array($processed, $ok, $sk, $fail);
     }
@@ -1256,7 +1757,8 @@ if (!function_exists('cbia_oldposts_handle_post')) {
         }
         if (!is_admin() || !current_user_can('manage_options')) return $settings;
 
-        if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD'] === 'POST') {
+        $request_method = isset($_SERVER['REQUEST_METHOD']) ? strtoupper(sanitize_text_field(wp_unslash((string) $_SERVER['REQUEST_METHOD']))) : '';
+        if ($request_method === 'POST') {
     
             // Guardar presets
             if (isset($_POST['cbia_form']) && $_POST['cbia_form'] === 'oldposts_settings') {
@@ -1266,19 +1768,24 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                     $settings['batch_size']      = isset($u['batch_size']) ? max(1, min(200, (int)$u['batch_size'])) : (int)$settings['batch_size'];
                     $settings['scope']           = (!empty($u['scope']) && $u['scope'] === 'plugin') ? 'plugin' : 'all';
     
-                    $settings['filter_mode']     = (!empty($u['filter_mode']) && $u['filter_mode'] === 'range') ? 'range' : 'older';
+                    $settings['filter_mode']     = in_array(($u['filter_mode'] ?? ''), array('all', 'range', 'older'), true)
+                        ? (string)$u['filter_mode']
+                        : 'all';
                     $settings['older_than_days'] = isset($u['older_than_days']) ? max(1, (int)$u['older_than_days']) : (int)$settings['older_than_days'];
                     $settings['date_from']       = cbia_oldposts_sanitize_ymd($u['date_from'] ?? '');
                     $settings['date_to']         = cbia_oldposts_sanitize_ymd($u['date_to'] ?? '');
     
-                    $settings['images_limit']    = isset($u['images_limit']) ? max(1, min(10, (int)$u['images_limit'])) : (int)$settings['images_limit'];
-                    $settings['post_ids']        = isset($u['post_ids']) ? implode(',', cbia_oldposts_parse_ids_csv(sanitize_text_field((string)$u['post_ids']))) : (string)$settings['post_ids'];
+                    $settings['images_limit']    = isset($u['images_limit']) ? max(1, min(3, (int)$u['images_limit'])) : (int)$settings['images_limit'];
+                    $settings['post_ids']        = isset($u['post_ids']) ? implode(',', cbia_oldposts_parse_ids_csv($u['post_ids'])) : (string)$settings['post_ids'];
                     $settings['category_id']     = isset($u['category_id']) ? (int)$u['category_id'] : (int)$settings['category_id'];
                     $settings['author_id']       = isset($u['author_id']) ? (int)$u['author_id'] : (int)$settings['author_id'];
                     $settings['dry_run']         = !empty($u['dry_run']) ? 1 : 0;
     
                     $settings['do_note']         = !empty($u['do_note']) ? 1 : 0;
                     $settings['force_note']      = !empty($u['force_note']) ? 1 : 0;
+                    $settings['reprocess_text']  = !empty($u['reprocess_text']) ? 1 : 0;
+                    $settings['reprocess_images']= !empty($u['reprocess_images']) ? 1 : 0;
+                    $settings['reprocess_meta']  = !empty($u['reprocess_meta']) ? 1 : 0;
     
                     $settings['do_yoast_metadesc'] = !empty($u['do_yoast_metadesc']) ? 1 : 0;
                     $settings['do_yoast_focuskw']  = !empty($u['do_yoast_focuskw']) ? 1 : 0;
@@ -1311,7 +1818,7 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                     $settings['force_tags']      = !empty($u['force_tags']) ? 1 : 0;
     
                     update_option(cbia_oldposts_settings_key(), $settings);
-                    echo '<div class="notice notice-success is-dismissible"><p>ConfiguraciÃƒÆ’Ã‚Â³n guardada.</p></div>';
+                    echo '<div class="notice notice-success is-dismissible"><p>ConfiguraciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n guardada.</p></div>';
                 }
             }
     
@@ -1330,23 +1837,28 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                         'run_quick_content_only',
                     );
     
-                    // Base comÃƒÆ’Ã‚Âºn para ejecuciones (normal o rÃƒÆ’Ã‚Â¡pida)
+                    // Base comÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Âºn para ejecuciones (normal o rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡pida)
                     $run_base = $settings;
                     if (in_array($action, $run_actions, true)) {
                         cbia_set_stop_flag(false);
                         $run_base['batch_size']      = isset($u['run_batch_size']) ? max(1, min(200, (int)$u['run_batch_size'])) : (int)$settings['batch_size'];
                         $run_base['scope']           = !empty($u['run_scope_plugin']) ? 'plugin' : 'all';
     
-                        $run_base['filter_mode']     = (!empty($u['run_filter_mode']) && $u['run_filter_mode'] === 'range') ? 'range' : 'older';
+                        $run_base['filter_mode']     = in_array(($u['run_filter_mode'] ?? ''), array('all', 'range', 'older'), true)
+                            ? (string)$u['run_filter_mode']
+                            : 'all';
                         $run_base['older_than_days'] = isset($u['run_older_than_days']) ? max(1, (int)$u['run_older_than_days']) : (int)$settings['older_than_days'];
                         $run_base['date_from']       = cbia_oldposts_sanitize_ymd($u['run_date_from'] ?? $settings['date_from']);
                         $run_base['date_to']         = cbia_oldposts_sanitize_ymd($u['run_date_to'] ?? $settings['date_to']);
     
-                        $run_base['images_limit']    = isset($u['run_images_limit']) ? max(1, min(10, (int)$u['run_images_limit'])) : (int)$settings['images_limit'];
+                        $run_base['images_limit']    = isset($u['run_images_limit']) ? max(1, min(3, (int)$u['run_images_limit'])) : (int)$settings['images_limit'];
     
                         // Filtros avanzados (acepta run_* y nombres simples)
-                        $run_post_ids_raw = isset($u['run_post_ids']) ? sanitize_text_field((string)$u['run_post_ids']) : (isset($u['post_ids']) ? sanitize_text_field((string)$u['post_ids']) : (string)($settings['post_ids'] ?? ''));
-                        $run_base['post_ids'] = cbia_oldposts_parse_ids_csv($run_post_ids_raw);
+                        $run_base['post_ids'] = cbia_oldposts_parse_ids_csv(
+                            $u['run_post_ids']
+                                ?? $u['post_ids']
+                                ?? ($settings['post_ids'] ?? '')
+                        );
                         $run_base['category_id'] = isset($u['run_category_id'])
                             ? (int)$u['run_category_id']
                             : (isset($u['category_id']) ? (int)$u['category_id'] : (int)($settings['category_id'] ?? 0));
@@ -1354,6 +1866,49 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                             ? (int)$u['run_author_id']
                             : (isset($u['author_id']) ? (int)$u['author_id'] : (int)($settings['author_id'] ?? 0));
                         $run_base['dry_run'] = !empty($u['run_dry_run']) || !empty($u['dry_run']) ? 1 : 0;
+
+                        $run_base['run_post_length_variant'] = sanitize_key((string)($u['run_post_length_variant'] ?? ($settings['run_post_length_variant'] ?? 'medium')));
+                        if (!in_array($run_base['run_post_length_variant'], array('short', 'medium', 'long'), true)) {
+                            $run_base['run_post_length_variant'] = 'medium';
+                        }
+
+                        $run_base['run_text_provider'] = sanitize_key((string)($u['run_text_provider'] ?? ($settings['run_text_provider'] ?? 'openai')));
+                        if ($run_base['run_text_provider'] === '') $run_base['run_text_provider'] = 'openai';
+                        $run_base['run_text_model'] = sanitize_text_field((string)($u['run_text_model'] ?? ($settings['run_text_model'] ?? '')));
+
+                        $run_base['run_image_provider'] = sanitize_key((string)($u['run_image_provider'] ?? ($settings['run_image_provider'] ?? 'openai')));
+                        if (
+                            $run_base['run_image_provider'] === ''
+                            || (function_exists('cbia_providers_supports_image') && !cbia_providers_supports_image($run_base['run_image_provider']))
+                        ) {
+                            $run_base['run_image_provider'] = 'openai';
+                        }
+                        $run_base['run_image_model'] = sanitize_text_field((string)($u['run_image_model'] ?? ($settings['run_image_model'] ?? '')));
+
+                        // Persist latest runtime profile for UI preload.
+                        $settings['run_post_length_variant'] = $run_base['run_post_length_variant'];
+                        $settings['run_text_provider'] = $run_base['run_text_provider'];
+                        $settings['run_text_model'] = $run_base['run_text_model'];
+                        $settings['run_image_provider'] = $run_base['run_image_provider'];
+                        $settings['run_image_model'] = $run_base['run_image_model'];
+                        update_option(cbia_oldposts_settings_key(), $settings);
+                    }
+
+                    if ($action === 'filter_oldposts_picker') {
+                        $settings['batch_size']      = isset($u['run_batch_size']) ? max(1, min(200, (int)$u['run_batch_size'])) : (int)$settings['batch_size'];
+                        $settings['filter_mode']     = in_array(($u['run_filter_mode'] ?? ''), array('all', 'range', 'older'), true)
+                            ? (string)$u['run_filter_mode']
+                            : 'all';
+                        $settings['older_than_days'] = isset($u['run_older_than_days']) ? max(1, (int)$u['run_older_than_days']) : (int)$settings['older_than_days'];
+                        $settings['date_from']       = cbia_oldposts_sanitize_ymd($u['run_date_from'] ?? $settings['date_from']);
+                        $settings['date_to']         = cbia_oldposts_sanitize_ymd($u['run_date_to'] ?? $settings['date_to']);
+                        $settings['images_limit']    = isset($u['run_images_limit']) ? max(1, min(3, (int)$u['run_images_limit'])) : (int)$settings['images_limit'];
+                        $settings['post_ids']        = implode(',', cbia_oldposts_parse_ids_csv($u['run_post_ids'] ?? ($settings['post_ids'] ?? '')));
+                        $settings['category_id']     = isset($u['run_category_id']) ? (int)$u['run_category_id'] : (int)$settings['category_id'];
+                        $settings['author_id']       = isset($u['run_author_id']) ? (int)$u['run_author_id'] : (int)$settings['author_id'];
+
+                        update_option(cbia_oldposts_settings_key(), $settings);
+                        echo '<div class="notice notice-info is-dismissible"><p>' . esc_html__('Filter applied to the visual selector.', 'cbiastudio-blogflow-ai') . '</p></div>';
                     }
     
                     if ($action === 'run_oldposts') {
@@ -1362,61 +1917,74 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                         // Base: presets
                         $run = $run_base;
     
-                        // Overrides bÃƒÆ’Ã‚Â¡sicos siempre visibles
+                        // Overrides bÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡sicos siempre visibles
                         $run['batch_size']      = isset($u['run_batch_size']) ? max(1, min(200, (int)$u['run_batch_size'])) : (int)$settings['batch_size'];
                         $run['scope']           = !empty($u['run_scope_plugin']) ? 'plugin' : 'all';
     
-                        $run['filter_mode']     = (!empty($u['run_filter_mode']) && $u['run_filter_mode'] === 'range') ? 'range' : 'older';
+                        $run['filter_mode']     = in_array(($u['run_filter_mode'] ?? ''), array('all', 'range', 'older'), true)
+                            ? (string)$u['run_filter_mode']
+                            : 'all';
                         $run['older_than_days'] = isset($u['run_older_than_days']) ? max(1, (int)$u['run_older_than_days']) : (int)$settings['older_than_days'];
                         $run['date_from']       = cbia_oldposts_sanitize_ymd($u['run_date_from'] ?? $settings['date_from']);
                         $run['date_to']         = cbia_oldposts_sanitize_ymd($u['run_date_to'] ?? $settings['date_to']);
     
-                        $run['images_limit']    = isset($u['run_images_limit']) ? max(1, min(10, (int)$u['run_images_limit'])) : (int)$settings['images_limit'];
+                        $run['images_limit']    = isset($u['run_images_limit']) ? max(1, min(3, (int)$u['run_images_limit'])) : (int)$settings['images_limit'];
     
-                        // Si el usuario activa personalizaciÃƒÆ’Ã‚Â³n, entonces sÃƒÆ’Ã‚Â­ aplicamos overrides de acciones.
+                        // Si el usuario activa personalizaciÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â³n, entonces sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­ aplicamos overrides de acciones.
                         $custom = !empty($u['run_custom_actions']) ? true : false;
+
+                            if ($custom) {
+                                $run['do_note']           = !empty($u['run_do_note']) ? 1 : 0;
+                                $run['reprocess_text']    = !empty($u['run_reprocess_text']) ? 1 : 0;
+                                $run['reprocess_images']  = !empty($u['run_reprocess_images']) ? 1 : 0;
+                                $run['reprocess_meta']    = !empty($u['run_reprocess_meta']) ? 1 : 0;
+                                $run['force_note']        = !empty($run['do_note']) ? 1 : 0;
+
+                                $run['do_yoast_metadesc'] = !empty($u['run_do_yoast_metadesc']) ? 1 : 0;
+                                $run['do_yoast_focuskw']  = !empty($u['run_do_yoast_focuskw']) ? 1 : 0;
+                                $run['do_yoast_title']    = !empty($u['run_do_yoast_title']) ? 1 : 0;
+                                $run['force_yoast']       = (!empty($run['do_yoast_metadesc']) || !empty($run['do_yoast_focuskw']) || !empty($run['do_yoast_title'])) ? 1 : 0;
+
+                                $run['do_yoast_reindex']  = !empty($u['run_do_yoast_reindex']) ? 1 : 0;
+
+                                $run['do_title']          = !empty($u['run_do_title']) ? 1 : 0;
+                                $run['force_title']       = !empty($run['do_title']) ? 1 : 0;
+
+                                $run['do_content']        = !empty($u['run_do_content']) ? 1 : 0;
+                                $run['force_content']     = !empty($run['do_content']) ? 1 : 0;
+                                $run['do_content_no_images']    = !empty($u['run_do_content_no_images']) ? 1 : 0;
+                                $run['force_content_no_images'] = !empty($run['do_content_no_images']) ? 1 : 0;
+
+                                $run['do_images_reset']    = !empty($u['run_do_images_reset']) ? 1 : 0;
+                                $run['force_images_reset'] = !empty($run['do_images_reset']) ? 1 : 0;
+                                $run['clear_featured']     = !empty($u['run_clear_featured']) ? 1 : 0;
+                                $run['do_images_content_only']    = !empty($u['run_do_images_content_only']) ? 1 : 0;
+                                $run['force_images_content_only'] = !empty($run['do_images_content_only']) ? 1 : 0;
+                                $run['do_featured_only']          = !empty($u['run_do_featured_only']) ? 1 : 0;
+                                $run['force_featured_only']       = !empty($run['do_featured_only']) ? 1 : 0;
+                                $run['featured_remove_old']       = !empty($u['run_featured_remove_old']) ? 1 : 0;
+
+                                $run['do_categories']     = !empty($u['run_do_categories']) ? 1 : 0;
+                                $run['force_categories']  = !empty($run['do_categories']) ? 1 : 0;
+
+                                $run['do_tags']           = !empty($u['run_do_tags']) ? 1 : 0;
+                                $run['force_tags']        = !empty($run['do_tags']) ? 1 : 0;
+                            }
     
-                        if ($custom) {
-                            $run['do_note']           = !empty($u['run_do_note']) ? 1 : 0;
-                            $run['force_note']        = !empty($u['run_force_note']) ? 1 : 0;
-    
-                            $run['do_yoast_metadesc'] = !empty($u['run_do_yoast_metadesc']) ? 1 : 0;
-                            $run['do_yoast_focuskw']  = !empty($u['run_do_yoast_focuskw']) ? 1 : 0;
-                            $run['do_yoast_title']    = !empty($u['run_do_yoast_title']) ? 1 : 0;
-                            $run['force_yoast']       = !empty($u['run_force_yoast']) ? 1 : 0;
-    
-                            $run['do_yoast_reindex']  = !empty($u['run_do_yoast_reindex']) ? 1 : 0;
-    
-                            $run['do_title']          = !empty($u['run_do_title']) ? 1 : 0;
-                            $run['force_title']       = !empty($u['run_force_title']) ? 1 : 0;
-    
-                            $run['do_content']        = !empty($u['run_do_content']) ? 1 : 0;
-                            $run['force_content']     = !empty($u['run_force_content']) ? 1 : 0;
-                            $run['do_content_no_images']    = !empty($u['run_do_content_no_images']) ? 1 : 0;
-                            $run['force_content_no_images'] = !empty($u['run_force_content_no_images']) ? 1 : 0;
-    
-                            $run['do_images_reset']    = !empty($u['run_do_images_reset']) ? 1 : 0;
-                            $run['force_images_reset'] = !empty($u['run_force_images_reset']) ? 1 : 0;
-                            $run['clear_featured']     = !empty($u['run_clear_featured']) ? 1 : 0;
-                            $run['do_images_content_only']    = !empty($u['run_do_images_content_only']) ? 1 : 0;
-                            $run['force_images_content_only'] = !empty($u['run_force_images_content_only']) ? 1 : 0;
-                            $run['do_featured_only']          = !empty($u['run_do_featured_only']) ? 1 : 0;
-                            $run['force_featured_only']       = !empty($u['run_force_featured_only']) ? 1 : 0;
-                            $run['featured_remove_old']       = !empty($u['run_featured_remove_old']) ? 1 : 0;
-    
-                            $run['do_categories']     = !empty($u['run_do_categories']) ? 1 : 0;
-                            $run['force_categories']  = !empty($u['run_force_categories']) ? 1 : 0;
-    
-                            $run['do_tags']           = !empty($u['run_do_tags']) ? 1 : 0;
-                            $run['force_tags']        = !empty($u['run_force_tags']) ? 1 : 0;
+                        if (function_exists('cbia_cap_enabled') && !cbia_cap_enabled('internal_images')) {
+                            $run['do_images_reset'] = 0;
+                            $run['force_images_reset'] = 0;
+                            $run['do_images_content_only'] = 0;
+                            $run['force_images_content_only'] = 0;
+                            $run['images_limit'] = 1;
                         }
+
+                        cbia_oldposts_run_batch_with_overrides($run);
     
-                        cbia_oldposts_run_batch_v3($run);
-    
-                        echo '<div class="notice notice-success is-dismissible"><p>Lote ejecutado. Revisa el log.</p></div>';
+                        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Batch executed. Check the log.', 'cbiastudio-blogflow-ai') . '</p></div>';
                     }
     
-                    // Acciones rÃƒÆ’Ã‚Â¡pidas (sobrescriben acciones, respetan filtros)
+                    // Acciones rÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¡pidas (sobrescriben acciones, respetan filtros)
                     if (in_array($action, $run_actions, true) && $action !== 'run_oldposts') {
                         $run = $run_base;
     
@@ -1438,6 +2006,7 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                             $run['do_yoast_metadesc'] = 1;
                             $run['do_yoast_focuskw']  = 1;
                             $run['do_yoast_title']    = 1;
+                            $run['force_yoast']       = 1;
                         } elseif ($action === 'run_quick_yoast_reindex') {
                             $run['do_yoast_reindex'] = 1;
                         } elseif ($action === 'run_quick_featured') {
@@ -1446,25 +2015,33 @@ if (!function_exists('cbia_oldposts_handle_post')) {
                             $run['featured_remove_old'] = !empty($u['run_featured_remove_old']) ? 1 : 0;
                         } elseif ($action === 'run_quick_images_only') {
                             $run['do_images_content_only']    = 1;
-                            $run['force_images_content_only'] = !empty($u['run_force_images_content_only']) ? 1 : 0;
+                            $run['force_images_content_only'] = 1;
                         } elseif ($action === 'run_quick_content_only') {
                             $run['do_content_no_images']    = 1;
-                            $run['force_content_no_images'] = !empty($u['run_force_content_no_images']) ? 1 : 0;
+                            $run['force_content_no_images'] = 1;
                         }
     
-                        cbia_oldposts_run_batch_v3($run);
-                        echo '<div class="notice notice-success is-dismissible"><p>AcciÃƒÆ’Ã‚Â³n rÃƒÆ’Ã‚Â¡pida ejecutada. Revisa el log.</p></div>';
+                        if (function_exists('cbia_cap_enabled') && !cbia_cap_enabled('internal_images')) {
+                            $run['do_images_reset'] = 0;
+                            $run['force_images_reset'] = 0;
+                            $run['do_images_content_only'] = 0;
+                            $run['force_images_content_only'] = 0;
+                            $run['images_limit'] = 1;
+                        }
+
+                        cbia_oldposts_run_batch_with_overrides($run);
+                        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Quick action executed. Check the log.', 'cbiastudio-blogflow-ai') . '</p></div>';
                     }
     
                     if ($action === 'stop') {
                         cbia_set_stop_flag(true);
-                        echo '<div class="notice notice-warning is-dismissible"><p>Stop activado.</p></div>';
+                        echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Stop enabled.', 'cbiastudio-blogflow-ai') . '</p></div>';
                     }
     
                     if ($action === 'clear_log') {
                         cbia_oldposts_clear_log();
-                        cbia_oldposts_log_message("Log cleared manually.");
-                        echo '<div class="notice notice-success is-dismissible"><p>Log limpiado.</p></div>';
+                        cbia_oldposts_log_message(__('Log cleared manually.', 'cbiastudio-blogflow-ai'));
+                        echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Log cleared.', 'cbiastudio-blogflow-ai') . '</p></div>';
                     }
                 }
             }
@@ -1476,3 +2053,6 @@ if (!function_exists('cbia_oldposts_handle_post')) {
 
 
 /* ------------------------- FIN includes/engine/oldposts.php ------------------------- */
+
+
+

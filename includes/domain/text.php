@@ -4,4 +4,3 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
-

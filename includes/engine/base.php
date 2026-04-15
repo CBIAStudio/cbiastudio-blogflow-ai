@@ -7,20 +7,28 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_get_settings')) {
     function cbia_get_settings() {
+        $apply_runtime_overrides = static function(array $settings): array {
+            if (!empty($GLOBALS['cbia_runtime_settings_overrides']) && is_array($GLOBALS['cbia_runtime_settings_overrides'])) {
+                return array_replace_recursive($settings, $GLOBALS['cbia_runtime_settings_overrides']);
+            }
+            return $settings;
+        };
+
         if (defined('CBIA_OPTION_SETTINGS')) {
             $stored = get_option(CBIA_OPTION_SETTINGS, []);
             if (!is_array($stored)) $stored = [];
 
             if (function_exists('cbia_get_default_settings')) {
                 $defaults = cbia_get_default_settings();
-                return array_replace_recursive($defaults, $stored);
+                return $apply_runtime_overrides(array_replace_recursive($defaults, $stored));
             }
 
-            return $stored;
+            return $apply_runtime_overrides($stored);
         }
 
         $s = get_option('cbia_settings', []);
-        return is_array($s) ? $s : [];
+        $s = is_array($s) ? $s : [];
+        return $apply_runtime_overrides($s);
     }
 }
 
@@ -48,16 +56,7 @@ if (!function_exists('cbia_log')) {
             $ts = function_exists('cbia_now_mysql') ? cbia_now_mysql() : current_time('mysql');
             $line = '[' . $ts . '][' . $level . '] ' . (string)$message;
             $log = (string) get_option(CBIA_OPTION_LOG, '');
-            if ($log !== '') {
-                $last = rtrim($log, "\r\n");
-                $last = (strrpos($last, "\n") !== false) ? substr($last, strrpos($last, "\n") + 1) : $last;
-                if ($last === $line) {
-                    return;
-                }
-                $log .= "\n" . $line;
-            } else {
-                $log = $line;
-            }
+            $log = $log ? ($log . "\n" . $line) : $line;
 
             if (strlen($log) > 250000) {
                 $lines = explode("\n", $log);
@@ -79,17 +78,7 @@ if (!function_exists('cbia_log')) {
 
         $log = (string) get_option(cbia_log_key(), '');
         $ts  = current_time('mysql');
-        $line = "[{$ts}] [{$level}] {$message}";
-        if ($log !== '') {
-            $last = rtrim($log, "\r\n");
-            $last = (strrpos($last, "\n") !== false) ? substr($last, strrpos($last, "\n") + 1) : $last;
-            if ($last === $line) {
-                return;
-            }
-            $log .= $line . "\n";
-        } else {
-            $log = $line . "\n";
-        }
+        $log .= "[{$ts}] [{$level}] {$message}\n";
         if (strlen($log) > 250000) $log = substr($log, -250000);
 
         update_option(cbia_log_key(), $log, false);
@@ -222,6 +211,28 @@ if (!function_exists('cbia_get_provider_api_key')) {
     }
 }
 
+// CAMBIO: helpers para Google Imagen (Vertex AI)
+if (!function_exists('cbia_get_google_project_id')) {
+    function cbia_get_google_project_id(): string {
+        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
+        return (string)($settings['google_project_id'] ?? '');
+    }
+}
+
+if (!function_exists('cbia_get_google_location')) {
+    function cbia_get_google_location(): string {
+        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
+        return (string)($settings['google_location'] ?? '');
+    }
+}
+
+if (!function_exists('cbia_get_google_service_account_json')) {
+    function cbia_get_google_service_account_json(): string {
+        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
+        return (string)($settings['google_service_account_json'] ?? '');
+    }
+}
+
 if (!function_exists('cbia_get_text_provider')) {
     function cbia_get_text_provider(): string {
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
@@ -236,13 +247,6 @@ if (!function_exists('cbia_get_text_provider')) {
 
 if (!function_exists('cbia_get_image_provider')) {
     function cbia_get_image_provider(): string {
-        if (!empty($GLOBALS['cbia_force_image_provider'])) {
-            $forced = sanitize_key((string)$GLOBALS['cbia_force_image_provider']);
-            if ($forced !== '' && function_exists('cbia_providers_supports_image') && cbia_providers_supports_image($forced)) {
-                return $forced;
-            }
-            return 'openai';
-        }
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
         $p = sanitize_key((string)($settings['image_provider'] ?? ''));
         if ($p !== '' && function_exists('cbia_providers_supports_image') && cbia_providers_supports_image($p)) {
@@ -289,9 +293,8 @@ if (!function_exists('cbia_get_image_model_for_provider')) {
             if ($m !== '') return $m;
         }
 
-        // Fallback legacy: image_model global SOLO cuando el proveedor activo de imagen es OpenAI.
-        $active_image_provider = sanitize_key((string)($settings['image_provider'] ?? ''));
-        if (!empty($settings['image_model']) && $provider === 'openai' && ($active_image_provider === '' || $active_image_provider === 'openai')) {
+        // Fallback legacy: image_model global
+        if (!empty($settings['image_model']) && $provider === 'openai') {
             return (string)$settings['image_model'];
         }
 
@@ -351,16 +354,16 @@ if (!function_exists('cbia_run_test_configuration')) {
             }
         };
 
-        $log('[INFO] TEST: Iniciando prueba de configuraciÃ³n.');
+        $log('[INFO] TEST: Starting configuration test.');
 
         $api_key = function_exists('cbia_openai_api_key') ? cbia_openai_api_key() : '';
         if (trim((string)$api_key) === '') {
-            $log('[ERROR] TEST: Falta OpenAI API key.');
+            $log('[ERROR] TEST: Missing OpenAI API key.');
             return ['ok' => false, 'error' => 'missing_api_key'];
         }
 
         if (function_exists('cbia_openai_consent_ok') && !cbia_openai_consent_ok()) {
-            $log('[ERROR] TEST: Consentimiento OpenAI no aceptado.');
+            $log('[ERROR] TEST: OpenAI consent not accepted.');
             return ['ok' => false, 'error' => 'missing_consent'];
         }
 
@@ -374,11 +377,11 @@ if (!function_exists('cbia_run_test_configuration')) {
         }
 
         if ($model !== '') {
-            $log("[INFO] TEST: Modelo texto actual: {$model}");
+            $log("[INFO] TEST: Current text model: {$model}");
         }
 
         if (!function_exists('cbia_openai_responses_call')) {
-            $log('[WARN] TEST: cbia_openai_responses_call no disponible. Prueba limitada a validaciÃ³n de ajustes.');
+            $log('[WARN] TEST: cbia_openai_responses_call not available. Test limited to settings validation.');
             return ['ok' => true, 'error' => 'limited_check'];
         }
 
@@ -394,18 +397,18 @@ if (!function_exists('cbia_run_test_configuration')) {
             return ['ok' => true, 'model' => $model_used, 'usage' => $usage];
         }
 
-        $log("[ERROR] TEST: fallo en llamada de prueba. " . ($err !== '' ? $err : 'error'));
+        $log("[ERROR] TEST: test call failed. " . ($err !== '' ? $err : 'error'));
         return ['ok' => false, 'error' => $err ?: 'test_call_failed'];
     }
 }
 
 if (!function_exists('cbia_fix_bracket_headings')) {
     /**
-     * Convierte headings en formato [H2]...[/H2] a HTML vÃ¡lido.
+     * Convierte headings en formato [H2]...[/H2] a HTML válido.
      */
     function cbia_fix_bracket_headings($html): string {
         $text = (string)$html;
-        // [H2]TÃ­tulo[/H2] => <h2>TÃ­tulo</h2>
+        // [H2]Título[/H2] => <h2>Título</h2>
         $text = preg_replace_callback('/\\[(H[1-6])\\]\\s*(.*?)\\s*\\[\\/\\1\\]/si', function ($m) {
             $tag = strtolower($m[1]);
             $content = trim((string)$m[2]);

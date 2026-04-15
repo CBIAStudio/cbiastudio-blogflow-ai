@@ -12,4 +12,3 @@ if (!class_exists('CBIA_Post_Repo')) {
         }
     }
 }
-

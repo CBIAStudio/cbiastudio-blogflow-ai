@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v1.2.2
+# CBIAStudio BlogFlow with AI (WordPress) v2.0.1
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,11 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.0.1
+- Base edition consolidation for the new Base + Pro Add-on model.
+- Upgrade UX polished in base-only screens (advanced modules clearly marked as Pro paths).
+- Release-prep alignment for GitHub + WordPress.org handoff with updated operational traceability.
 
 ## What's New in 1.2.2
 - Release metadata alignment for WordPress 6.9.4 (`Tested up to`).

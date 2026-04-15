@@ -35,7 +35,7 @@ if (!class_exists('CBIA_Yoast_Admin')) {
                 cbia_render_tab_yoast();
                 return;
             }
-            echo '<p>No se pudo cargar Yoast.</p>';
+            echo '<p>' . esc_html__('Could not load Yoast.', 'cbiastudio-blogflow-ai') . '</p>';
         }
     }
 }
