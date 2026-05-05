@@ -93,7 +93,13 @@ if (!function_exists('cbia_get_last_scheduled_at')) {
 }
 if (!function_exists('cbia_set_last_scheduled_at')) {
     function cbia_set_last_scheduled_at($datetime) {
-        if ($datetime) update_option('_cbia_last_scheduled_at', $datetime, false);
+        $datetime = trim((string)$datetime);
+        if ($datetime !== '') {
+            update_option('_cbia_last_scheduled_at', $datetime, false);
+        } else {
+            delete_option('_cbia_last_scheduled_at');
+        }
+        wp_cache_delete('_cbia_last_scheduled_at', 'options');
     }
 }
 
@@ -111,6 +117,56 @@ if (!function_exists('cbia_checkpoint_get')) {
 }
 if (!function_exists('cbia_checkpoint_save')) {
     function cbia_checkpoint_save($cp){ update_option('cbia_checkpoint', $cp, false); }
+}
+if (!function_exists('cbia_blog_generation_lock_key')) {
+    function cbia_blog_generation_lock_key() {
+        return 'cbia_blog_generation_lock';
+    }
+}
+if (!function_exists('cbia_blog_generation_lock_ttl')) {
+    function cbia_blog_generation_lock_ttl() {
+        $ttl = (int)apply_filters('cbia_blog_generation_lock_ttl', 15 * MINUTE_IN_SECONDS);
+        if ($ttl < 60) $ttl = 60;
+        return $ttl;
+    }
+}
+if (!function_exists('cbia_blog_generation_acquire_lock')) {
+    function cbia_blog_generation_acquire_lock($run_id = '') {
+        $run_id = trim((string)$run_id);
+        if ($run_id === '') {
+            $run_id = function_exists('wp_generate_uuid4') ? wp_generate_uuid4() : uniqid('cbia-blog-', true);
+        }
+        $key = cbia_blog_generation_lock_key();
+        $ttl = cbia_blog_generation_lock_ttl();
+        $now = time();
+        $existing = get_option($key, array());
+        if (is_array($existing) && !empty($existing['locked_at'])) {
+            $locked_at = (int)$existing['locked_at'];
+            if ($locked_at > 0 && ($now - $locked_at) < $ttl) {
+                return false;
+            }
+        }
+        update_option($key, array(
+            'run_id' => $run_id,
+            'locked_at' => $now,
+        ), false);
+        return true;
+    }
+}
+if (!function_exists('cbia_blog_generation_release_lock')) {
+    function cbia_blog_generation_release_lock($run_id = '') {
+        $key = cbia_blog_generation_lock_key();
+        $existing = get_option($key, array());
+        if (!is_array($existing) || empty($existing)) {
+            return;
+        }
+        $existing_run_id = (string)($existing['run_id'] ?? '');
+        $run_id = trim((string)$run_id);
+        if ($run_id !== '' && $existing_run_id !== '' && $existing_run_id !== $run_id) {
+            return;
+        }
+        delete_option($key);
+    }
 }
 if (!function_exists('cbia_pro_normalize_csv_url')) {
     function cbia_pro_normalize_csv_url($url){
@@ -214,6 +270,7 @@ if (!function_exists('cbia_blog_handle_post')) {
 
             } elseif ($action === 'stop_generation') {
                 cbia_set_stop_flag(true);
+                wp_clear_scheduled_hook('cbia_generation_event');
                 cbia_log_message("[INFO] Stop enabled by user.");
                 $saved_notice = 'stop';
 
@@ -377,8 +434,6 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
             return array('done'=>true,'processed'=>0);
         }
 
-        cbia_set_stop_flag(false);
-
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
         $interval_days = max(1, intval($settings['publication_interval'] ?? 5));
 
@@ -396,6 +451,7 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
             }
             $queue = cbia_prepare_queue_from_titles($titles);
             $idx = 0;
+            cbia_set_last_scheduled_at('');
             $cp = array('queue'=>$queue,'idx'=>$idx,'created_total'=>0,'running'=>true);
             cbia_checkpoint_save($cp);
             cbia_log_message("[INFO] Checkpoint created. Starting batch... queue=".count($queue));
@@ -467,6 +523,13 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
         $queue_count = count((array)($cp['queue'] ?? array()));
         $idx_now = intval($cp['idx'] ?? 0);
 
+        if (cbia_check_stop_flag()) {
+            $cp['running'] = false;
+            cbia_checkpoint_save($cp);
+            cbia_log_message("[INFO] STOP detected. Queue paused at idx={$idx_now}/{$queue_count}.");
+            return array('done'=>true,'processed'=>$processed_this_run,'stopped'=>true);
+        }
+
         if ($queue_count > 0 && $idx_now >= $queue_count) {
             cbia_log_message("[INFO] Queue finished. Total created: ".intval($cp['created_total']));
             $cp['running'] = false;
@@ -489,8 +552,17 @@ if (!function_exists('cbia_run_generate_blogs')) {
         cbia_log_message("[INFO] Starting blog generation (checkpoint)...");
 
         $max_per_run = max(1, (int)$max_per_run);
+        $run_id = function_exists('wp_generate_uuid4') ? wp_generate_uuid4() : uniqid('cbia-blog-', true);
+        if (!cbia_blog_generation_acquire_lock($run_id)) {
+            cbia_log_message("[WARN] Blog batch already running. This start was ignored.");
+            return array('done'=>false,'processed'=>0,'locked'=>true);
+        }
 
-        $result = cbia_create_all_posts_checkpointed(null, $max_per_run);
+        try {
+            $result = cbia_create_all_posts_checkpointed(null, $max_per_run);
+        } finally {
+            cbia_blog_generation_release_lock($run_id);
+        }
 
         if (is_array($result) && empty($result['done'])) {
             cbia_schedule_generation_event(8, true);
@@ -530,4 +602,3 @@ if (!function_exists('cbia_render_tab_blog')) {
         echo '<p>Could not load Blog.</p>';
     }
 }
-

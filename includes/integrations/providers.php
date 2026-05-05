@@ -13,9 +13,9 @@ if (!function_exists('cbia_providers_defaults')) {
                 'openai' => array(
                     'label' => 'OpenAI',
                     'api_key' => '',
-                    'model' => 'gpt-4.1-mini',
+                    'model' => 'gpt-5-mini',
                     // CAMBIO: modelo de imagen por proveedor (persistencia)
-                    'image_model' => 'gpt-image-1-mini',
+                    'image_model' => 'gpt-image-2',
                     'base_url' => 'https://api.openai.com',
                     'api_version' => 'v1',
                 ),
@@ -280,7 +280,7 @@ if (!function_exists('cbia_providers_get_model_list')) {
             return $stored[$provider];
         }
         $lists = array(
-            'openai' => array('gpt-4.1-nano', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-5-nano', 'gpt-5-mini', 'gpt-5'),
+            'openai' => array('gpt-5-mini', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.5', 'gpt-5', 'gpt-5-nano', 'gpt-5.2', 'gpt-5.1', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-4.1-nano'),
             'google' => array(
                 'gemini-2.5-flash',
                 'gemini-2.5-pro',
@@ -306,7 +306,7 @@ if (!function_exists('cbia_providers_get_image_model_list')) {
     function cbia_providers_get_image_model_list(string $provider): array {
         $lists = array(
             // CAMBIO: modelos de imagen requeridos (manteniendo compatibilidad)
-            'openai' => array('gpt-image-1-mini', 'gpt-image-1'),
+            'openai' => array('gpt-image-2', 'gpt-image-1', 'gpt-image-1-mini'),
             'google' => array('imagen-3.0-generate-002', 'imagen-4.0-generate-001'),
             'deepseek' => array(),
         );
@@ -332,7 +332,7 @@ if (!function_exists('cbia_providers_get_recommended_text_model')) {
         $provider = sanitize_key($provider);
         if ($provider === 'google') return 'gemini-2.5-flash';
         if ($provider === 'deepseek') return 'deepseek-chat';
-        return function_exists('cbia_get_recommended_text_model') ? cbia_get_recommended_text_model() : 'gpt-4.1-mini';
+        return function_exists('cbia_get_recommended_text_model') ? cbia_get_recommended_text_model() : 'gpt-5-mini';
     }
 }
 
@@ -341,7 +341,6 @@ if (!function_exists('cbia_providers_get_recommended_image_model')) {
         $provider = sanitize_key($provider);
         if ($provider === 'google') return 'imagen-3.0-generate-002';
         if (!cbia_providers_supports_image($provider)) return '';
-        return 'gpt-image-1-mini';
+        return 'gpt-image-2';
     }
 }
-

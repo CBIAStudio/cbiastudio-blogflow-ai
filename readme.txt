@@ -1,8 +1,8 @@
 === CBIAStudio BlogFlow with AI ===
 Contributors: webgoh
 Requires at least: 6.9.2
-Tested up to: 6.9.4
-Stable tag: 2.0.1
+Tested up to: 6.9
+Stable tag: 2.0.2
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -156,6 +156,14 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Changelog ==
 
+= 2.0.2 =
+* Release prep for repository publication with explicit version alignment across plugin headers/constants/UI fallbacks.
+* Cost optimization in medium length flow: soft threshold for `Medium` without FAQ to reduce unnecessary expansion calls.
+* OpenAI key-resolution hardening: prioritize valid main settings key over stale provider-side values; stricter key-shape validation.
+* Log redaction hardened to avoid leaking key-like values while keeping readable provider error messages.
+* Packaging cleanup: distribution zips now exclude Git/dev artifacts for WordPress-ready upload.
+* Comparison vs 2.0.1: lower token/call overhead in near-target medium articles, safer key handling in runtime, cleaner release packaging/documentation for repo handoff.
+
 = 2.0.1 =
 * Major base-edition consolidation: this plugin is now the official base for the Base + Pro Add-on model.
 * Pro gating refined in base UI (clear upgrade paths for advanced modules without breaking base flows).
@@ -180,6 +188,9 @@ This plugin can connect to third-party AI services only when the site administra
 * Improved preview/create flows by returning real preview URLs for scheduled drafts and stabilizing admin-side usage rendering.
 
 == Upgrade Notice ==
+
+= 2.0.2 =
+Recommended update. This release improves runtime API-key reliability, reduces extra generation calls in medium no-FAQ flows, and finalizes repository-ready packaging/docs.
 
 = 2.0.1 =
 Recommended update. This release formalizes the base role in the Base + Pro Add-on model and aligns upgrade flows for advanced modules.

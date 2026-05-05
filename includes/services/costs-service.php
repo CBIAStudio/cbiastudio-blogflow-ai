@@ -100,6 +100,8 @@ if (!class_exists('CBIA_Costs_Service')) {
                 if ($cost['image_flat_usd_openai_mini'] < 0) $cost['image_flat_usd_openai_mini'] = 0.0;
                 $cost['image_flat_usd_openai_full'] = isset($u['image_flat_usd_openai_full']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_full']) : (float)($cost['image_flat_usd_openai_full'] ?? ($cost['image_flat_usd_full'] ?? 0.042));
                 if ($cost['image_flat_usd_openai_full'] < 0) $cost['image_flat_usd_openai_full'] = 0.0;
+                $cost['image_flat_usd_openai_v2'] = isset($u['image_flat_usd_openai_v2']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_v2']) : (float)($cost['image_flat_usd_openai_v2'] ?? $cost['image_flat_usd_openai_full']);
+                if ($cost['image_flat_usd_openai_v2'] < 0) $cost['image_flat_usd_openai_v2'] = 0.0;
                 $cost['image_flat_usd_imagen3'] = isset($u['image_flat_usd_imagen3']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_imagen3']) : (float)($cost['image_flat_usd_imagen3'] ?? ($cost['image_flat_usd_mini'] ?? 0.040));
                 if ($cost['image_flat_usd_imagen3'] < 0) $cost['image_flat_usd_imagen3'] = 0.0;
                 $cost['image_flat_usd_imagen4'] = isset($u['image_flat_usd_imagen4']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_imagen4']) : (float)($cost['image_flat_usd_imagen4'] ?? 0.040);
@@ -149,10 +151,10 @@ if (!class_exists('CBIA_Costs_Service')) {
                 $im = isset($u['image_model']) ? sanitize_text_field((string)$u['image_model']) : (string)$cost['image_model'];
                 $allowed_image_models = function_exists('cbia_costes_get_supported_image_models')
                     ? cbia_costes_get_supported_image_models()
-                    : array('gpt-image-1-mini', 'gpt-image-1');
+                    : array('gpt-image-2', 'gpt-image-1', 'gpt-image-1-mini');
                 if (!in_array($im, $allowed_image_models, true)) {
-                    $im = function_exists('cbia_costes_get_current_image_model') ? cbia_costes_get_current_image_model($cbia) : 'gpt-image-1-mini';
-                    if ($im === '') $im = 'gpt-image-1-mini';
+                    $im = function_exists('cbia_costes_get_current_image_model') ? cbia_costes_get_current_image_model($cbia) : 'gpt-image-2';
+                    if ($im === '') $im = 'gpt-image-2';
                 }
                 $cost['image_model'] = $im;
 

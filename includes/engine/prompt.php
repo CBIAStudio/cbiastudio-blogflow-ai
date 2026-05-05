@@ -9,7 +9,7 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 if (!function_exists('cbia_prompt_recommended_header_template')) {
     function cbia_prompt_recommended_header_template(): string {
         return
-            "Write a COMPLETE POST in {IDIOMA_POST} and HTML for \"{title}\", optimized for Google Discover, with an approximate length of 1800-2100 words (+/-10%)."
+            "Write a COMPLETE POST in {IDIOMA_POST} and HTML for \"{title}\", optimized for Google Discover."
             ."\n\nLANGUAGE RULE (MANDATORY)"
             ."\n- ALL content must be written EXCLUSIVELY in {IDIOMA_POST}."
             ."\n- This includes titles, headings, FAQs and answers."
@@ -22,7 +22,7 @@ if (!function_exists('cbia_prompt_recommended_header_template')) {
 if (!function_exists('cbia_prompt_recommended_header_template_es')) {
     function cbia_prompt_recommended_header_template_es(): string {
         return
-            "Escribe un POST COMPLETO en {IDIOMA_POST} y en HTML para \"{title}\", optimizado para Google Discover, con una extension aproximada de 1800-2100 palabras (+/-10%)."
+            "Escribe un POST COMPLETO en {IDIOMA_POST} y en HTML para \"{title}\", optimizado para Google Discover."
             ."\n\nREGLA DE IDIOMA (OBLIGATORIA)"
             ."\n- TODO el contenido debe estar escrito EXCLUSIVAMENTE en {IDIOMA_POST}."
             ."\n- Esto incluye titulos, encabezados, preguntas frecuentes y respuestas."
@@ -348,6 +348,417 @@ if (!function_exists('cbia_prompt_sanitize_editable_block')) {
     }
 }
 
+if (!function_exists('cbia_prompt_has_explicit_profile')) {
+    function cbia_prompt_has_explicit_profile(): bool {
+        $stored_raw = get_option('cbia_settings', array());
+        return is_array($stored_raw) && array_key_exists('blog_prompt_profile', $stored_raw);
+    }
+}
+
+if (!function_exists('cbia_prompt_should_use_profile_mode')) {
+    function cbia_prompt_should_use_profile_mode(array $settings): bool {
+        foreach (array('blog_prompt_profile', 'include_faq', 'include_practical_examples', 'search_intent_strength', 'blog_prompt_custom_instructions') as $key) {
+            if (array_key_exists($key, $settings)) {
+                return true;
+            }
+        }
+        return cbia_prompt_has_explicit_profile();
+    }
+}
+
+if (!function_exists('cbia_prompt_get_profile_options')) {
+    function cbia_prompt_get_profile_options(): array {
+        return array(
+            'discover_editorial' => array(
+                'label' => 'Editorial / Discover',
+                'description' => 'Natural, human and editorial. Best for Discover-style reading.',
+            ),
+            'seo_balanced' => array(
+                'label' => 'SEO Balanced',
+                'description' => 'Clearer search intent, stronger scanability and useful early answers.',
+            ),
+            'how_to' => array(
+                'label' => 'How-to / Practical Guide',
+                'description' => 'Practical, actionable and structured around steps, mistakes and recommendations.',
+            ),
+        );
+    }
+}
+
+if (!function_exists('cbia_get_prompt_profile')) {
+    function cbia_get_prompt_profile(array $settings): string {
+        $profile = sanitize_key((string)($settings['blog_prompt_profile'] ?? 'discover_editorial'));
+        return array_key_exists($profile, cbia_prompt_get_profile_options()) ? $profile : 'discover_editorial';
+    }
+}
+
+if (!function_exists('cbia_prompt_sanitize_custom_instructions')) {
+    function cbia_prompt_sanitize_custom_instructions($text): string {
+        $text = is_string($text) ? $text : '';
+        $text = str_replace(array("\r\n", "\r"), "\n", $text);
+        $text = wp_strip_all_tags($text);
+        $text = preg_replace("/\n{3,}/", "\n\n", $text);
+        return trim((string)$text);
+    }
+}
+
+if (!function_exists('cbia_prompt_get_profile_settings')) {
+    function cbia_prompt_get_profile_settings(array $settings): array {
+        $strength = sanitize_key((string)($settings['search_intent_strength'] ?? 'balanced'));
+        if (!in_array($strength, array('soft', 'balanced', 'strong'), true)) {
+            $strength = 'balanced';
+        }
+        $length_variant = sanitize_key((string)($settings['post_length_variant'] ?? 'medium'));
+        if (!in_array($length_variant, array('short', 'medium', 'long'), true)) {
+            $length_variant = 'medium';
+        }
+
+        return array(
+            'profile' => cbia_get_prompt_profile($settings),
+            'include_faq' => !empty($settings['include_faq']),
+            'include_practical_examples' => !empty($settings['include_practical_examples']),
+            'post_length_variant' => $length_variant,
+            'search_intent_strength' => $strength,
+            'custom_instructions' => cbia_prompt_sanitize_custom_instructions((string)($settings['blog_prompt_custom_instructions'] ?? '')),
+        );
+    }
+}
+
+if (!function_exists('cbia_prompt_search_intent_line')) {
+    function cbia_prompt_search_intent_line($strength, $language = ''): string {
+        $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        switch ((string)$strength) {
+            case 'soft':
+                return $is_spanish
+                    ? '- Prioriza lectura natural, contexto y fluidez editorial por encima de la optimizacion SEO clasica.'
+                    : '- Prioritize natural reading, context and editorial flow over classic SEO optimization.';
+            case 'strong':
+                return $is_spanish
+                    ? '- Responde pronto a la intencion principal, deja claras las respuestas practicas y refuerza relevancia semantica en <h2>/<h3> sin keyword stuffing.'
+                    : '- Surface the main intent early, make practical answers explicit and reinforce semantic relevance in <h2>/<h3> without keyword stuffing.';
+            default:
+                return $is_spanish
+                    ? '- Equilibra fluidez editorial con una intencion de busqueda clara y respuestas utiles desde la apertura.'
+                    : '- Balance editorial flow with clear search intent and useful answers from the opening.';
+        }
+    }
+}
+
+if (!function_exists('cbia_prompt_build_length_policy_block')) {
+    function cbia_prompt_build_length_policy_block(array $opts, $language = ''): string {
+        $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        $variant = sanitize_key((string)($opts['post_length_variant'] ?? 'medium'));
+        if (!in_array($variant, array('short', 'medium', 'long'), true)) {
+            $variant = 'medium';
+        }
+        $faq = !empty($opts['include_faq']);
+
+        if ($variant === 'short') {
+            if ($faq) {
+                return $is_spanish
+                    ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 950-1100 palabras reales (minimo 950).\n- Distribucion obligatoria: apertura 150-190; cada bloque principal 150-180; cada respuesta FAQ 45-55; cierre 80-100.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+                    : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 950-1100 real words (minimum 950).\n- Mandatory distribution: opening 150-190; each main block 150-180; each FAQ answer 45-55; closing 80-100.\n- This policy overrides any previous range in this prompt.";
+            }
+            return $is_spanish
+                ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 950-1100 palabras reales (minimo 950).\n- Distribucion obligatoria: apertura 180-220; cada bloque principal 220-260; cierre 100-130.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+                : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 950-1100 real words (minimum 950).\n- Mandatory distribution: opening 180-220; each main block 220-260; closing 100-130.\n- This policy overrides any previous range in this prompt.";
+        }
+
+        if ($variant === 'long') {
+            if ($faq) {
+                return $is_spanish
+                    ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 2000-2200 palabras reales (minimo 2000).\n- Distribucion obligatoria: apertura 280-320; cada bloque principal 340-370; cada respuesta FAQ 90-100; cierre 170-200.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+                    : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 2000-2200 real words (minimum 2000).\n- Mandatory distribution: opening 280-320; each main block 340-370; each FAQ answer 90-100; closing 170-200.\n- This policy overrides any previous range in this prompt.";
+            }
+            return $is_spanish
+                ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 2000-2200 palabras reales (minimo 2000).\n- Distribucion obligatoria: apertura 320-360; cada bloque principal 500-540; cierre 190-220.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+                : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 2000-2200 real words (minimum 2000).\n- Mandatory distribution: opening 320-360; each main block 500-540; closing 190-220.\n- This policy overrides any previous range in this prompt.";
+        }
+
+        if ($faq) {
+            return $is_spanish
+                ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 1800-2000 palabras reales (minimo 1800).\n- Distribucion obligatoria: apertura 260-300; cada bloque principal 320-340; cada respuesta FAQ 80-88; cierre 160-180.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+                : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 1800-2000 real words (minimum 1800).\n- Mandatory distribution: opening 260-300; each main block 320-340; each FAQ answer 80-88; closing 160-180.\n- This policy overrides any previous range in this prompt.";
+        }
+
+        return $is_spanish
+            ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 1800-2000 palabras reales (minimo 1800).\n- Distribucion obligatoria: apertura 300-340; cada bloque principal 450-490; cierre 170-190.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+            : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 1800-2000 real words (minimum 1800).\n- Mandatory distribution: opening 300-340; each main block 450-490; closing 170-190.\n- This policy overrides any previous range in this prompt.";
+    }
+}
+
+if (!function_exists('cbia_prompt_profile_discover_editorial')) {
+    function cbia_prompt_profile_discover_editorial(array $opts, $language = ''): string {
+        $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        $variant = sanitize_key((string)($opts['post_length_variant'] ?? 'medium'));
+        if (!in_array($variant, array('short', 'medium', 'long'), true)) $variant = 'medium';
+        $faq = !empty($opts['include_faq']);
+
+        if ($variant === 'short') {
+            if ($faq) {
+                $opening_range = '150-190';
+                $block_range = '150-180';
+                $faq_range = '45-55';
+                $closing_range = '80-100';
+            } else {
+                $opening_range = '180-220';
+                $block_range = '220-260';
+                $faq_range = '120-150';
+                $closing_range = '100-130';
+            }
+        } elseif ($variant === 'long') {
+            if ($faq) {
+                $opening_range = '280-320';
+                $block_range = '340-370';
+                $faq_range = '90-100';
+                $closing_range = '170-200';
+            } else {
+                $opening_range = '320-360';
+                $block_range = '500-540';
+                $faq_range = '120-150';
+                $closing_range = '190-220';
+            }
+        } else {
+            if ($faq) {
+                $opening_range = '260-300';
+                $block_range = '320-340';
+                $faq_range = '80-88';
+                $closing_range = '160-180';
+            } else {
+                $opening_range = '300-340';
+                $block_range = '450-490';
+                $faq_range = '120-150';
+                $closing_range = '170-190';
+            }
+        }
+
+        $lines = array(
+            $is_spanish ? 'TONO Y ESTILO' : 'TONE AND STYLE',
+            $is_spanish ? '- Profesional, cercano y natural.' : '- Professional, close and natural.',
+            $is_spanish ? '- Editorial y humano, no enciclopedico.' : '- Editorial and human, not encyclopedic.',
+            $is_spanish ? '- Narrativo cuando aporte contexto o interes real.' : '- Narrative when it adds context or genuine interest.',
+            $is_spanish ? '- Pensado para lectores que no estaban buscando activamente el tema.' : '- Designed for readers who were not actively searching for this topic.',
+        );
+        if (!empty($opts['include_practical_examples'])) {
+            $lines[] = $is_spanish
+                ? '- OBLIGATORIO: incluye al menos 3 ejemplos practicos concretos (uno por bloque principal). Cada ejemplo debe incluir contexto real, accion aplicada y resultado esperado medible.'
+                : '- MANDATORY: include at least 3 concrete practical examples (one per main block). Each example must include real context, applied action, and measurable expected result.';
+        }
+        $lines[] = '';
+        $lines[] = $is_spanish ? 'ENFOQUE DE BUSQUEDA' : 'SEARCH APPROACH';
+        $lines[] = cbia_prompt_search_intent_line((string)$opts['search_intent_strength'], $language);
+        $lines[] = '';
+        $lines[] = $is_spanish ? 'ESTRUCTURA OBLIGATORIA (no anadir ni eliminar secciones)' : 'MANDATORY STRUCTURE (do not add or remove sections)';
+        $lines[] = $is_spanish ? '1) Un encabezado usando la etiqueta <h2>' : '1) One heading using <h2>';
+        $lines[] = $is_spanish ? '   Apertura usando 2 parrafos con la etiqueta <p>.' : '   Opening section using 2 paragraphs with <p>.';
+        $lines[] = $is_spanish ? '   - NO usar la palabra "Introduccion" ni equivalentes.' : '   - DO NOT use the word "Introduction" or equivalents.';
+        $lines[] = $is_spanish ? ('   - Extension total: ' . $opening_range . ' palabras entre ambos parrafos.') : ('   - Total length: ' . $opening_range . ' words across both paragraphs.');
+        $lines[] = $is_spanish ? '   - Objetivo: 70-110 palabras por parrafo.' : '   - Target 70-110 words per paragraph.';
+        $lines[] = '';
+        $lines[] = $is_spanish ? '2) Tres bloques principales, cada uno con:' : '2) Three main blocks, each with:';
+        $lines[] = $is_spanish ? '   - (Opcional) un subtitulo usando la etiqueta <h3> SOLO si aporta claridad real.' : '   - (Optional) a subtitle using <h3> ONLY if it adds real clarity.';
+        $lines[] = $is_spanish ? ('   - Extension total: ' . $block_range . ' palabras por bloque.') : ('   - Total length: ' . $block_range . ' words per block.');
+        $lines[] = $is_spanish ? '   - Divide cada bloque en 2 o 3 parrafos usando <p>.' : '   - Split each block into 2 or 3 paragraphs using <p>.';
+        $lines[] = $is_spanish ? '   - Objetivo: 70-110 palabras por parrafo.' : '   - Target 70-110 words per paragraph.';
+        $lines[] = $is_spanish ? '   - Listas SOLO cuando ayuden a la comprension (etiquetas <ul> y <li>).' : '   - Lists ONLY when they improve understanding (<ul> and <li>).';
+        if (!empty($opts['include_faq'])) {
+            $lines[] = '';
+            $lines[] = $is_spanish ? '3) Seccion de preguntas frecuentes:' : '3) FAQ section:';
+            $lines[] = $is_spanish ? '   - Un encabezado <h2> cuyo texto debe estar escrito en {IDIOMA_POST} y ser el equivalente natural a "Preguntas frecuentes" en ese idioma.' : '   - One <h2> heading written in {IDIOMA_POST}, as the natural equivalent of "Frequently Asked Questions" in that language.';
+            $lines[] = $is_spanish ? '   - Seis preguntas frecuentes, cada una con:' : '   - Six FAQs, each with:';
+            $lines[] = $is_spanish ? '     - Pregunta en etiqueta <h3>.' : '     - Question in <h3>.';
+            $lines[] = $is_spanish ? ('     - Respuesta en 2 parrafos cortos usando <p>, con un total de ' . $faq_range . ' palabras.') : ('     - Answer in 2 short paragraphs using <p>, with a total of ' . $faq_range . ' words.');
+        } else {
+            $lines[] = '';
+            $lines[] = $is_spanish ? '3) NO incluir seccion de preguntas frecuentes (FAQ).' : '3) DO NOT include an FAQ section.';
+        }
+        $lines[] = '';
+        $lines[] = $is_spanish ? '4) Cierre obligatorio:' : '4) Mandatory closing:';
+        $lines[] = $is_spanish ? '   - Un encabezado final en <h2> para cerrar el articulo con una recomendacion accionable.' : '   - One final <h2> heading that closes the article with an actionable recommendation.';
+        $lines[] = $is_spanish ? ('   - Extension total del cierre: ' . $closing_range . ' palabras en 2 parrafos <p>.') : ('   - Total closing length: ' . $closing_range . ' words in 2 <p> paragraphs.');
+        $lines[] = '';
+        $lines[] = $is_spanish ? 'REGLAS DE LEGIBILIDAD' : 'READABILITY RULES';
+        $lines[] = $is_spanish ? '- Ningun parrafo puede superar 140 palabras.' : '- No paragraph may exceed 140 words.';
+        $lines[] = $is_spanish ? '- Si un parrafo supera 4 frases, dividelo en un nuevo parrafo.' : '- If a paragraph exceeds 4 sentences, split it into a new paragraph.';
+        $lines[] = $is_spanish ? '- Mantener la mayoria de frases entre 12 y 22 palabras.' : '- Keep most sentences between 12 and 22 words.';
+        $lines[] = $is_spanish ? '- Usar conectores naturales cuando mejoren el flujo.' : '- Use natural transition words when they improve flow.';
+        $lines[] = $is_spanish ? '- NO usar raya larga ni dash editorial. Preferir comas, punto y coma o punto.' : '- Do NOT use em dashes or en dashes. Prefer commas, semicolons or full stops.';
+        return implode("\n", $lines);
+    }
+}
+
+if (!function_exists('cbia_prompt_profile_seo_balanced')) {
+    function cbia_prompt_profile_seo_balanced(array $opts, $language = ''): string {
+        $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        $lines = array(
+            $is_spanish ? 'TONO Y ESTILO' : 'TONE AND STYLE',
+            $is_spanish ? '- Claro, util y profesional.' : '- Clear, useful and professional.',
+            $is_spanish ? '- Mas orientado a resolver la intencion de busqueda que el perfil editorial.' : '- More oriented to solving search intent than the editorial profile.',
+            $is_spanish ? '- Escaneable, pero natural. Sin keyword stuffing.' : '- Scan-friendly, but natural. No keyword stuffing.',
+        );
+        if (!empty($opts['include_practical_examples'])) {
+            $lines[] = $is_spanish
+                ? '- OBLIGATORIO: incluye al menos 3 ejemplos/casos practicos concretos distribuidos en los 3 bloques principales. Cada caso debe terminar con impacto o KPI esperado.'
+                : '- MANDATORY: include at least 3 concrete practical examples/cases across the 3 main blocks. Each case must end with expected impact or KPI.';
+        }
+        $lines[] = '';
+        $lines[] = $is_spanish ? 'ENFOQUE DE BUSQUEDA' : 'SEARCH APPROACH';
+        $lines[] = cbia_prompt_search_intent_line((string)$opts['search_intent_strength'], $language);
+        $lines[] = '';
+        $lines[] = $is_spanish ? 'ESTRUCTURA OBLIGATORIA (no anadir ni eliminar secciones)' : 'MANDATORY STRUCTURE (do not add or remove sections)';
+        $lines[] = $is_spanish ? '1) Un encabezado usando la etiqueta <h2>' : '1) One heading using <h2>';
+        $lines[] = $is_spanish ? '   Apertura usando 2 parrafos con la etiqueta <p>.' : '   Opening section using 2 paragraphs with <p>.';
+        $lines[] = $is_spanish ? '   - La primera respuesta util debe aparecer dentro de los primeros 120-160 palabras.' : '   - The first useful answer should appear within the first 120-160 words.';
+        $lines[] = $is_spanish ? '   - Extension total: 170-220 palabras entre ambos parrafos.' : '   - Total length: 170-220 words across both paragraphs.';
+        $lines[] = '';
+        $lines[] = $is_spanish ? '2) Tres bloques principales, cada uno con:' : '2) Three main blocks, each with:';
+        $lines[] = $is_spanish ? '   - Subtitulo <h3> si ayuda a escanear mejor la respuesta.' : '   - A <h3> subtitle if it improves scanability.';
+        $lines[] = $is_spanish ? '   - 220-290 palabras por bloque.' : '   - 220-290 words per block.';
+        $lines[] = $is_spanish ? '   - 2 o 3 parrafos usando <p>.' : '   - 2 or 3 paragraphs using <p>.';
+        $lines[] = $is_spanish ? '   - Prioriza definiciones claras, respuesta practica y subtitulos semanticos.' : '   - Prioritize clear definitions, practical answers and semantic subheadings.';
+        $lines[] = $is_spanish ? '   - Las listas (<ul>/<li>) se permiten cuando mejoren claridad o comparacion.' : '   - Lists (<ul>/<li>) are allowed when they improve clarity or comparison.';
+        if (!empty($opts['include_faq'])) {
+            $lines[] = '';
+            $lines[] = $is_spanish ? '3) Seccion de preguntas frecuentes:' : '3) FAQ section:';
+            $lines[] = $is_spanish ? '   - Un encabezado <h2> escrito en {IDIOMA_POST} como equivalente natural de "Preguntas frecuentes".' : '   - One <h2> heading written in {IDIOMA_POST} as the natural equivalent of "Frequently Asked Questions".';
+            $lines[] = $is_spanish ? '   - Seis preguntas frecuentes centradas en dudas de busqueda reales.' : '   - Six FAQs focused on real search-driven questions.';
+            $lines[] = $is_spanish ? '   - Cada pregunta en <h3> y cada respuesta en 2 parrafos cortos con <p>.' : '   - Each question in <h3> and each answer in 2 short paragraphs with <p>.';
+        } else {
+            $lines[] = '';
+            $lines[] = $is_spanish ? '3) NO incluir seccion de preguntas frecuentes (FAQ).' : '3) DO NOT include an FAQ section.';
+        }
+        $lines[] = '';
+        $lines[] = $is_spanish ? 'REGLAS DE LEGIBILIDAD' : 'READABILITY RULES';
+        $lines[] = $is_spanish ? '- Frases claras, directas y orientadas a resolver dudas.' : '- Use clear, direct sentences aimed at solving questions.';
+        $lines[] = $is_spanish ? '- Mantener la mayoria de frases entre 10 y 22 palabras.' : '- Keep most sentences between 10 and 22 words.';
+        $lines[] = $is_spanish ? '- Evita repetir el mismo termino exacto en exceso.' : '- Avoid over-repeating the same exact term.';
+        return implode("\n", $lines);
+    }
+}
+
+if (!function_exists('cbia_prompt_profile_how_to')) {
+    function cbia_prompt_profile_how_to(array $opts, $language = ''): string {
+        $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        $lines = array(
+            $is_spanish ? 'TONO Y ESTILO' : 'TONE AND STYLE',
+            $is_spanish ? '- Practico, claro y accionable.' : '- Practical, clear and actionable.',
+            $is_spanish ? '- Orientado a guiar al lector paso a paso o por decisiones concretas.' : '- Oriented to guide the reader step by step or through concrete decisions.',
+            $is_spanish ? '- Util y directo, sin perder naturalidad.' : '- Useful and direct, without losing naturalness.',
+        );
+        if (!empty($opts['include_practical_examples'])) {
+            $lines[] = $is_spanish
+                ? '- OBLIGATORIO: incluye al menos 3 ejemplos de aplicacion (pasos reales, errores comunes o mini escenarios). Cada ejemplo: problema, accion y resultado esperado.'
+                : '- MANDATORY: include at least 3 application examples (real steps, common mistakes, or mini scenarios). Each example: problem, action, and expected result.';
+        }
+        $lines[] = '';
+        $lines[] = $is_spanish ? 'ENFOQUE DE BUSQUEDA' : 'SEARCH APPROACH';
+        $lines[] = cbia_prompt_search_intent_line((string)$opts['search_intent_strength'], $language);
+        $lines[] = '';
+        $lines[] = $is_spanish ? 'ESTRUCTURA OBLIGATORIA (no anadir ni eliminar secciones)' : 'MANDATORY STRUCTURE (do not add or remove sections)';
+        $lines[] = $is_spanish ? '1) Un encabezado usando la etiqueta <h2>' : '1) One heading using <h2>';
+        $lines[] = $is_spanish ? '   Apertura usando 2 parrafos con la etiqueta <p>.' : '   Opening section using 2 paragraphs with <p>.';
+        $lines[] = $is_spanish ? '   - Debe dejar claro que aprendera o resolvera el lector.' : '   - It must make clear what the reader will learn or solve.';
+        $lines[] = $is_spanish ? '   - Extension total: 160-210 palabras.' : '   - Total length: 160-210 words.';
+        $lines[] = '';
+        $lines[] = $is_spanish ? '2) Tres bloques practicos, cada uno con:' : '2) Three practical blocks, each with:';
+        $lines[] = $is_spanish ? '   - Subtitulo <h3> si mejora claridad o secuencia.' : '   - A <h3> subtitle if it improves clarity or sequence.';
+        $lines[] = $is_spanish ? '   - 220-290 palabras por bloque.' : '   - 220-290 words per block.';
+        $lines[] = $is_spanish ? '   - 2 o 3 parrafos con <p>.' : '   - 2 or 3 paragraphs with <p>.';
+        $lines[] = $is_spanish ? '   - Explica pasos, decisiones, errores comunes o recomendaciones practicas.' : '   - Explain steps, decisions, common mistakes or practical recommendations.';
+        $lines[] = $is_spanish ? '   - Las listas (<ul>/<li>) se permiten si ayudan a ordenar pasos o consejos.' : '   - Lists (<ul>/<li>) are allowed if they help order steps or advice.';
+        if (!empty($opts['include_faq'])) {
+            $lines[] = '';
+            $lines[] = $is_spanish ? '3) Seccion de preguntas frecuentes:' : '3) FAQ section:';
+            $lines[] = $is_spanish ? '   - Un encabezado <h2> escrito en {IDIOMA_POST} como equivalente natural de "Preguntas frecuentes".' : '   - One <h2> heading written in {IDIOMA_POST} as the natural equivalent of "Frequently Asked Questions".';
+            $lines[] = $is_spanish ? '   - Seis preguntas frecuentes orientadas a dudas practicas y de aplicacion.' : '   - Six FAQs focused on practical and application-oriented doubts.';
+            $lines[] = $is_spanish ? '   - Cada respuesta en 2 parrafos cortos con <p>.' : '   - Each answer in 2 short paragraphs with <p>.';
+        } else {
+            $lines[] = '';
+            $lines[] = $is_spanish ? '3) NO incluir seccion de preguntas frecuentes (FAQ).' : '3) DO NOT include an FAQ section.';
+        }
+        $lines[] = '';
+        $lines[] = $is_spanish ? 'REGLAS DE LEGIBILIDAD' : 'READABILITY RULES';
+        $lines[] = $is_spanish ? '- Prioriza claridad y accion frente a teoria innecesaria.' : '- Prioritize clarity and action over unnecessary theory.';
+        $lines[] = $is_spanish ? '- Usa frases cortas y directas cuando expliques pasos.' : '- Use short, direct sentences when explaining steps.';
+        $lines[] = $is_spanish ? '- Mantener la mayoria de frases entre 10 y 20 palabras.' : '- Keep most sentences between 10 and 20 words.';
+        return implode("\n", $lines);
+    }
+}
+
+if (!function_exists('cbia_build_prompt_profile_block')) {
+    function cbia_build_prompt_profile_block($profile, array $opts, $language = ''): string {
+        switch ((string)$profile) {
+            case 'seo_balanced':
+                $block = cbia_prompt_profile_seo_balanced($opts, $language);
+                break;
+            case 'how_to':
+                $block = cbia_prompt_profile_how_to($opts, $language);
+                break;
+            case 'discover_editorial':
+            default:
+                $block = cbia_prompt_profile_discover_editorial($opts, $language);
+                break;
+        }
+
+        $length_policy = trim((string)cbia_prompt_build_length_policy_block($opts, $language));
+        if ($length_policy !== '') {
+            $block .= "\n\n" . $length_policy;
+        }
+
+        $custom = trim((string)($opts['custom_instructions'] ?? ''));
+        if ($custom !== '') {
+            $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+            $block .= "\n\n" . ($is_spanish ? 'INSTRUCCIONES EDITORIALES ADICIONALES' : 'ADDITIONAL EDITORIAL INSTRUCTIONS');
+            $block .= "\n- " . str_replace("\n", "\n- ", $custom);
+        }
+
+        return $block;
+    }
+}
+
+if (!function_exists('cbia_prompt_get_recommended_generated_block')) {
+    function cbia_prompt_get_recommended_generated_block(array $settings, $language = ''): string {
+        $opts = cbia_prompt_get_profile_settings($settings);
+        return cbia_build_prompt_profile_block((string)$opts['profile'], $opts, $language);
+    }
+}
+
+if (!function_exists('cbia_prompt_get_recommended_editable_block')) {
+    function cbia_prompt_get_recommended_editable_block(array $settings, $language = ''): string {
+        $default_editable = function_exists('cbia_prompt_recommended_editable_default_for_language')
+            ? cbia_prompt_recommended_editable_default_for_language($language)
+            : (function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : '');
+
+        if (!cbia_prompt_should_use_profile_mode($settings)) {
+            $editable = (string)($settings['blog_prompt_editable'] ?? $default_editable);
+            if (function_exists('cbia_prompt_maybe_upgrade_legacy_editable')) {
+                $editable = cbia_prompt_maybe_upgrade_legacy_editable($editable, $language);
+            }
+            return function_exists('cbia_prompt_sanitize_editable_block')
+                ? cbia_prompt_sanitize_editable_block($editable)
+                : $editable;
+        }
+
+        $generated = cbia_prompt_get_recommended_generated_block($settings, $language);
+        $editable = (string)($settings['blog_prompt_editable'] ?? '');
+        if (function_exists('cbia_prompt_sanitize_editable_block')) {
+            $editable = cbia_prompt_sanitize_editable_block($editable);
+        } else {
+            $editable = sanitize_textarea_field($editable);
+        }
+
+        return trim($editable) !== '' ? $editable : $generated;
+    }
+}
+
+if (!function_exists('cbia_prompt_build_recommended_template_from_settings')) {
+    function cbia_prompt_build_recommended_template_from_settings(array $settings, $language = ''): string {
+        $language = $language !== '' ? (string)$language : (string)($settings['post_language'] ?? 'English');
+        $editable = cbia_prompt_get_recommended_editable_block($settings, $language);
+        return cbia_prompt_build_recommended_template($editable, $language);
+    }
+}
+
 if (!function_exists('cbia_prompt_build_recommended_template')) {
     function cbia_prompt_build_recommended_template($editable = null, $language = ''): string {
         $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
@@ -421,19 +832,34 @@ if (!function_exists('cbia_build_prompt_for_title')) {
                 $prompt_unico = cbia_prompt_build_recommended_template($editable, $idioma_post);
             }
         } else {
-            $default_editable = cbia_prompt_is_spanish($idioma_post)
-                ? cbia_prompt_recommended_editable_legacy_default()
-                : cbia_prompt_recommended_editable_default();
-            $editable = (string)($s['blog_prompt_editable'] ?? $default_editable);
-            if (function_exists('cbia_prompt_maybe_upgrade_legacy_editable')) {
-                $editable = cbia_prompt_maybe_upgrade_legacy_editable($editable, $idioma_post);
-            }
-            $prompt_unico = cbia_prompt_build_recommended_template($editable, $idioma_post);
+            $prompt_unico = function_exists('cbia_prompt_build_recommended_template_from_settings')
+                ? cbia_prompt_build_recommended_template_from_settings($s, $idioma_post)
+                : cbia_prompt_build_recommended_template((string)($s['blog_prompt_editable'] ?? ''), $idioma_post);
         }
 
         $prompt_unico = str_replace('{title}', (string)$title, $prompt_unico);
         // Language is always enforced from selector.
         $prompt_unico = str_replace('{IDIOMA_POST}', $idioma_post, $prompt_unico);
+
+        $variant = sanitize_key((string)($s['post_length_variant'] ?? 'medium'));
+        if (!in_array($variant, array('short', 'medium', 'long'), true)) $variant = 'medium';
+        if (function_exists('cbia_pick_length_target_words')) {
+            list($min_words, $max_words) = cbia_pick_length_target_words($variant, !empty($s['include_faq']));
+            $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($idioma_post);
+            if ($is_spanish) {
+                $prompt_unico .= "\n\nCONTROL FINAL DE LONGITUD (OBLIGATORIO)\n";
+                $prompt_unico .= "- Antes de devolver la respuesta, valida el total real de palabras del HTML.\n";
+                $prompt_unico .= "- Debe quedar entre {$min_words} y {$max_words} palabras.\n";
+                $prompt_unico .= "- Si queda corto, amplia en la MISMA respuesta con mas contenido util hasta cumplir minimo.\n";
+                $prompt_unico .= "- Si supera el maximo, recorta manteniendo contenido util.\n";
+            } else {
+                $prompt_unico .= "\n\nFINAL LENGTH CHECK (MANDATORY)\n";
+                $prompt_unico .= "- Before returning, validate the real total word count of the HTML.\n";
+                $prompt_unico .= "- It must be between {$min_words} and {$max_words} words.\n";
+                $prompt_unico .= "- If it is short, expand in the SAME response with useful content until minimum is met.\n";
+                $prompt_unico .= "- If it exceeds the maximum, trim while preserving useful content.\n";
+            }
+        }
 
         return (string)$prompt_unico;
     }

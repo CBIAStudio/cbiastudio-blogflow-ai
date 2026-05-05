@@ -764,6 +764,9 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
             );
         }
 
+        $openai_temperature_raw = isset($_POST['openai_temperature'])
+            ? sanitize_text_field((string) wp_unslash($_POST['openai_temperature']))
+            : '';
         $payload = array(
             'rows' => $recent_rows,
             'totalRows' => count($log_rows),
@@ -2858,6 +2861,12 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
         $default_internal_style = (strpos($default_internal_format, 'banner') !== false) ? 'banner' : 'normal';
         $default_length = isset($settings['post_length_variant']) ? sanitize_key((string)$settings['post_length_variant']) : 'medium';
         if (!in_array($default_length, array('short', 'medium', 'long'), true)) $default_length = 'medium';
+        $default_prompt_profile = sanitize_key((string)($settings['blog_prompt_profile'] ?? 'discover_editorial'));
+        if (!in_array($default_prompt_profile, array('discover_editorial', 'seo_balanced', 'how_to'), true)) {
+            $default_prompt_profile = 'discover_editorial';
+        }
+        $default_include_faq = array_key_exists('include_faq', (array)$settings) ? !empty($settings['include_faq']) : true;
+        $default_include_examples = array_key_exists('include_practical_examples', (array)$settings) ? !empty($settings['include_practical_examples']) : false;
         $default_language = function_exists('cbia_ai_composer_normalize_language_value')
             ? cbia_ai_composer_normalize_language_value(isset($settings['post_language']) ? (string)$settings['post_language'] : 'English')
             : cbia_ai_composer_normalize_language_code(isset($settings['post_language']) ? (string)$settings['post_language'] : 'es');
@@ -2944,15 +2953,16 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
                 <input type="text" id="cbia-ai-title" class="widefat" value="<?php echo esc_attr(function_exists('cbia_ai_composer_normalize_title_value') ? cbia_ai_composer_normalize_title_value((string)get_the_title($post), $post) : (string)get_the_title($post)); ?>" />
             </p>
             <div class="cbia-ai-controls">
-                <p>
+                <p class="cbia-ai-col-length">
                      <label for="cbia-ai-length"><strong><?php echo esc_html__('Blog text length', 'cbiastudio-blogflow-ai'); ?></strong></label><br />
                     <select id="cbia-ai-length">
                         <option value="short" <?php selected($default_length, 'short'); ?>><?php echo esc_html__('Short', 'cbiastudio-blogflow-ai'); ?></option>
                         <option value="medium" <?php selected($default_length, 'medium'); ?>><?php echo esc_html__('Medium', 'cbiastudio-blogflow-ai'); ?></option>
                         <option value="long" <?php selected($default_length, 'long'); ?>><?php echo esc_html__('Long', 'cbiastudio-blogflow-ai'); ?></option>
                     </select>
+                    <span class="description cbia-ai-control-help" id="cbia-ai-length-help"><?php echo esc_html__('Target words will update based on selected length.', 'cbiastudio-blogflow-ai'); ?></span>
                 </p>
-                <p>
+                <p class="cbia-ai-col-images">
                     <label for="cbia-ai-images"><strong><?php echo esc_html__('Number of internal images', 'cbiastudio-blogflow-ai'); ?></strong></label><br />
                     <select id="cbia-ai-images" <?php disabled(!$internal_images_enabled); ?>>
                         <?php for ($i = 0; $i <= ($internal_images_enabled ? 3 : 0); $i++): ?>
@@ -2963,7 +2973,39 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
                         <span class="description"><?php echo esc_html__('Internal images are available in Pro only.', 'cbiastudio-blogflow-ai'); ?></span>
                     <?php endif; ?>
                 </p>
-                <p>
+                <p class="cbia-ai-control cbia-ai-control-goal cbia-ai-col-goal">
+                    <label for="cbia-ai-prompt-profile">
+                        <span class="dashicons dashicons-controls-forward"></span>
+                        <strong><?php echo esc_html__('Article goal', 'cbiastudio-blogflow-ai'); ?></strong>
+                    </label><br />
+                    <select id="cbia-ai-prompt-profile">
+                        <option value="discover_editorial" <?php selected($default_prompt_profile, 'discover_editorial'); ?>><?php echo esc_html__('Discover / Editorial', 'cbiastudio-blogflow-ai'); ?></option>
+                        <option value="seo_balanced" <?php selected($default_prompt_profile, 'seo_balanced'); ?>><?php echo esc_html__('SEO Standard', 'cbiastudio-blogflow-ai'); ?></option>
+                        <option value="how_to" <?php selected($default_prompt_profile, 'how_to'); ?>><?php echo esc_html__('How-to / Practical Guide', 'cbiastudio-blogflow-ai'); ?></option>
+                    </select>
+                    <span class="description cbia-ai-control-help"><?php echo esc_html__('Defines the writing objective. Recommended for most posts: SEO Standard.', 'cbiastudio-blogflow-ai'); ?></span>
+                </p>
+                <p class="cbia-ai-control cbia-ai-control-toggle cbia-ai-col-faq">
+                    <label for="cbia-ai-include-faq" class="cbia-ai-toggle-label">
+                        <input type="checkbox" id="cbia-ai-include-faq" value="1" <?php checked($default_include_faq); ?> />
+                        <span class="dashicons dashicons-editor-help"></span>
+                        <span class="cbia-ai-toggle-copy">
+                            <strong><?php echo esc_html__('Include FAQ', 'cbiastudio-blogflow-ai'); ?></strong>
+                            <small><?php echo esc_html__('Adds a final FAQ block with Q&A.', 'cbiastudio-blogflow-ai'); ?></small>
+                        </span>
+                    </label>
+                </p>
+                <p class="cbia-ai-control cbia-ai-control-toggle cbia-ai-col-examples">
+                    <label for="cbia-ai-include-examples" class="cbia-ai-toggle-label">
+                        <input type="checkbox" id="cbia-ai-include-examples" value="1" <?php checked($default_include_examples); ?> />
+                        <span class="dashicons dashicons-lightbulb"></span>
+                        <span class="cbia-ai-toggle-copy">
+                            <strong><?php echo esc_html__('Include practical examples', 'cbiastudio-blogflow-ai'); ?></strong>
+                            <small><?php echo esc_html__('Adds realistic scenarios and actionable examples.', 'cbiastudio-blogflow-ai'); ?></small>
+                        </span>
+                    </label>
+                </p>
+                <p class="cbia-ai-col-language">
                     <label for="cbia-ai-language"><strong><?php echo esc_html__('Language', 'cbiastudio-blogflow-ai'); ?></strong></label><br />
                     <select id="cbia-ai-language">
                         <?php foreach (cbia_ai_composer_get_language_options() as $lang_value => $lang_label) : ?>
@@ -2971,17 +3013,17 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
                         <?php endforeach; ?>
                     </select>
                 </p>
-                <p>
+                <p class="cbia-ai-col-style">
                     <label for="cbia-ai-internal-style"><strong><?php echo esc_html__('Internal images style', 'cbiastudio-blogflow-ai'); ?></strong></label><br />
                     <select id="cbia-ai-internal-style" <?php disabled(!$internal_images_enabled); ?>>
                         <option value="banner" <?php selected($default_internal_style, 'banner'); ?>>Banner (cbia-banner)</option>
                         <option value="normal" <?php selected($default_internal_style, 'normal'); ?>>Normal</option>
                     </select>
                 </p>
-                <p>
+                <p class="cbia-ai-col-temperature">
                     <label for="cbia-ai-temperature"><strong><?php echo esc_html__('Temperature (global)', 'cbiastudio-blogflow-ai'); ?></strong></label><br />
-                    <input type="number" id="cbia-ai-temperature" min="0" max="2" step="0.1" value="<?php echo esc_attr((string)$default_temp); ?>" readonly />
-                    <span class="description"><?php echo esc_html__('Uses the value from Settings for the whole generation.', 'cbiastudio-blogflow-ai'); ?></span>
+                    <input type="number" id="cbia-ai-temperature" min="0" max="2" step="0.1" value="<?php echo esc_attr((string)$default_temp); ?>" />
+                    <span class="description"><?php echo esc_html__('Applied to this generation (0 = more deterministic, 1+ = more creative).', 'cbiastudio-blogflow-ai'); ?></span>
                 </p>
             </div>
             <p class="cbia-ai-actions">
@@ -3116,6 +3158,9 @@ if (!function_exists('cbia_ajax_preview_article')) {
         if (!current_user_can('manage_options')) {
             wp_send_json_error(array('message' => __('Unauthorized', 'cbiastudio-blogflow-ai')), 403);
         }
+        if (function_exists('cbia_set_stop_flag')) {
+            cbia_set_stop_flag(false);
+        }
 
         $payload = array(
             'title' => isset($_POST['title']) ? sanitize_text_field(wp_unslash($_POST['title'])) : '',
@@ -3127,6 +3172,10 @@ if (!function_exists('cbia_ajax_preview_article')) {
             'skip_images' => isset($_POST['skip_images']) ? absint(wp_unslash($_POST['skip_images'])) : 0,
             'post_language' => isset($_POST['post_language']) ? sanitize_text_field(wp_unslash($_POST['post_language'])) : '',
             'blog_prompt_mode' => isset($_POST['blog_prompt_mode']) ? sanitize_key((string)wp_unslash($_POST['blog_prompt_mode'])) : '',
+            'blog_prompt_profile' => isset($_POST['blog_prompt_profile']) ? sanitize_key((string)wp_unslash($_POST['blog_prompt_profile'])) : 'discover_editorial',
+            'include_faq' => isset($_POST['include_faq']) ? absint(wp_unslash($_POST['include_faq'])) : 1,
+            'include_practical_examples' => isset($_POST['include_practical_examples']) ? absint(wp_unslash($_POST['include_practical_examples'])) : 0,
+            'openai_temperature' => ($openai_temperature_raw !== '') ? (float) str_replace(',', '.', $openai_temperature_raw) : null,
             'blog_prompt_editable' => isset($_POST['blog_prompt_editable']) ? sanitize_textarea_field(wp_unslash($_POST['blog_prompt_editable'])) : '',
             'legacy_full_prompt' => isset($_POST['legacy_full_prompt']) ? sanitize_textarea_field(wp_unslash($_POST['legacy_full_prompt'])) : '',
         );
@@ -3196,7 +3245,13 @@ if (!function_exists('cbia_ajax_preview_article_stream')) {
             cbia_sse_emit('cbia_error', array('message' => __('Unauthorized.', 'cbiastudio-blogflow-ai')));
             exit;
         }
+        if (function_exists('cbia_set_stop_flag')) {
+            cbia_set_stop_flag(false);
+        }
 
+        $openai_temperature_raw = isset($_GET['openai_temperature'])
+            ? sanitize_text_field((string) wp_unslash($_GET['openai_temperature']))
+            : '';
         $payload = array(
             'title' => isset($_GET['title']) ? sanitize_text_field(wp_unslash($_GET['title'])) : '',
             'preview_mode' => isset($_GET['preview_mode']) ? sanitize_key((string)wp_unslash($_GET['preview_mode'])) : 'fast',
@@ -3207,6 +3262,10 @@ if (!function_exists('cbia_ajax_preview_article_stream')) {
             'skip_images' => isset($_GET['skip_images']) ? absint(wp_unslash($_GET['skip_images'])) : 0,
             'post_language' => isset($_GET['post_language']) ? sanitize_text_field(wp_unslash($_GET['post_language'])) : '',
             'blog_prompt_mode' => isset($_GET['blog_prompt_mode']) ? sanitize_key((string)wp_unslash($_GET['blog_prompt_mode'])) : '',
+            'blog_prompt_profile' => isset($_GET['blog_prompt_profile']) ? sanitize_key((string)wp_unslash($_GET['blog_prompt_profile'])) : 'discover_editorial',
+            'include_faq' => isset($_GET['include_faq']) ? absint(wp_unslash($_GET['include_faq'])) : 1,
+            'include_practical_examples' => isset($_GET['include_practical_examples']) ? absint(wp_unslash($_GET['include_practical_examples'])) : 0,
+            'openai_temperature' => ($openai_temperature_raw !== '') ? (float) str_replace(',', '.', $openai_temperature_raw) : null,
             // El SSE usa GET: no aceptar payload largo aqui para evitar URL enorme.
             'blog_prompt_editable' => '',
             'legacy_full_prompt' => '',
@@ -3624,11 +3683,20 @@ if (!function_exists('cbia_ai_composer_sanitize_snapshot')) {
         if (!in_array($internal_style, array('banner', 'normal'), true)) {
             $internal_style = 'banner';
         }
+        $prompt_profile = isset($controls['prompt_profile']) ? sanitize_key((string)$controls['prompt_profile']) : 'discover_editorial';
+        if (!in_array($prompt_profile, array('discover_editorial', 'seo_balanced', 'how_to'), true)) {
+            $prompt_profile = 'discover_editorial';
+        }
+        $include_faq = isset($controls['include_faq']) ? absint($controls['include_faq']) : 1;
+        $include_examples = isset($controls['include_practical_examples']) ? absint($controls['include_practical_examples']) : 0;
         $out['controls'] = array(
             'length' => $length,
             'internal_images' => $internal_images,
             'language' => $language,
             'internal_style' => $internal_style,
+            'prompt_profile' => $prompt_profile,
+            'include_faq' => $include_faq ? 1 : 0,
+            'include_practical_examples' => $include_examples ? 1 : 0,
         );
 
         $out['final_html'] = isset($raw_snapshot['final_html']) ? wp_kses_post((string)$raw_snapshot['final_html']) : '';
@@ -4544,6 +4612,7 @@ if (!function_exists('cbia_ajax_set_stop')) {
                 }
             }
             wp_clear_scheduled_hook('cbia_oldposts_process_background_run');
+            wp_clear_scheduled_hook('cbia_generation_event');
         }
         if (function_exists('cbia_log')) {
             cbia_log($stop === 1 ? 'STOP enabled (generation paused).' : 'STOP disabled (generation resumed).', 'INFO');
@@ -4598,9 +4667,58 @@ if (!function_exists('cbia_ajax_start_generation')) {
         if ($request_method !== 'POST') wp_send_json_error(['msg' => 'method_not_allowed'], 405);
         check_ajax_referer('cbia_ajax_nonce');
         if (!current_user_can('manage_options')) wp_send_json_error(['msg' => __('Unauthorized', 'cbiastudio-blogflow-ai')], 403);
+        $post_unslashed = isset($_POST) && is_array($_POST) ? wp_unslash($_POST) : array();
 
         if (!function_exists('cbia_set_stop_flag')) {
             wp_send_json_error(['msg' => __('cbia_set_stop_flag unavailable', 'cbiastudio-blogflow-ai')], 500);
+        }
+
+        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
+        $settings_updated = false;
+
+        if (array_key_exists('title_input_mode', $post_unslashed)) {
+            $mode = sanitize_key((string)($post_unslashed['title_input_mode'] ?? 'manual'));
+            $mode = in_array($mode, array('manual', 'csv'), true) ? $mode : 'manual';
+            $settings['title_input_mode'] = $mode;
+            $settings_updated = true;
+        }
+        if (array_key_exists('manual_titles', $post_unslashed)) {
+            $settings['manual_titles'] = sanitize_textarea_field((string)($post_unslashed['manual_titles'] ?? ''));
+            $settings_updated = true;
+        }
+        if (array_key_exists('csv_url', $post_unslashed)) {
+            $csv_raw = sanitize_text_field((string)($post_unslashed['csv_url'] ?? ''));
+            if (function_exists('cbia_ajax_normalize_csv_url')) {
+                $settings['csv_url'] = cbia_ajax_normalize_csv_url($csv_raw);
+            } else {
+                $settings['csv_url'] = esc_url_raw($csv_raw);
+            }
+            $settings_updated = true;
+        }
+        if (array_key_exists('first_publication_datetime_local', $post_unslashed)) {
+            $dt_local = sanitize_text_field(trim((string)($post_unslashed['first_publication_datetime_local'] ?? '')));
+            if ($dt_local !== '') {
+                $dt_local = str_replace('T', ' ', $dt_local);
+                if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/', $dt_local)) {
+                    $dt_local .= ':00';
+                }
+                if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/', $dt_local)) {
+                    $settings['first_publication_datetime'] = $dt_local;
+                }
+            } else {
+                $settings['first_publication_datetime'] = '';
+            }
+            $settings_updated = true;
+        }
+        if (array_key_exists('publication_interval', $post_unslashed)) {
+            $settings['publication_interval'] = max(1, intval($post_unslashed['publication_interval'] ?? 5));
+            $settings_updated = true;
+        }
+        if ($settings_updated) {
+            update_option('cbia_settings', $settings, false);
+            if (function_exists('cbia_log_message')) {
+                cbia_log_message('[INFO] START AJAX: runtime settings synced from current Blog form values.');
+            }
         }
 
         cbia_set_stop_flag(false);
@@ -5822,6 +5940,3 @@ if (!function_exists('cbia_ajax_sync_models')) {
         wp_send_json_error(['message' => 'Could not sync models', 'result' => $result], 500);
     }
 }
-
-
-

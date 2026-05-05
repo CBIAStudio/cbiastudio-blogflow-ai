@@ -46,10 +46,33 @@ if (!function_exists('cbia_log_key')) {
     }
 }
 
+if (!function_exists('cbia_mask_sensitive_log_text')) {
+    function cbia_mask_sensitive_log_text(string $text): string {
+        $text = (string)$text;
+        if ($text === '') return $text;
+        $text = preg_replace('/(Incorrect API key provided:\s*)([^\s\.,]+)/i', '$1[REDACTED]', $text);
+        $text = preg_replace('/(\bapi[_\s-]?key\s*:\s*)([^\s\.,]+)/i', '$1[REDACTED]', $text);
+        $text = preg_replace('/([?&](?:key|api_key)=)([^&\s]+)/i', '$1[REDACTED]', $text);
+        $text = preg_replace('/\bsk-[A-Za-z0-9_\-]{10,}\b/', 'sk-[REDACTED]', $text);
+        return (string)$text;
+    }
+}
+
+if (!function_exists('cbia_is_likely_openai_key')) {
+    function cbia_is_likely_openai_key(string $key): bool {
+        $key = trim((string)$key);
+        if ($key === '') return false;
+        return (bool)preg_match('/^sk-[A-Za-z0-9_\-]{20,}$/', $key);
+    }
+}
+
 if (!function_exists('cbia_log')) {
     function cbia_log($message, $level = 'INFO') {
         if (function_exists('cbia_fix_mojibake')) {
             $message = cbia_fix_mojibake($message);
+        }
+        if (function_exists('cbia_mask_sensitive_log_text')) {
+            $message = cbia_mask_sensitive_log_text((string)$message);
         }
         if (defined('CBIA_OPTION_LOG') && defined('CBIA_OPTION_LOG_COUNTER')) {
             $level = strtoupper(trim((string)$level ?: 'INFO'));
@@ -187,21 +210,35 @@ if (!function_exists('cbia_get_provider_api_key')) {
         $provider = sanitize_key($provider);
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
 
-        // Prioridad: keys nuevas por proveedor en settings principales.
+        // Leer ambas fuentes para priorizar la clave realmente activa por proveedor.
         $map = array(
             'openai'  => (string)($settings['openai_api_key'] ?? ''),
             'google'  => (string)($settings['google_api_key'] ?? ''),
             'deepseek'=> (string)($settings['deepseek_api_key'] ?? ''),
         );
-        if (!empty($map[$provider])) return $map[$provider];
+        $main_key = trim((string)($map[$provider] ?? ''));
 
-        // Fallback: settings de providers (pro)
+        $provider_key = '';
         if (function_exists('cbia_providers_get_settings')) {
             $p = cbia_providers_get_settings();
             if (!empty($p['providers'][$provider]['api_key'])) {
-                return (string)$p['providers'][$provider]['api_key'];
+                $provider_key = trim((string)$p['providers'][$provider]['api_key']);
             }
         }
+
+        // Para OpenAI, preferir la clave que tenga formato válido si hay conflicto.
+        if ($provider === 'openai') {
+            $main_valid = cbia_is_likely_openai_key($main_key);
+            $prov_valid = cbia_is_likely_openai_key($provider_key);
+            if ($main_valid) return $main_key;
+            if ($prov_valid) return $provider_key;
+            $legacy = cbia_get_legacy_api_key();
+            if (cbia_is_likely_openai_key($legacy)) return $legacy;
+            return '';
+        }
+
+        if ($provider_key !== '') return $provider_key;
+        if ($main_key !== '') return $main_key;
 
         // Fallback legacy: api_key unico
         $legacy = cbia_get_legacy_api_key();

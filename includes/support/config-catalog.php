@@ -11,21 +11,24 @@ if (!function_exists('cbia_get_allowed_models_for_ui')) {
      */
     function cbia_get_allowed_models_for_ui(): array {
         return [
-            'gpt-4.1-mini',
-            'gpt-4.1',
-            'gpt-4.1-nano',
-            'gpt-5',
             'gpt-5-mini',
+            'gpt-5.4-mini',
+            'gpt-5.4',
+            'gpt-5.5',
+            'gpt-5',
             'gpt-5-nano',
             'gpt-5.1',
             'gpt-5.2',
+            'gpt-4.1-mini',
+            'gpt-4.1',
+            'gpt-4.1-nano',
         ];
     }
 }
 
 if (!function_exists('cbia_get_recommended_text_model')) {
     function cbia_get_recommended_text_model(): string {
-        return 'gpt-4.1-mini';
+        return 'gpt-5-mini';
     }
 }
 
@@ -41,35 +44,35 @@ if (!function_exists('cbia_config_safe_model')) {
 if (!function_exists('cbia_config_image_formats_catalog')) {
     function cbia_config_image_formats_catalog(): array {
         return [
-            'panoramic_1536x1024' => 'PanorÃ¡mica (1536x1024)',
-            'banner_1536x1024'    => 'Banner (1536x1024, encuadre amplio + headroom 25â€“35%)',
+            'panoramic_1536x1024' => 'Panoramic (1536x1024)',
+            'banner_1536x1024'    => 'Banner (1536x1024, wide framing + 25-35% headroom)',
         ];
     }
 }
 
 if (!function_exists('cbia_config_presets_catalog')) {
     /**
-     * Presets rÃ¡pidos por modelo (UX).
+     * Presets rÃƒÂ¡pidos por modelo (UX).
      */
     function cbia_config_presets_catalog(): array {
         return [
-            'gpt-4.1-mini' => [
-                'label' => 'Preset GPT-4.1-mini (estable)',
-                'openai_model' => 'gpt-4.1-mini',
-                'openai_temperature' => 0.7,
-                'responses_max_output_tokens' => 6000,
-            ],
             'gpt-5-mini' => [
-                'label' => 'Preset GPT-5-mini (mÃ¡s creativo)',
+                'label' => 'Preset GPT-5-mini (recommended)',
                 'openai_model' => 'gpt-5-mini',
                 'openai_temperature' => 0.7,
                 'responses_max_output_tokens' => 8000,
             ],
-            'gpt-5.1-mini' => [
-                'label' => 'Preset GPT-5.1-mini (mÃ¡s coste/calidad)',
-                'openai_model' => 'gpt-5.1-mini',
+            'gpt-5.4-mini' => [
+                'label' => 'Preset GPT-5.4-mini (balanced)',
+                'openai_model' => 'gpt-5.4-mini',
                 'openai_temperature' => 0.7,
                 'responses_max_output_tokens' => 8000,
+            ],
+            'gpt-5.4' => [
+                'label' => 'Preset GPT-5.4 (high quality)',
+                'openai_model' => 'gpt-5.4',
+                'openai_temperature' => 0.7,
+                'responses_max_output_tokens' => 9000,
             ],
         ];
     }
@@ -81,7 +84,7 @@ if (!function_exists('cbia_config_apply_preset')) {
         if (!isset($presets[$preset_key])) return $current;
         $p = $presets[$preset_key];
 
-        $current['openai_model'] = cbia_config_safe_model($p['openai_model'] ?? ($current['openai_model'] ?? 'gpt-4.1-mini'));
+        $current['openai_model'] = cbia_config_safe_model($p['openai_model'] ?? ($current['openai_model'] ?? 'gpt-5-mini'));
         $current['openai_temperature'] = isset($p['openai_temperature']) ? (float)$p['openai_temperature'] : (float)($current['openai_temperature'] ?? 0.7);
         $current['responses_max_output_tokens'] = isset($p['responses_max_output_tokens']) ? (int)$p['responses_max_output_tokens'] : (int)($current['responses_max_output_tokens'] ?? 6000);
 
@@ -100,7 +103,7 @@ if (!function_exists('cbia_config_sanitize_image_format')) {
 
 if (!function_exists('cbia_config_banner_css_presets')) {
     /**
-     * Presets de CSS para imÃ¡genes internas (clase cbia-banner).
+     * Presets de CSS para imÃƒÂ¡genes internas (clase cbia-banner).
      */
     function cbia_config_banner_css_presets(): array {
         return [
@@ -118,7 +121,7 @@ if (!function_exists('cbia_config_banner_css_presets')) {
                     "}\n",
             ],
             'compact_250' => [
-                'label' => 'Banner 250px (compacto)',
+                'label' => 'Banner 250px (compact)',
                 'css' =>
                     "img.cbia-banner {\n" .
                     "  width: 100%;\n" .
@@ -131,7 +134,7 @@ if (!function_exists('cbia_config_banner_css_presets')) {
                     "}\n",
             ],
             'none' => [
-                'label' => 'Sin estilo (vacÃ­o)',
+                'label' => 'No style (empty)',
                 'css' => '',
             ],
         ];
@@ -157,5 +160,3 @@ if (!function_exists('cbia_config_detect_banner_css_preset')) {
         return 'custom';
     }
 }
-
-

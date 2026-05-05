@@ -34,7 +34,7 @@ $provider_key_urls = array(
 // Defaults seguros
 $recommended = function_exists('cbia_providers_get_recommended_text_model')
     ? cbia_providers_get_recommended_text_model($provider_current)
-    : 'gpt-4.1-mini';
+    : 'gpt-5-mini';
 $s['openai_model'] = cbia_config_safe_model($s['openai_model'] ?? $recommended);
 if (!isset($s['openai_temperature'])) $s['openai_temperature'] = 0.7;
 if (!isset($s['post_length_variant'])) $s['post_length_variant'] = 'medium';
@@ -43,7 +43,7 @@ if (!$internal_images_enabled) $s['images_limit'] = 1;
 if (!isset($s['default_category'])) $s['default_category'] = 'News';
 if (!isset($s['post_language'])) $s['post_language'] = 'English';
 if (!isset($s['responses_max_output_tokens'])) $s['responses_max_output_tokens'] = 6000;
-if (!isset($s['image_model'])) $s['image_model'] = 'gpt-image-1-mini';
+if (!isset($s['image_model'])) $s['image_model'] = 'gpt-image-2';
 // CAMBIO: nuevos settings texto/imagen
 if (!isset($s['text_provider'])) $s['text_provider'] = $provider_current;
 if (!isset($s['image_provider'])) $s['image_provider'] = 'openai';
@@ -570,5 +570,4 @@ echo '</div>';
 }
 
 cbia_render_view_config();
-
 

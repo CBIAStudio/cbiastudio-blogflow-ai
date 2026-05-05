@@ -14,7 +14,7 @@ if (!function_exists('cbia_image_model_chain')) {
             : array();
 
         if (empty($list)) {
-            $list = ['gpt-image-1-mini', 'gpt-image-1'];
+            $list = ['gpt-image-2', 'gpt-image-1', 'gpt-image-1-mini'];
         }
 
         $preferred = trim((string)$preferred);
@@ -489,4 +489,3 @@ if (!function_exists('cbia_upload_image_to_media')) {
         return [$attach_id, ''];
     }
 }
-

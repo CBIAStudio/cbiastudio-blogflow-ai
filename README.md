@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.0.1
+# CBIAStudio BlogFlow with AI (WordPress) v2.0.2
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,17 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.0.2
+- Release version alignment for repository handoff (header, constants, and admin fallback version labels).
+- Medium length cost optimization (`FAQ Off`): near-target outputs can be accepted without forced expansion, reducing extra calls.
+- OpenAI runtime key resolution hardened to prefer valid primary settings keys.
+- Redaction and packaging cleanup for safer logs and WordPress-ready distribution artifacts.
+
+## Comparative: 2.0.2 vs 2.0.1
+- Lower operating cost in common `Medium` no-FAQ runs due to fewer expansion retries.
+- More reliable API key usage in background batches (less risk of stale/invalid key selection).
+- Cleaner release packaging and docs for publication in repositories.
 
 ## What's New in 2.0.1
 - Base edition consolidation for the new Base + Pro Add-on model.

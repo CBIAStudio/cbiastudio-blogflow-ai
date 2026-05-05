@@ -109,7 +109,7 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 		if ($text_model === '') {
 			$text_model = function_exists('cbia_providers_get_recommended_text_model')
 				? cbia_providers_get_recommended_text_model($text_provider)
-				: 'gpt-4.1-mini';
+				: 'gpt-5-mini';
 		}
 		if ($text_provider === 'openai') {
 			$text_model = cbia_config_safe_model($text_model);
@@ -123,11 +123,11 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 		if ($image_model === '') {
 			$image_model = function_exists('cbia_providers_get_recommended_image_model')
 				? cbia_providers_get_recommended_image_model($image_provider)
-				: 'gpt-image-1-mini';
+				: 'gpt-image-2';
 		}
 
 		// CAMBIO: compatibilidad con campo legacy openai_model
-		$model = ($text_provider === 'openai') ? $text_model : (string)($settings['openai_model'] ?? 'gpt-4.1-mini');
+		$model = ($text_provider === 'openai') ? $text_model : (string)($settings['openai_model'] ?? 'gpt-5-mini');
 
 		// CAMBIO: provider settings (texto + imagen)
 		if (function_exists('cbia_providers_get_settings') && function_exists('cbia_providers_get_all')) {
@@ -437,4 +437,3 @@ if (!function_exists('cbia_render_tab_config')) {
         echo '<p>Could not load Configuration.</p>';
     }
 }
-

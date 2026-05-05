@@ -8,8 +8,11 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 if (!function_exists('cbia_model_fallback_chain')) {
     function cbia_model_fallback_chain($preferred) {
         $chain = [
-            'gpt-5',
             'gpt-5-mini',
+            'gpt-5.4-mini',
+            'gpt-5.4',
+            'gpt-5.5',
+            'gpt-5',
             'gpt-5-nano',
             'gpt-5.2',
             'gpt-4.1-mini',
@@ -48,13 +51,13 @@ if (!function_exists('cbia_is_responses_model')) {
 if (!function_exists('cbia_pick_model')) {
     function cbia_pick_model() {
         $s = cbia_get_settings();
-        $preferred = $s['openai_model'] ?? 'gpt-4.1-mini';
+        $preferred = $s['openai_model'] ?? 'gpt-5-mini';
 
         $chain = cbia_model_fallback_chain($preferred);
         foreach ($chain as $m) {
             return $m;
         }
         // Si no hay candidatos, devolvemos preferido igualmente
-        return $preferred ?: 'gpt-4.1-mini';
+        return $preferred ?: 'gpt-5-mini';
     }
 }

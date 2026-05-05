@@ -275,7 +275,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 	 * Devuelve 6 valores:
 	 * [ok(bool), text(string), usage(array), model_used(string), err(string), raw(array|string)]
 	 */
-		function cbia_openai_responses_call($prompt, $title_for_log = '', $tries = 2) {
+		function cbia_openai_responses_call($prompt, $title_for_log = '', $tries = 2, $max_output_override = 0) {
 			cbia_try_unlimited_runtime();
 			$attempts = array();
 			// CAMBIO: proveedor de texto
@@ -318,7 +318,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 			if ($google_key !== '') {
 				cbia_log("DeepSeek failed ({$last_err}). Text fallback -> Google Gemini.", 'WARN');
 				$GLOBALS['cbia_force_text_provider'] = 'google';
-				$google_result = cbia_openai_responses_call($prompt, $title_for_log, $tries);
+				$google_result = cbia_openai_responses_call($prompt, $title_for_log, $tries, $max_output_override);
 				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
 				else unset($GLOBALS['cbia_force_text_provider']);
 				if (!empty($google_result[0])) return $google_result;
@@ -329,7 +329,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 			if ($openai_key !== '') {
 				cbia_log("Google fallback unavailable/failed. Text fallback -> OpenAI.", 'WARN');
 				$GLOBALS['cbia_force_text_provider'] = 'openai';
-				$openai_result = cbia_openai_responses_call($prompt, $title_for_log, $tries);
+				$openai_result = cbia_openai_responses_call($prompt, $title_for_log, $tries, $max_output_override);
 				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
 				else unset($GLOBALS['cbia_force_text_provider']);
 				if (!empty($openai_result[0])) return $openai_result;
@@ -356,14 +356,22 @@ if (!function_exists('cbia_openai_responses_call')) {
 				cbia_log(("OpenAI Responses: model={$model} attempt {$t}/{$tries} ") . ($title_for_log ? "| '{$title_for_log}'" : ''), 'INFO');
 
 				$max_out = (int)($s['responses_max_output_tokens'] ?? 6000);
+				$max_out_override = (int)$max_output_override;
+				if ($max_out_override > 0) {
+					$max_out = max($max_out, $max_out_override);
+				}
 				if ($max_out < 1500) $max_out = 1500;
 				if ($max_out > 12000) $max_out = 12000;
+				$temperature = isset($s['openai_temperature']) ? (float)$s['openai_temperature'] : 0.7;
+				if ($temperature < 0) $temperature = 0;
+				if ($temperature > 2) $temperature = 2;
 
 				$payload = [
 					'model' => $model,
 					'input' => $input,
 					// Max output prudente (luego el prompt manda)
 					'max_output_tokens' => $max_out,
+					'temperature' => $temperature,
 				];
 
 				$resp = wp_remote_post('https://api.openai.com/v1/responses', [
@@ -374,6 +382,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 
 				if (is_wp_error($resp)) {
 					$err = $resp->get_error_message();
+					if (function_exists('cbia_mask_sensitive_log_text')) $err = cbia_mask_sensitive_log_text((string)$err);
 					cbia_log(("HTTP error: {$err}"), 'ERROR');
 					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
 					$last_err = (string)$err;
@@ -387,6 +396,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 				if ($code < 200 || $code >= 300) {
 					$msg = '';
 					if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
+					if (function_exists('cbia_mask_sensitive_log_text')) $msg = cbia_mask_sensitive_log_text((string)$msg);
 					$err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 					cbia_log(("OpenAI error: {$err}"), 'ERROR');
 					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
@@ -399,6 +409,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 
 				if (is_array($data) && !empty($data['error']['message'])) {
 					$err = (string)$data['error']['message'];
+					if (function_exists('cbia_mask_sensitive_log_text')) $err = cbia_mask_sensitive_log_text((string)$err);
 					cbia_log(("OpenAI error payload: {$err}"), 'ERROR');
 					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
 					$last_err = (string)$err;
@@ -475,11 +486,15 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 				$max_out = (int)($s['responses_max_output_tokens'] ?? 6000);
 				if ($max_out < 1500) $max_out = 1500;
 				if ($max_out > 12000) $max_out = 12000;
+				$temperature = isset($s['openai_temperature']) ? (float)$s['openai_temperature'] : 0.7;
+				if ($temperature < 0) $temperature = 0;
+				if ($temperature > 2) $temperature = 2;
 
 				$payload = [
 					'model' => $model,
 					'input' => $input,
 					'max_output_tokens' => $max_out,
+					'temperature' => $temperature,
 					'stream' => true,
 				];
 
@@ -499,6 +514,7 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 				]);
 				if (is_wp_error($resp)) {
 					$last_error = $resp->get_error_message();
+					if (function_exists('cbia_mask_sensitive_log_text')) $last_error = cbia_mask_sensitive_log_text((string)$last_error);
 					$global_last_error = $last_error;
 					cbia_log(sprintf('HTTP stream error: %s', $last_error), 'ERROR');
 					continue;
@@ -517,6 +533,7 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 						$last_event = $evt;
 						if (!empty($evt['error']['message'])) {
 							$last_error = (string)$evt['error']['message'];
+							if (function_exists('cbia_mask_sensitive_log_text')) $last_error = cbia_mask_sensitive_log_text((string)$last_error);
 							continue;
 						}
 						$delta = '';
@@ -541,6 +558,7 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 				}
 				if ($http_code < 200 || $http_code >= 300) {
 					$last_error = 'HTTP ' . $http_code . ($last_error ? (' | ' . $last_error) : '');
+					if (function_exists('cbia_mask_sensitive_log_text')) $last_error = cbia_mask_sensitive_log_text((string)$last_error);
 					$global_last_error = $last_error;
 					cbia_log(("OpenAI stream error: {$last_error}"), 'ERROR');
 					if (in_array($http_code, array(401, 403, 404), true)) {
@@ -549,6 +567,7 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 					continue;
 				}
 				if ($last_error !== '') {
+					if (function_exists('cbia_mask_sensitive_log_text')) $last_error = cbia_mask_sensitive_log_text((string)$last_error);
 					$global_last_error = $last_error;
 					cbia_log(("OpenAI stream payload error: {$last_error}"), 'ERROR');
 					if (stripos($last_error, 'incorrect api key') !== false || stripos($last_error, 'unauthorized') !== false || stripos($last_error, 'forbidden') !== false) {
@@ -608,8 +627,8 @@ if (!function_exists('cbia_generate_image_openai')) {
 
 		// CAMBIO: modelo preferido segun settings
 		$preferred_model = function_exists('cbia_get_image_model_for_provider')
-			? cbia_get_image_model_for_provider('openai', function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('openai') : 'gpt-image-1-mini')
-			: 'gpt-image-1-mini';
+			? cbia_get_image_model_for_provider('openai', function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('openai') : 'gpt-image-2')
+			: 'gpt-image-2';
 		foreach (cbia_image_model_chain('openai', $preferred_model) as $model) {
 			$tries = 2;
 			for ($t = 1; $t <= $tries; $t++) {
@@ -744,8 +763,8 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 
 		// CAMBIO: modelo preferido segun settings
 		$preferred_model = function_exists('cbia_get_image_model_for_provider')
-			? cbia_get_image_model_for_provider('openai', function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('openai') : 'gpt-image-1-mini')
-			: 'gpt-image-1-mini';
+			? cbia_get_image_model_for_provider('openai', function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('openai') : 'gpt-image-2')
+			: 'gpt-image-2';
 		foreach (cbia_image_model_chain('openai', $preferred_model) as $model) {
 			$tries = 2;
 			for ($t = 1; $t <= $tries; $t++) {
@@ -1103,6 +1122,3 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Could not get a response.', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts)];
 	}
 }
-
-
-

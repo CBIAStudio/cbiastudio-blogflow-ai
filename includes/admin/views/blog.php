@@ -24,6 +24,37 @@ $blog_prompt_mode = function_exists('cbia_prompt_get_mode')
     ? cbia_prompt_get_mode((array)$settings)
     : sanitize_key((string)($settings['blog_prompt_mode'] ?? 'recommended'));
 if (!in_array($blog_prompt_mode, array('recommended', 'legacy'), true)) $blog_prompt_mode = 'recommended';
+$blog_prompt_profile = function_exists('cbia_get_prompt_profile')
+    ? cbia_get_prompt_profile((array)$settings)
+    : sanitize_key((string)($settings['blog_prompt_profile'] ?? 'discover_editorial'));
+$prompt_profile_options = function_exists('cbia_prompt_get_profile_options')
+    ? cbia_prompt_get_profile_options()
+    : array();
+$include_faq = isset($settings['include_faq']) ? (int)$settings['include_faq'] : 1;
+$include_practical_examples = isset($settings['include_practical_examples']) ? (int)$settings['include_practical_examples'] : 0;
+$search_intent_strength = sanitize_key((string)($settings['search_intent_strength'] ?? 'balanced'));
+if (!in_array($search_intent_strength, array('soft', 'balanced', 'strong'), true)) $search_intent_strength = 'balanced';
+$blog_prompt_custom_instructions = function_exists('cbia_prompt_sanitize_custom_instructions')
+    ? cbia_prompt_sanitize_custom_instructions((string)($settings['blog_prompt_custom_instructions'] ?? ''))
+    : sanitize_textarea_field((string)($settings['blog_prompt_custom_instructions'] ?? ''));
+$profile_prompt_active = function_exists('cbia_prompt_has_explicit_profile') ? cbia_prompt_has_explicit_profile() : false;
+$recommended_prompt_block = function_exists('cbia_prompt_get_recommended_editable_block')
+    ? cbia_prompt_get_recommended_editable_block((array)$settings, (string)($settings['post_language'] ?? 'English'))
+    : '';
+$prompt_profile_cards = array(
+    'discover_editorial' => array(
+        'icon' => 'dashicons-welcome-write-blog',
+        'preset' => array('faq' => 1, 'examples' => 0, 'intent' => 'soft'),
+    ),
+    'seo_balanced' => array(
+        'icon' => 'dashicons-chart-area',
+        'preset' => array('faq' => 1, 'examples' => 0, 'intent' => 'strong'),
+    ),
+    'how_to' => array(
+        'icon' => 'dashicons-editor-ul',
+        'preset' => array('faq' => 1, 'examples' => 1, 'intent' => 'balanced'),
+    ),
+);
 $blog_prompt_editable = (string)($settings['blog_prompt_editable'] ?? '');
 $prompt_language = (string)($settings['post_language'] ?? 'English');
 if ($blog_prompt_editable === '' && function_exists('cbia_prompt_recommended_editable_default')) {
@@ -95,8 +126,13 @@ if ($mode === 'csv' && trim((string)$csv_url) !== '') {
 }
 
 $first_dt = $settings['first_publication_datetime'] ?? '';
-$first_dt_local = '';
-if ($first_dt !== '') $first_dt_local = substr(str_replace(' ', 'T', $first_dt), 0, 16);
+$first_dt_default_local = function_exists('wp_date')
+    ? wp_date('Y-m-d\TH:i', current_time('timestamp'))
+    : date_i18n('Y-m-d\TH:i', current_time('timestamp'));
+$first_dt_local = $first_dt_default_local;
+if ($first_dt !== '') {
+    $first_dt_local = substr(str_replace(' ', 'T', $first_dt), 0, 16);
+}
 
 $interval = max(1, intval($settings['publication_interval'] ?? 5));
 $enable_cron = !empty($settings['enable_cron_fill']);
@@ -252,48 +288,121 @@ $manual_single_title = isset($manual_titles_list[0]) ? (string)$manual_titles_li
 <div class="cbia-blog-prompt-panel" style="padding:12px;border:1px solid #dcdcde;border-radius:8px;max-width:1100px;">
 <p class="description" style="margin-top:0;"><?php echo esc_html__('Editorial prompt optimized for Google Discover and image marker insertion. You can adjust style, but fixed rules prevent truncation and keep compatibility.', 'cbiastudio-blogflow-ai'); ?></p>
 <p class="description" style="margin-top:0;"><?php echo esc_html__('Language is automatically applied from the language selector and is not edited in this prompt.', 'cbiastudio-blogflow-ai'); ?></p>
-
-<div class="cbia-blog-switch-stack" id="cbia-prompt-mode-switches" style="margin:8px 0;">
-<label class="cbia-oldv2-switch-row">
-    <span class="cbia-oldv2-switch-copy"><strong><?php echo esc_html__('Recommended prompt', 'cbiastudio-blogflow-ai'); ?></strong><span><?php echo esc_html__('Safe mode for the normal workflow. Keeps structure, language and markers under control.', 'cbiastudio-blogflow-ai'); ?></span></span>
-    <span class="cbia-oldv2-switch-wrap"><input type="radio" name="blog_prompt_mode_ui" value="recommended" <?php checked($blog_prompt_mode, 'recommended'); ?> /><span class="cbia-oldv2-switch-ui"></span></span>
-</label>
+<div class="cbia-prompt-mode-grid" id="cbia-prompt-mode-pills">
+    <label class="cbia-prompt-mode-card <?php echo $blog_prompt_mode === 'recommended' ? 'is-active' : ''; ?>">
+        <input type="radio" name="blog_prompt_mode_ui" value="recommended" <?php checked($blog_prompt_mode, 'recommended'); ?> />
+        <span class="cbia-prompt-mode-card-head">
+            <span class="dashicons dashicons-superhero-alt"></span>
+            <span><?php echo esc_html__('Recommended prompts', 'cbiastudio-blogflow-ai'); ?></span>
+        </span>
+        <span class="cbia-prompt-mode-card-copy"><?php echo esc_html__('Structured profiles for the normal workflow. Best balance between quality, stability and SEO control.', 'cbiastudio-blogflow-ai'); ?></span>
+    </label>
+    <label class="cbia-prompt-mode-card <?php echo $blog_prompt_mode === 'legacy' ? 'is-active' : ''; ?>">
+        <input type="radio" name="blog_prompt_mode_ui" value="legacy" <?php checked($blog_prompt_mode, 'legacy'); ?> />
+        <span class="cbia-prompt-mode-card-head">
+            <span class="dashicons dashicons-warning"></span>
+            <span><?php echo esc_html__('Advanced / Legacy', 'cbiastudio-blogflow-ai'); ?></span>
+        </span>
+        <span class="cbia-prompt-mode-card-copy"><?php echo esc_html__('Full manual control of the historical prompt. Use only when you need to override the protected recommended flow.', 'cbiastudio-blogflow-ai'); ?></span>
+    </label>
 </div>
 <input type="hidden" name="blog_prompt_mode" id="cbia_blog_prompt_mode" value="<?php echo esc_attr($blog_prompt_mode); ?>" />
-<div class="cbia-blog-switch-stack" style="margin:8px 0;">
-<label class="cbia-oldv2-switch-row">
-    <span class="cbia-oldv2-switch-copy"><strong><?php echo esc_html__('Show advanced options', 'cbiastudio-blogflow-ai'); ?></strong><span><?php echo esc_html__('Display compatibility mode and legacy prompt controls.', 'cbiastudio-blogflow-ai'); ?></span></span>
-    <span class="cbia-oldv2-switch-wrap"><input type="checkbox" id="cbia_toggle_advanced_prompt" <?php checked($blog_prompt_mode, 'legacy'); ?> /><span class="cbia-oldv2-switch-ui"></span></span>
-</label>
-</div>
-<div id="cbia_advanced_prompt_wrap" style="display:none;">
-<div class="cbia-blog-switch-stack" style="margin:8px 0;">
-<label class="cbia-oldv2-switch-row">
-    <span class="cbia-oldv2-switch-copy"><strong><?php echo esc_html__('Advanced prompt', 'cbiastudio-blogflow-ai'); ?></strong><span><?php echo esc_html__('Compatibility mode with full control. Use only if you need to override the recommended prompt.', 'cbiastudio-blogflow-ai'); ?></span></span>
-    <span class="cbia-oldv2-switch-wrap"><input type="radio" name="blog_prompt_mode_ui" value="legacy" <?php checked($blog_prompt_mode, 'legacy'); ?> /><span class="cbia-oldv2-switch-ui"></span></span>
-</label>
-</div>
-<p class="description" style="margin-top:0;"><?php echo esc_html__('Warning: this mode allows full control and can break format, language, or image markers.', 'cbiastudio-blogflow-ai'); ?></p>
-</div>
+<input type="hidden" name="blog_prompt_custom_instructions" id="cbia_blog_prompt_custom_instructions" value="" />
 
-<div class="cbia-blog-switch-stack" style="margin:8px 0;">
-<label class="cbia-oldv2-switch-row">
-    <span class="cbia-oldv2-switch-copy"><strong><?php echo esc_html__('Edit prompt', 'cbiastudio-blogflow-ai'); ?></strong><span><?php echo esc_html__('Unlock the editable prompt block below.', 'cbiastudio-blogflow-ai'); ?></span></span>
-    <span class="cbia-oldv2-switch-wrap"><input type="checkbox" id="cbia_toggle_prompt_edit" /><span class="cbia-oldv2-switch-ui"></span></span>
-</label>
-</div>
+<div id="cbia_prompt_edit_wrap" style="margin-top:16px;">
+    <div id="cbia_prompt_edit_recommended">
+        <?php if (!$profile_prompt_active): ?>
+            <p class="description" style="margin-top:0;"><?php echo esc_html__('This site is still using the historical recommended block. Saving this panel will migrate recommended mode to profile-based prompts while keeping the current runtime safe.', 'cbiastudio-blogflow-ai'); ?></p>
+        <?php endif; ?>
+        <div class="cbia-prompt-profile-grid" id="cbia_prompt_profile_cards">
+            <?php foreach ($prompt_profile_options as $profile_key => $profile_meta): $card_meta = $prompt_profile_cards[$profile_key] ?? array(); $preset_meta = (array)($card_meta['preset'] ?? array()); ?>
+                <label class="cbia-prompt-profile-card <?php echo $blog_prompt_profile === $profile_key ? 'is-active' : ''; ?>" data-profile-card="<?php echo esc_attr($profile_key); ?>">
+                    <input type="radio" name="blog_prompt_profile" value="<?php echo esc_attr($profile_key); ?>" <?php checked($blog_prompt_profile, $profile_key); ?> />
+                    <span class="cbia-prompt-profile-icon dashicons <?php echo esc_attr((string)($card_meta['icon'] ?? 'dashicons-edit')); ?>"></span>
+                    <strong><?php echo esc_html((string)($profile_meta['label'] ?? $profile_key)); ?></strong>
+                    <span class="cbia-prompt-profile-copy"><?php echo esc_html((string)($profile_meta['description'] ?? '')); ?></span>
+                    <span class="cbia-prompt-profile-preset">
+                        <?php
+                        $faq_label = !empty($preset_meta['faq']) ? __('FAQ On', 'cbiastudio-blogflow-ai') : __('FAQ Off', 'cbiastudio-blogflow-ai');
+                        $ex_label = !empty($preset_meta['examples']) ? __('Examples On', 'cbiastudio-blogflow-ai') : __('Examples Off', 'cbiastudio-blogflow-ai');
+                        $intent_key = sanitize_key((string)($preset_meta['intent'] ?? 'balanced'));
+                        $intent_map = array(
+                            'soft' => __('Soft', 'cbiastudio-blogflow-ai'),
+                            'balanced' => __('Balanced', 'cbiastudio-blogflow-ai'),
+                            'strong' => __('Strong', 'cbiastudio-blogflow-ai'),
+                        );
+                        $intent_label = $intent_map[$intent_key] ?? $intent_map['balanced'];
+                        printf(
+                            /* translators: 1: FAQ preset, 2: practical examples preset, 3: intent preset */
+                            esc_html__('Preset: %1$s | %2$s | Intent %3$s', 'cbiastudio-blogflow-ai'),
+                            esc_html($faq_label),
+                            esc_html($ex_label),
+                            esc_html($intent_label)
+                        );
+                        ?>
+                    </span>
+                </label>
+            <?php endforeach; ?>
+        </div>
+        <p class="description" id="cbia_blog_prompt_profile_help" style="margin:10px 0 0 0;"><?php echo esc_html((string)($prompt_profile_options[$blog_prompt_profile]['description'] ?? '')); ?></p>
 
-<div id="cbia_prompt_edit_wrap" style="display:none;margin-top:10px;">
-    <div id="cbia_prompt_edit_recommended" style="display:none;">
-        <textarea name="blog_prompt_editable" id="cbia_blog_prompt_editable" rows="12" style="width:100%;"><?php echo esc_textarea($blog_prompt_editable); ?></textarea>
-        <input type="hidden" id="cbia_blog_prompt_default" value="<?php echo esc_attr((function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($prompt_language)) ? (function_exists('cbia_prompt_recommended_editable_legacy_default') ? cbia_prompt_recommended_editable_legacy_default() : '') : (function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : '')); ?>" />
-        <input type="hidden" id="cbia_blog_prompt_default_en" value="<?php echo esc_attr(function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : ''); ?>" />
-        <input type="hidden" id="cbia_blog_prompt_default_es" value="<?php echo esc_attr(function_exists('cbia_prompt_recommended_editable_legacy_default') ? cbia_prompt_recommended_editable_legacy_default() : ''); ?>" />
-        <p style="margin-top:8px;">
-            <button type="button" class="button" id="cbia_btn_restore_prompt"><?php echo esc_html__('Restore recommended prompt', 'cbiastudio-blogflow-ai'); ?></button>
-        </p>
+        <div class="cbia-prompt-config-state">
+            <p id="cbia_prompt_config_summary" class="description"><?php echo esc_html__('Loading profile preset status...', 'cbiastudio-blogflow-ai'); ?></p>
+            <button type="button" class="button" id="cbia_btn_restore_profile_preset"><?php echo esc_html__('Use recommended preset', 'cbiastudio-blogflow-ai'); ?></button>
+        </div>
+
+        <div class="cbia-prompt-options-grid">
+            <label class="cbia-prompt-option-chip">
+                <input type="checkbox" name="include_faq" id="cbia_include_faq" value="1" <?php checked($include_faq, 1); ?> />
+                <span class="dashicons dashicons-editor-help"></span>
+                <span>
+                    <strong><?php echo esc_html__('Text + FAQ', 'cbiastudio-blogflow-ai'); ?></strong>
+                    <small><?php echo esc_html__('Keeps the FAQ block in the generated article.', 'cbiastudio-blogflow-ai'); ?></small>
+                </span>
+            </label>
+            <label class="cbia-prompt-option-chip">
+                <input type="checkbox" name="include_practical_examples" id="cbia_include_practical_examples" value="1" <?php checked($include_practical_examples, 1); ?> />
+                <span class="dashicons dashicons-lightbulb"></span>
+                <span>
+                    <strong><?php echo esc_html__('Practical examples', 'cbiastudio-blogflow-ai'); ?></strong>
+                    <small><?php echo esc_html__('Adds scenarios, examples and practical angles when useful.', 'cbiastudio-blogflow-ai'); ?></small>
+                </span>
+            </label>
+            <div class="cbia-prompt-intent-card">
+                <span class="dashicons dashicons-search"></span>
+                <div>
+                    <strong><?php echo esc_html__('Search intent strength', 'cbiastudio-blogflow-ai'); ?></strong>
+                    <small><?php echo esc_html__('Controls how strongly the prompt prioritizes direct search answers vs editorial flow.', 'cbiastudio-blogflow-ai'); ?></small>
+                </div>
+                <select name="search_intent_strength" id="cbia_search_intent_strength">
+                    <option value="soft" <?php selected($search_intent_strength, 'soft'); ?>><?php echo esc_html__('Soft', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="balanced" <?php selected($search_intent_strength, 'balanced'); ?>><?php echo esc_html__('Balanced', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="strong" <?php selected($search_intent_strength, 'strong'); ?>><?php echo esc_html__('Strong', 'cbiastudio-blogflow-ai'); ?></option>
+                </select>
+            </div>
+        </div>
+
+        <details class="cbia-prompt-editor-card cbia-prompt-editor-accordion">
+            <summary class="cbia-prompt-editor-summary">
+                <span class="cbia-prompt-editor-summary-copy">
+                    <strong><?php echo esc_html__('Editable prompt block', 'cbiastudio-blogflow-ai'); ?></strong>
+                    <small><?php echo esc_html__('Expand to review and edit the exact editorial block sent to the model.', 'cbiastudio-blogflow-ai'); ?></small>
+                </span>
+                <span class="dashicons dashicons-arrow-down-alt2" aria-hidden="true"></span>
+            </summary>
+            <div class="cbia-prompt-editor-body">
+                <div class="cbia-prompt-editor-head">
+                    <div>
+                        <p><?php echo esc_html__('This is the editorial block sent inside the protected prompt template. You can adjust it without touching the fixed rules, HTML safeguards or image marker format.', 'cbiastudio-blogflow-ai'); ?></p>
+                    </div>
+                    <button type="button" class="button" id="cbia_btn_restore_prompt"><?php echo esc_html__('Reset to selected profile', 'cbiastudio-blogflow-ai'); ?></button>
+                </div>
+                <textarea name="blog_prompt_editable" id="cbia_blog_prompt_editable" rows="14" style="width:100%;" placeholder="<?php echo esc_attr__('The generated editorial block will appear here.', 'cbiastudio-blogflow-ai'); ?>"><?php echo esc_textarea($recommended_prompt_block !== '' ? $recommended_prompt_block : $blog_prompt_editable); ?></textarea>
+            </div>
+        </details>
     </div>
-    <div id="cbia_prompt_edit_legacy" style="display:none;">
+    <div id="cbia_prompt_edit_legacy">
+        <p class="description" style="margin-top:0;"><?php echo esc_html__('Warning: legacy mode lets you replace the full prompt and can break structure, language or image markers if edited carelessly.', 'cbiastudio-blogflow-ai'); ?></p>
         <textarea name="legacy_full_prompt" rows="12" style="width:100%;" placeholder="<?php echo esc_attr__('Full legacy prompt', 'cbiastudio-blogflow-ai'); ?>"><?php echo esc_textarea($legacy_full_prompt !== '' ? $legacy_full_prompt : $legacy_placeholder); ?></textarea>
         <p class="description"><?php echo esc_html__('Advanced mode: uses the full historical prompt for compatibility.', 'cbiastudio-blogflow-ai'); ?></p>
     </div>
@@ -459,7 +568,7 @@ echo '</select>';
 <tr>
 <th><?php echo esc_html__('First date/time', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
-<input type="datetime-local" name="first_publication_datetime_local" value="<?php echo esc_attr($first_dt_local); ?>" />
+<input type="datetime-local" name="first_publication_datetime_local" value="<?php echo esc_attr($first_dt_local); ?>" min="<?php echo esc_attr($first_dt_default_local); ?>" step="60" />
 <p class="description"><?php echo esc_html__('If left empty, generation starts immediately. If you set a date/time, the first post is scheduled and the next ones follow the interval.', 'cbiastudio-blogflow-ai'); ?></p>
 </td>
 </tr>
@@ -753,6 +862,9 @@ echo '</select>';
     }
 
     const btn = document.getElementById('cbia_btn_generate');
+    const firstPublicationInput = document.querySelector('input[name="first_publication_datetime_local"]');
+    const publicationIntervalInput = document.querySelector('input[name="publication_interval"]');
+    const manualTitlesInput = document.querySelector('textarea[name="manual_titles"]');
     if(btn){
         btn.addEventListener('click', function(){
             btn.disabled = true;
@@ -762,6 +874,12 @@ echo '</select>';
             const fd = new FormData();
             fd.append('action','cbia_start_generation');
             fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+            const titleModeSelected = document.querySelector('input[name="title_input_mode"]:checked');
+            if (titleModeSelected) fd.append('title_input_mode', titleModeSelected.value || 'manual');
+            if (manualTitlesInput) fd.append('manual_titles', manualTitlesInput.value || '');
+            if (csvUrlInput) fd.append('csv_url', csvUrlInput.value || '');
+            if (firstPublicationInput) fd.append('first_publication_datetime_local', firstPublicationInput.value || '');
+            if (publicationIntervalInput) fd.append('publication_interval', publicationIntervalInput.value || '');
 
             fetch(ajaxurl, { method:'POST', credentials:'same-origin', body: fd })
             .then(r => r.text())
@@ -797,24 +915,82 @@ echo '</select>';
 
     // Prompt panel (recommended/legacy).
     const modeInputs = document.querySelectorAll('input[name="blog_prompt_mode_ui"]');
-    const advancedToggle = document.getElementById('cbia_toggle_advanced_prompt');
-    const advancedWrap = document.getElementById('cbia_advanced_prompt_wrap');
-    const editToggle = document.getElementById('cbia_toggle_prompt_edit');
     const editWrap = document.getElementById('cbia_prompt_edit_wrap');
     const editRecommended = document.getElementById('cbia_prompt_edit_recommended');
     const editLegacy = document.getElementById('cbia_prompt_edit_legacy');
     const restoreBtn = document.getElementById('cbia_btn_restore_prompt');
+    const profileInputs = document.querySelectorAll('input[name="blog_prompt_profile"]');
+    const profileHelp = document.getElementById('cbia_blog_prompt_profile_help');
+    const configSummary = document.getElementById('cbia_prompt_config_summary');
+    const restoreProfilePresetBtn = document.getElementById('cbia_btn_restore_profile_preset');
+    const includeFaq = document.getElementById('cbia_include_faq');
+    const includeExamples = document.getElementById('cbia_include_practical_examples');
+    const intentStrength = document.getElementById('cbia_search_intent_strength');
     const editableTa = document.getElementById('cbia_blog_prompt_editable');
-    const editableDefault = document.getElementById('cbia_blog_prompt_default');
-    const editableDefaultEn = document.getElementById('cbia_blog_prompt_default_en');
-    const editableDefaultEs = document.getElementById('cbia_blog_prompt_default_es');
     const promptModeState = document.getElementById('cbia_blog_prompt_mode');
-    const promptModePills = document.getElementById('cbia-prompt-mode-pills');
+    const profileDescriptions = <?php echo wp_json_encode(array_map(static function ($meta) { return (string)($meta['description'] ?? ''); }, $prompt_profile_options)); ?>;
+    const profileTemplates = <?php
+        $profile_template_payload = array('default' => array(), 'spanish' => array());
+        foreach (array('default' => 'English', 'spanish' => 'Spanish') as $bucket => $lang_ref) {
+            foreach (array_keys($prompt_profile_options) as $profile_key) {
+                foreach (array(0, 1) as $faq_flag) {
+                    foreach (array(0, 1) as $examples_flag) {
+                        foreach (array('soft', 'balanced', 'strong') as $strength_key) {
+                            $template_key = $profile_key . '|' . $faq_flag . '|' . $examples_flag . '|' . $strength_key;
+                            $profile_template_payload[$bucket][$template_key] = cbia_build_prompt_profile_block($profile_key, array(
+                                'profile' => $profile_key,
+                                'include_faq' => (bool) $faq_flag,
+                                'include_practical_examples' => (bool) $examples_flag,
+                                'search_intent_strength' => $strength_key,
+                                'custom_instructions' => '',
+                            ), $lang_ref);
+                        }
+                    }
+                }
+            }
+        }
+        echo wp_json_encode($profile_template_payload);
+    ?>;
+    const profilePresets = <?php
+        $profile_preset_payload = array();
+        foreach ($prompt_profile_cards as $profile_key => $card_meta) {
+            $preset_meta = (array)($card_meta['preset'] ?? array());
+            $intent_key = sanitize_key((string)($preset_meta['intent'] ?? 'balanced'));
+            if (!in_array($intent_key, array('soft', 'balanced', 'strong'), true)) {
+                $intent_key = 'balanced';
+            }
+            $profile_preset_payload[$profile_key] = array(
+                'faq' => !empty($preset_meta['faq']),
+                'examples' => !empty($preset_meta['examples']),
+                'intent' => $intent_key,
+            );
+        }
+        echo wp_json_encode($profile_preset_payload);
+    ?>;
+    const promptPresetUi = <?php echo wp_json_encode(array(
+        'faq_on' => __('FAQ On', 'cbiastudio-blogflow-ai'),
+        'faq_off' => __('FAQ Off', 'cbiastudio-blogflow-ai'),
+        'examples_on' => __('Examples On', 'cbiastudio-blogflow-ai'),
+        'examples_off' => __('Examples Off', 'cbiastudio-blogflow-ai'),
+        'intent_word' => __('Intent', 'cbiastudio-blogflow-ai'),
+        'intent_soft' => __('Soft', 'cbiastudio-blogflow-ai'),
+        'intent_balanced' => __('Balanced', 'cbiastudio-blogflow-ai'),
+        'intent_strong' => __('Strong', 'cbiastudio-blogflow-ai'),
+        'preset_prefix' => __('Recommended preset', 'cbiastudio-blogflow-ai'),
+        'preset_active' => __('Preset active. You can still customize the options below.', 'cbiastudio-blogflow-ai'),
+        'preset_custom' => __('Customized options active. Prompt profile stays selected, but your overrides are being used.', 'cbiastudio-blogflow-ai'),
+    )); ?>;
     let lastPromptLanguage = postLanguage ? String(postLanguage.value || '') : '';
+    let lastGeneratedBlock = editableTa ? normalizePromptText(editableTa.value) : '';
 
     function getPromptMode(){
         const selected = document.querySelector('input[name="blog_prompt_mode_ui"]:checked');
         return selected ? selected.value : 'recommended';
+    }
+
+    function getSelectedProfile(){
+        const selected = document.querySelector('input[name="blog_prompt_profile"]:checked');
+        return selected ? String(selected.value || 'discover_editorial') : 'discover_editorial';
     }
 
     function syncPromptModeState(){
@@ -827,72 +1003,129 @@ echo '</select>';
         return String(value || '').replace(/\r\n?/g, '\n').trim();
     }
 
+    function syncProfileHelp(){
+        if (!profileHelp) return;
+        const key = getSelectedProfile();
+        profileHelp.textContent = profileDescriptions[key] || '';
+    }
+
+    function getPresetForProfile(profileKey){
+        const raw = profilePresets && profilePresets[profileKey] ? profilePresets[profileKey] : {};
+        const intent = String(raw.intent || 'balanced');
+        return {
+            faq: !!raw.faq,
+            examples: !!raw.examples,
+            intent: ['soft', 'balanced', 'strong'].includes(intent) ? intent : 'balanced'
+        };
+    }
+
+    function getCurrentOptionState(){
+        return {
+            faq: !!(includeFaq && includeFaq.checked),
+            examples: !!(includeExamples && includeExamples.checked),
+            intent: intentStrength ? String(intentStrength.value || 'balanced') : 'balanced'
+        };
+    }
+
+    function isSelectedProfilePreset(){
+        const current = getCurrentOptionState();
+        const preset = getPresetForProfile(getSelectedProfile());
+        return current.faq === preset.faq && current.examples === preset.examples && current.intent === preset.intent;
+    }
+
+    function syncPresetSummary(){
+        if (!configSummary) return;
+        const preset = getPresetForProfile(getSelectedProfile());
+        const intentLabels = {
+            soft: promptPresetUi.intent_soft || 'Soft',
+            balanced: promptPresetUi.intent_balanced || 'Balanced',
+            strong: promptPresetUi.intent_strong || 'Strong'
+        };
+        const faqLabel = preset.faq ? (promptPresetUi.faq_on || 'FAQ On') : (promptPresetUi.faq_off || 'FAQ Off');
+        const examplesLabel = preset.examples ? (promptPresetUi.examples_on || 'Examples On') : (promptPresetUi.examples_off || 'Examples Off');
+        const intentLabel = intentLabels[preset.intent] || intentLabels.balanced;
+        const prefix = promptPresetUi.preset_prefix || 'Recommended preset';
+        const intentWord = promptPresetUi.intent_word || 'Intent';
+        const presetLine = prefix + ': ' + faqLabel + ' | ' + examplesLabel + ' | ' + intentWord + ' ' + intentLabel + '.';
+        const isPreset = isSelectedProfilePreset();
+        const statusLine = isPreset
+            ? (promptPresetUi.preset_active || 'Preset active.')
+            : (promptPresetUi.preset_custom || 'Customized options active.');
+        configSummary.textContent = presetLine + ' ' + statusLine;
+        configSummary.classList.toggle('is-custom', !isPreset);
+        if (restoreProfilePresetBtn) {
+            restoreProfilePresetBtn.disabled = isPreset;
+        }
+    }
+
+    function applySelectedProfilePreset(forceBlock){
+        const preset = getPresetForProfile(getSelectedProfile());
+        if (includeFaq) includeFaq.checked = !!preset.faq;
+        if (includeExamples) includeExamples.checked = !!preset.examples;
+        if (intentStrength) intentStrength.value = preset.intent;
+        syncRecommendedEditableBlock(!!forceBlock);
+        syncPresetSummary();
+    }
+
     function isSpanishLanguage(value){
         const v = String(value || '').trim().toLowerCase();
         return v === 'spanish' || v === 'espanol' || v === 'espaÃ±ol';
     }
 
-    function getRecommendedDefaultByLanguage(value){
-        return isSpanishLanguage(value)
-            ? (editableDefaultEs ? String(editableDefaultEs.value || '') : '')
-            : (editableDefaultEn ? String(editableDefaultEn.value || '') : '');
+    function getPromptTemplateBucket(value){
+        return isSpanishLanguage(value) ? 'spanish' : 'default';
     }
 
-    function syncRecommendedPromptByLanguage(forceReplace){
-        if (!editableDefault) return;
-        const currentLanguage = postLanguage ? String(postLanguage.value || '') : lastPromptLanguage;
-        const previousLanguage = lastPromptLanguage;
-        const newDefault = getRecommendedDefaultByLanguage(currentLanguage);
-        const prevDefault = getRecommendedDefaultByLanguage(previousLanguage);
-        editableDefault.value = newDefault;
+    function getCurrentGeneratedBlock(){
+        const faqFlag = includeFaq && includeFaq.checked ? '1' : '0';
+        const examplesFlag = includeExamples && includeExamples.checked ? '1' : '0';
+        const strengthKey = intentStrength ? String(intentStrength.value || 'balanced') : 'balanced';
+        const templateKey = [getSelectedProfile(), faqFlag, examplesFlag, strengthKey].join('|');
+        const bucket = profileTemplates[getPromptTemplateBucket(postLanguage ? postLanguage.value : lastPromptLanguage)] || profileTemplates.default || {};
+        return String(bucket[templateKey] || '');
+    }
 
-        if (!editableTa || getPromptMode() !== 'recommended') {
-            lastPromptLanguage = currentLanguage;
-            return;
-        }
+    function syncPromptModeCards(){
+        document.querySelectorAll('.cbia-prompt-mode-card').forEach(function(card){
+            const input = card.querySelector('input[name="blog_prompt_mode_ui"]');
+            card.classList.toggle('is-active', !!(input && input.checked));
+        });
+    }
 
-        const currentText = normalizePromptText(editableTa.value);
-        const shouldReplace = !!forceReplace || (
-            currentText !== '' && (
-                currentText === normalizePromptText(prevDefault)
-                || currentText === normalizePromptText(newDefault)
-                || currentText === normalizePromptText(editableDefaultEn ? editableDefaultEn.value : '')
-                || currentText === normalizePromptText(editableDefaultEs ? editableDefaultEs.value : '')
-            )
-        );
+    function syncPromptProfileCards(){
+        document.querySelectorAll('.cbia-prompt-profile-card').forEach(function(card){
+            const input = card.querySelector('input[name="blog_prompt_profile"]');
+            card.classList.toggle('is-active', !!(input && input.checked));
+        });
+    }
 
+    function syncRecommendedEditableBlock(forceReplace){
+        if (!editableTa) return;
+        const generatedBlock = getCurrentGeneratedBlock();
+        const currentValue = normalizePromptText(editableTa.value);
+        const shouldReplace = !!forceReplace || currentValue === '' || currentValue === lastGeneratedBlock;
         if (shouldReplace) {
-            editableTa.value = newDefault;
+            editableTa.value = generatedBlock;
         }
-        lastPromptLanguage = currentLanguage;
+        lastGeneratedBlock = normalizePromptText(generatedBlock);
+        lastPromptLanguage = postLanguage ? String(postLanguage.value || '') : lastPromptLanguage;
     }
 
     function refreshPromptEditor(){
-        const opened = !!(editToggle && editToggle.checked);
         const mode = getPromptMode();
-        const advancedOn = (mode === 'legacy');
-        if (advancedToggle) advancedToggle.checked = advancedOn;
-        if (advancedWrap) advancedWrap.style.display = advancedOn ? '' : 'none';
-        if (editWrap) editWrap.style.display = opened ? '' : 'none';
-        if (editRecommended) editRecommended.style.display = opened && mode === 'recommended' ? '' : 'none';
-        if (editLegacy) editLegacy.style.display = opened && mode === 'legacy' ? '' : 'none';
+        if (editWrap) editWrap.style.display = '';
+        if (editRecommended) editRecommended.style.display = mode === 'recommended' ? '' : 'none';
+        if (editLegacy) editLegacy.style.display = mode === 'legacy' ? '' : 'none';
         syncPromptModeState();
-        syncChoicePills(promptModePills);
-        if (advancedWrap) {
-            advancedWrap.querySelectorAll('.cbia-blog-choice-pills').forEach(syncChoicePills);
+        syncPromptModeCards();
+        syncPromptProfileCards();
+        syncProfileHelp();
+        if (mode === 'recommended') {
+            syncRecommendedEditableBlock(false);
         }
+        syncPresetSummary();
     }
 
-    if (editToggle) editToggle.addEventListener('change', refreshPromptEditor);
-    if (advancedToggle) {
-        advancedToggle.addEventListener('change', function(){
-            const legacyRadio = document.querySelector('input[name="blog_prompt_mode_ui"][value="legacy"]');
-            const recRadio = document.querySelector('input[name="blog_prompt_mode_ui"][value="recommended"]');
-            if (!advancedToggle.checked && recRadio) recRadio.checked = true;
-            if (advancedToggle.checked && legacyRadio) legacyRadio.checked = true;
-            refreshPromptEditor();
-        });
-    }
     modeInputs.forEach(function(r){
         r.addEventListener('change', function(){
             refreshPromptEditor();
@@ -901,11 +1134,12 @@ echo '</select>';
 
     function ensureHiddenInForm(form, name, value){
         if (!form) return;
-        let field = form.querySelector('input[name="' + name + '"]');
+        let field = form.querySelector('input[type="hidden"][data-cbia-mirror="1"][name="' + name + '"]');
         if (!field) {
             field = document.createElement('input');
             field.type = 'hidden';
             field.name = name;
+            field.setAttribute('data-cbia-mirror', '1');
             form.appendChild(field);
         }
         field.value = String(value == null ? '' : value);
@@ -915,12 +1149,22 @@ echo '</select>';
         const mode = getPromptMode();
         const editableVal = editableTa ? editableTa.value : '';
         const legacyVal = legacyPrompt ? legacyPrompt.value : '';
+        const profileVal = getSelectedProfile();
+        const includeFaqVal = includeFaq && includeFaq.checked ? '1' : '';
+        const includeExamplesVal = includeExamples && includeExamples.checked ? '1' : '';
+        const intentVal = intentStrength ? intentStrength.value : 'balanced';
+        const customVal = '';
         const saveForms = document.querySelectorAll('form input[name="cbia_form"][value="blog_save"]');
         saveForms.forEach(function(hiddenCbiaForm){
             const form = hiddenCbiaForm.form;
             if (!form) return;
             ensureHiddenInForm(form, 'blog_prompt_mode', mode);
             if (editableTa) ensureHiddenInForm(form, 'blog_prompt_editable', editableVal);
+            ensureHiddenInForm(form, 'blog_prompt_profile', profileVal);
+            ensureHiddenInForm(form, 'include_faq', includeFaqVal);
+            ensureHiddenInForm(form, 'include_practical_examples', includeExamplesVal);
+            ensureHiddenInForm(form, 'search_intent_strength', intentVal);
+            ensureHiddenInForm(form, 'blog_prompt_custom_instructions', customVal);
             if (legacyPrompt) ensureHiddenInForm(form, 'legacy_full_prompt', legacyVal);
         });
     }
@@ -935,24 +1179,50 @@ echo '</select>';
         });
     });
 
-    if (restoreBtn && editableTa && editableDefault) {
+    if (restoreBtn) {
         restoreBtn.addEventListener('click', function(){
-            syncRecommendedPromptByLanguage(true);
+            syncRecommendedEditableBlock(true);
+            syncPromptFieldsToAllSaveForms();
+        });
+    }
+    if (restoreProfilePresetBtn) {
+        restoreProfilePresetBtn.addEventListener('click', function(){
+            applySelectedProfilePreset(true);
+            syncPromptFieldsToAllSaveForms();
         });
     }
     if (postLanguage) {
         postLanguage.addEventListener('change', function(){
-            syncRecommendedPromptByLanguage(false);
+            syncRecommendedEditableBlock(false);
+            syncPresetSummary();
             syncPromptFieldsToAllSaveForms();
         });
     }
+    profileInputs.forEach(function(field){
+        field.addEventListener('change', function(){
+            applySelectedProfilePreset(true);
+            refreshPromptEditor();
+            syncPromptFieldsToAllSaveForms();
+        });
+    });
+    [includeFaq, includeExamples, intentStrength].forEach(function(field){
+        if (!field) return;
+        field.addEventListener('change', function(){
+            syncRecommendedEditableBlock(false);
+            syncPresetSummary();
+            syncPromptFieldsToAllSaveForms();
+        });
+    });
+    if (editableTa) {
+        editableTa.addEventListener('input', syncPromptFieldsToAllSaveForms);
+    }
 
-    syncRecommendedPromptByLanguage(false);
     syncPromptModeState();
     syncPromptFieldsToAllSaveForms();
+    syncProfileHelp();
+    syncPresetSummary();
 
     refreshPromptEditor();
 })();
 <?php wp_add_inline_script('abb-admin', (string) ob_get_clean(), 'after'); ?>
 <?php // phpcs:enable WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedVariableFound ?>
-

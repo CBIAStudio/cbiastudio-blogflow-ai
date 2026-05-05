@@ -26,6 +26,7 @@ $defaults = array(
     'image_flat_usd_full' => 0.042,
     'image_flat_usd_openai_mini' => 0.011,
     'image_flat_usd_openai_full' => 0.042,
+    'image_flat_usd_openai_v2' => 0.042,
     'image_flat_usd_imagen3' => 0.040,
     'image_flat_usd_imagen4' => 0.040,
     // Ajustes finos
@@ -48,7 +49,7 @@ $defaults = array(
     'image_calls_per_post' => 0, // 0 => usa images_limit
 
     // modelo imagen
-    'image_model' => 'gpt-image-1-mini',
+    'image_model' => 'gpt-image-2',
 
     // output tokens por llamada de imagen (opcional)
     'image_output_tokens_per_call' => 0,
@@ -67,14 +68,14 @@ $text_provider_current = function_exists('cbia_get_text_provider') ? (string)cbi
 $image_provider_current = function_exists('cbia_get_image_provider') ? (string)cbia_get_image_provider() : 'openai';
 $model_text_current = function_exists('cbia_costes_get_current_text_model')
     ? (string)cbia_costes_get_current_text_model($cbia)
-    : (isset($cbia['openai_model']) ? (string)$cbia['openai_model'] : 'gpt-4.1-mini');
-if (!isset($table[$model_text_current])) $model_text_current = 'gpt-4.1-mini';
+    : (isset($cbia['openai_model']) ? (string)$cbia['openai_model'] : 'gpt-5-mini');
+if (!isset($table[$model_text_current])) $model_text_current = 'gpt-5-mini';
 
 $model_img_current = isset($cost['image_model']) ? (string)$cost['image_model'] : '';
 if ($model_img_current === '' && function_exists('cbia_costes_get_current_image_model')) {
     $model_img_current = (string)cbia_costes_get_current_image_model($cbia);
 }
-if ($model_img_current === '') $model_img_current = 'gpt-image-1-mini';
+if ($model_img_current === '') $model_img_current = 'gpt-image-2';
 
 $model_seo_current = (string)($cost['seo_model'] ?? '');
 if ($model_seo_current === '' || !isset($table[$model_seo_current])) $model_seo_current = $model_text_current;
@@ -102,14 +103,14 @@ $log  = $service && method_exists($service, 'get_log')
 
 $model_text_current = function_exists('cbia_costes_get_current_text_model')
     ? (string)cbia_costes_get_current_text_model($cbia)
-    : (isset($cbia['openai_model']) ? (string)$cbia['openai_model'] : 'gpt-4.1-mini');
-if (!isset($table[$model_text_current])) $model_text_current = 'gpt-4.1-mini';
+    : (isset($cbia['openai_model']) ? (string)$cbia['openai_model'] : 'gpt-5-mini');
+if (!isset($table[$model_text_current])) $model_text_current = 'gpt-5-mini';
 
 $model_img_current = isset($cost['image_model']) ? (string)$cost['image_model'] : '';
 if ($model_img_current === '' && function_exists('cbia_costes_get_current_image_model')) {
     $model_img_current = (string)cbia_costes_get_current_image_model($cbia);
 }
-if ($model_img_current === '') $model_img_current = 'gpt-image-1-mini';
+if ($model_img_current === '') $model_img_current = 'gpt-image-2';
 
 $model_seo_current = (string)($cost['seo_model'] ?? '');
 if ($model_seo_current === '' || !isset($table[$model_seo_current])) $model_seo_current = $model_text_current;
@@ -452,14 +453,15 @@ echo ($eur_total_est === null)
 <th>Image model for calculation</th>
 <td>
 <select name="image_model" class="abb-select" style="width:240px;">
+<option value="gpt-image-2" <?php selected($model_img_current, 'gpt-image-2'); ?>>gpt-image-2</option>
 <option value="gpt-image-1-mini" <?php selected($model_img_current, 'gpt-image-1-mini'); ?>>gpt-image-1-mini</option>
 <option value="gpt-image-1" <?php selected($model_img_current, 'gpt-image-1'); ?>>gpt-image-1</option>
 <option value="imagen-3.0-generate-002" <?php selected($model_img_current, 'imagen-3.0-generate-002'); ?>>imagen-3.0-generate-002</option>
 <option value="imagen-4.0-generate-001" <?php selected($model_img_current, 'imagen-4.0-generate-001'); ?>>imagen-4.0-generate-001</option>
 </select>
 <p class="description">Active image provider: <code><?php echo esc_html($image_provider_current); ?></code>. This field acts as an estimate override if you want a manual fine tune.</p>
-<p class="description"><?php echo esc_html__('Fixed image prices (USD):', 'cbiastudio-blogflow-ai'); ?> OpenAI mini <input type="number" step="0.001" min="0" name="image_flat_usd_openai_mini" value="<?php echo esc_attr((string)$cost['image_flat_usd_openai_mini']); ?>" style="width:90px;" /> &nbsp;OpenAI full <input type="number" step="0.001" min="0" name="image_flat_usd_openai_full" value="<?php echo esc_attr((string)$cost['image_flat_usd_openai_full']); ?>" style="width:90px;" /></p>
-<p class="description">Preloaded OpenAI reference: GPT Image 1 Mini = 0.011 USD and GPT Image 1 = 0.042 USD per image at 1024x1024 medium quality.</p>
+<p class="description"><?php echo esc_html__('Fixed image prices (USD):', 'cbiastudio-blogflow-ai'); ?> OpenAI mini <input type="number" step="0.001" min="0" name="image_flat_usd_openai_mini" value="<?php echo esc_attr((string)$cost['image_flat_usd_openai_mini']); ?>" style="width:90px;" /> &nbsp;OpenAI full <input type="number" step="0.001" min="0" name="image_flat_usd_openai_full" value="<?php echo esc_attr((string)$cost['image_flat_usd_openai_full']); ?>" style="width:90px;" /> &nbsp;OpenAI v2 <input type="number" step="0.001" min="0" name="image_flat_usd_openai_v2" value="<?php echo esc_attr((string)$cost['image_flat_usd_openai_v2']); ?>" style="width:90px;" /></p>
+<p class="description">Preloaded OpenAI reference: GPT Image 1 Mini = 0.011 USD and GPT Image 1 = 0.042 USD per image at 1024x1024 medium quality. GPT Image 2 uses the OpenAI v2 field for manual tuning.</p>
 <p class="description">Google Imagen 3 <input type="number" step="0.001" min="0" name="image_flat_usd_imagen3" value="<?php echo esc_attr((string)$cost['image_flat_usd_imagen3']); ?>" style="width:90px;" /> &nbsp;Google Imagen 4 <input type="number" step="0.001" min="0" name="image_flat_usd_imagen4" value="<?php echo esc_attr((string)$cost['image_flat_usd_imagen4']); ?>" style="width:90px;" /></p>
 <p class="description">Current practical reference for Google Imagen: Imagen 3 = 0.04 USD per image, Imagen 4 = 0.04 USD per image, Imagen 4 Ultra = 0.06 USD per image. Adjust this here if your real flow uses another variant.</p>
 </td>
@@ -587,4 +589,3 @@ wp_add_inline_script('abb-admin', $cbia_pro_costs_log_js, 'after');
 <?php if (!$cbia_costs_embedded): ?>
 </div>
 <?php endif; ?>
-

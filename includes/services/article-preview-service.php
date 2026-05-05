@@ -17,7 +17,8 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
         private function generate_internal(array $payload, $emit = null) {
             $prev_ignore_stop = !empty($GLOBALS['cbia_ignore_stop']);
-            $GLOBALS['cbia_ignore_stop'] = true;
+            $prev_runtime_overrides = isset($GLOBALS['cbia_runtime_settings_overrides']) ? $GLOBALS['cbia_runtime_settings_overrides'] : null;
+            $GLOBALS['cbia_ignore_stop'] = !empty($payload['ignore_stop']) ? true : false;
             try {
             $title = trim((string)($payload['title'] ?? ''));
             if ($title === '') {
@@ -78,6 +79,68 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     ? cbia_prompt_sanitize_editable_block($editable)
                     : sanitize_textarea_field($editable);
             }
+            if (array_key_exists('blog_prompt_profile', $payload)) {
+                $profile = sanitize_key((string)$payload['blog_prompt_profile']);
+                $profile_options = function_exists('cbia_prompt_get_profile_options') ? cbia_prompt_get_profile_options() : array();
+                if (array_key_exists($profile, $profile_options)) {
+                    $settings['blog_prompt_profile'] = $profile;
+                }
+            }
+            if (array_key_exists('post_length_variant', $payload)) {
+                $length_variant = sanitize_key((string)$payload['post_length_variant']);
+                if (!in_array($length_variant, array('short', 'medium', 'long'), true)) {
+                    $length_variant = 'medium';
+                }
+                $settings['post_length_variant'] = $length_variant;
+            }
+            if (array_key_exists('include_faq', $payload)) {
+                $settings['include_faq'] = !empty($payload['include_faq']) ? 1 : 0;
+            }
+            if (array_key_exists('include_practical_examples', $payload)) {
+                $settings['include_practical_examples'] = !empty($payload['include_practical_examples']) ? 1 : 0;
+            }
+            if (array_key_exists('openai_temperature', $payload) && $payload['openai_temperature'] !== null && $payload['openai_temperature'] !== '') {
+                $temperature = (float)$payload['openai_temperature'];
+                if ($temperature < 0) $temperature = 0;
+                if ($temperature > 2) $temperature = 2;
+                $settings['openai_temperature'] = $temperature;
+            }
+            if (array_key_exists('search_intent_strength', $payload)) {
+                $strength = sanitize_key((string)$payload['search_intent_strength']);
+                if (in_array($strength, array('soft', 'balanced', 'strong'), true)) {
+                    $settings['search_intent_strength'] = $strength;
+                }
+            }
+            if (array_key_exists('blog_prompt_custom_instructions', $payload)) {
+                $settings['blog_prompt_custom_instructions'] = function_exists('cbia_prompt_sanitize_custom_instructions')
+                    ? cbia_prompt_sanitize_custom_instructions((string)$payload['blog_prompt_custom_instructions'])
+                    : sanitize_textarea_field((string)$payload['blog_prompt_custom_instructions']);
+            }
+            // Composer length setting must always become a strict prompt rule.
+            if ($composer_mode) {
+                $variant = sanitize_key((string)($settings['post_length_variant'] ?? 'medium'));
+                if (!in_array($variant, array('short', 'medium', 'long'), true)) {
+                    $variant = 'medium';
+                }
+                $length_instruction = $this->build_length_instruction(
+                    $variant,
+                    (string)($settings['post_language'] ?? 'English'),
+                    !empty($settings['include_faq'])
+                );
+                $existing_custom = trim((string)($settings['blog_prompt_custom_instructions'] ?? ''));
+                if ($existing_custom !== '') {
+                    $settings['blog_prompt_custom_instructions'] = trim($length_instruction . "\n" . $existing_custom);
+                } else {
+                    $settings['blog_prompt_custom_instructions'] = $length_instruction;
+                }
+            }
+            if (!isset($GLOBALS['cbia_runtime_settings_overrides']) || !is_array($GLOBALS['cbia_runtime_settings_overrides'])) {
+                $GLOBALS['cbia_runtime_settings_overrides'] = array();
+            }
+            $GLOBALS['cbia_runtime_settings_overrides'] = array_replace_recursive(
+                (array)$GLOBALS['cbia_runtime_settings_overrides'],
+                array('openai_temperature' => (float)($settings['openai_temperature'] ?? 0.7))
+            );
             if (array_key_exists('legacy_full_prompt', $payload)) {
                 $settings['legacy_full_prompt'] = sanitize_textarea_field((string)$payload['legacy_full_prompt']);
             }
@@ -94,7 +157,15 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $text_html = cbia_strip_document_wrappers((string)$text_html);
             $text_html = cbia_strip_h1_to_h2($text_html);
             $text_html = cbia_fix_bracket_headings($text_html);
-            $text_html = cbia_normalize_faq_heading($text_html);
+            $faq_enabled = function_exists('cbia_runtime_include_faq_enabled') ? cbia_runtime_include_faq_enabled($settings) : true;
+            if (!$faq_enabled && function_exists('cbia_strip_faq_section')) {
+                $text_html = cbia_strip_faq_section($text_html);
+            } else {
+                $text_html = cbia_normalize_faq_heading($text_html);
+            }
+            if (!empty($settings['include_practical_examples'])) {
+                $text_html = $this->ensure_practical_examples_block($text_html, $title, (string)($settings['post_language'] ?? 'English'));
+            }
             if (function_exists('cbia_log')) {
                 cbia_log(sprintf("AI preview text OK: HTML generated for '%s'", (string)$title), 'INFO');
             }
@@ -296,6 +367,11 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             );
             } finally {
                 $GLOBALS['cbia_ignore_stop'] = $prev_ignore_stop;
+                if ($prev_runtime_overrides === null) {
+                    unset($GLOBALS['cbia_runtime_settings_overrides']);
+                } else {
+                    $GLOBALS['cbia_runtime_settings_overrides'] = $prev_runtime_overrides;
+                }
             }
         }
 
@@ -794,25 +870,124 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     ? cbia_prompt_get_legacy_template($settings)
                     : (string)($settings['legacy_full_prompt'] ?? ($settings['prompt_single_all'] ?? ''));
             } else {
-                $editable = (string)($settings['blog_prompt_editable'] ?? '');
-                if ($editable === '') {
-                    if (function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($idioma_post) && function_exists('cbia_prompt_recommended_editable_legacy_default')) {
-                        $editable = cbia_prompt_recommended_editable_legacy_default();
-                    } elseif (function_exists('cbia_prompt_recommended_editable_default')) {
-                        $editable = cbia_prompt_recommended_editable_default();
-                    }
-                }
-                if (function_exists('cbia_prompt_maybe_upgrade_legacy_editable')) {
-                    $editable = cbia_prompt_maybe_upgrade_legacy_editable($editable, $idioma_post);
-                }
-                $template = function_exists('cbia_prompt_build_recommended_template')
-                    ? cbia_prompt_build_recommended_template($editable, $idioma_post)
+                $template = function_exists('cbia_prompt_build_recommended_template_from_settings')
+                    ? cbia_prompt_build_recommended_template_from_settings($settings, $idioma_post)
                     : (string)($settings['prompt_single_all'] ?? '');
             }
 
             $template = str_replace('{title}', (string)$title, (string)$template);
             $template = str_replace('{IDIOMA_POST}', (string)$idioma_post, (string)$template);
             return (string)$template;
+        }
+
+        private function build_length_instruction($variant, $language, $include_faq = false) {
+            $variant = sanitize_key((string)$variant);
+            if (!in_array($variant, array('short', 'medium', 'long'), true)) {
+                $variant = 'medium';
+            }
+            $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+            if ($variant === 'short') {
+                return $is_spanish
+                    ? 'PRIORIDAD ABSOLUTA DE LONGITUD (sustituye cualquier otro rango): entre 950 y 1100 palabras reales. Minimo 950. Reparte el texto asi: apertura 180-240 palabras; cada bloque principal 220-280; cierre 100-160.'
+                    : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): between 950 and 1100 real words. Minimum 950. Split as: opening 180-240 words; each main block 220-280; closing 100-160.';
+            }
+            if ($variant === 'long') {
+                if ($include_faq) {
+                    return $is_spanish
+                        ? 'PRIORIDAD ABSOLUTA DE LONGITUD (sustituye cualquier otro rango): entre 2000 y 2200 palabras reales. Minimo 2000. Con FAQ activa, reparte asi: apertura 240-320; cada bloque principal 300-380; cada respuesta FAQ 80-110 palabras; cierre 140-220.'
+                        : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): between 2000 and 2200 real words. Minimum 2000. With FAQ enabled, split as: opening 240-320; each main block 300-380; each FAQ answer 80-110 words; closing 140-220.';
+                }
+                return $is_spanish
+                    ? 'PRIORIDAD ABSOLUTA DE LONGITUD (sustituye cualquier otro rango): entre 2000 y 2200 palabras reales. Minimo 2000. Reparte el texto asi: apertura 280-360 palabras; cada bloque principal 460-560; cierre 180-260.'
+                    : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): between 2000 and 2200 real words. Minimum 2000. Split as: opening 280-360 words; each main block 460-560; closing 180-260.';
+            }
+            if ($include_faq) {
+                return $is_spanish
+                    ? 'PRIORIDAD ABSOLUTA DE LONGITUD (sustituye cualquier otro rango): entre 1800 y 2000 palabras reales. Minimo 1800. Con FAQ activa, reparte asi: apertura 220-300; cada bloque principal 280-360; cada respuesta FAQ 75-105 palabras; cierre 130-190.'
+                    : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): between 1800 and 2000 real words. Minimum 1800. With FAQ enabled, split as: opening 220-300; each main block 280-360; each FAQ answer 75-105 words; closing 130-190.';
+            }
+            return $is_spanish
+                ? 'PRIORIDAD ABSOLUTA DE LONGITUD (sustituye cualquier otro rango): entre 1800 y 2000 palabras reales. Minimo 1800. Reparte el texto asi: apertura 260-340 palabras; cada bloque principal 420-520; cierre 150-220.'
+                : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): between 1800 and 2000 real words. Minimum 1800. Split as: opening 260-340 words; each main block 420-520; closing 150-220.';
+        }
+
+        private function ensure_practical_examples_block($html, $title, $language) {
+            $html = (string)$html;
+            $plain = strtolower(wp_strip_all_tags($html));
+            $example_hits = preg_match_all('/\b(por ejemplo|ejemplo|caso practico|caso real|escenario|example|for example|use case|real-world|scenario)\b/u', $plain, $m);
+            $has_examples_heading = (bool)preg_match('/<h[23][^>]*>[^<]*(ejemplos|casos practicos|practical examples|use cases)[^<]*<\/h[23]>/iu', $html);
+            $has_quality_examples = (bool)preg_match(
+                '/<h3[^>]*>[^<]*(escenario|scenario)\s*[0-9][^<]*<\/h3>[\s\S]{120,}/iu',
+                $html
+            );
+            if ($has_examples_heading && $example_hits >= 3 && $has_quality_examples) {
+                return $html;
+            }
+
+            $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+            $topics = $this->extract_example_topics($html, $title);
+
+            $block = '';
+            if ($is_spanish) {
+                $block .= "<h2>Ejemplos practicos aplicados</h2>\n";
+                $block .= "<h3>Escenario 1: " . esc_html($topics[0]) . "</h3>\n";
+                $block .= "<p><strong>Contexto real:</strong> en una operativa semanal se detectan senales tempranas relacionadas con este bloque antes de que se conviertan en incidencias costosas.</p>\n";
+                $block .= "<p><strong>Aplicacion:</strong> se define una revision breve con responsables, checklist y umbral de alerta para actuar en menos de 24 horas.</p>\n";
+                $block .= "<p><strong>Resultado medible (30 dias):</strong> menos incidencias repetidas y mejor tiempo medio de respuesta.</p>\n";
+                $block .= "<h3>Escenario 2: " . esc_html($topics[1]) . "</h3>\n";
+                $block .= "<p><strong>Contexto real:</strong> el equipo acumula problemas puntuales sin patron claro y no existe trazabilidad suficiente para tomar decisiones.</p>\n";
+                $block .= "<p><strong>Aplicacion:</strong> se registra cada caso con fecha, impacto, causa probable, accion correctiva y fecha de cierre en un unico tablero.</p>\n";
+                $block .= "<p><strong>Resultado medible (30 dias):</strong> decisiones mas rapidas, priorizacion objetiva y menos reprocesos.</p>\n";
+                $block .= "<h3>Escenario 3: " . esc_html($topics[2]) . "</h3>\n";
+                $block .= "<p><strong>Contexto real:</strong> distintos turnos resuelven situaciones similares de forma diferente, generando errores evitables.</p>\n";
+                $block .= "<p><strong>Aplicacion:</strong> se implanta una mini secuencia operativa con 5 pasos, verificacion cruzada y retroalimentacion semanal.</p>\n";
+                $block .= "<p><strong>Resultado medible (30 dias):</strong> mayor consistencia, menos fallos por omision y mejor coordinacion entre equipos.</p>\n";
+            } else {
+                $block .= "<h2>Practical examples</h2>\n";
+                $block .= "<h3>Scenario 1: " . esc_html($topics[0]) . "</h3>\n";
+                $block .= "<p><strong>Real context:</strong> a weekly operation review reveals early signals in this area before they become expensive incidents.</p>\n";
+                $block .= "<p><strong>Application:</strong> define a short review ritual with owners, a checklist, and escalation thresholds for action within 24 hours.</p>\n";
+                $block .= "<p><strong>30-day measurable result:</strong> fewer repeated incidents and better average response time.</p>\n";
+                $block .= "<h3>Scenario 2: " . esc_html($topics[1]) . "</h3>\n";
+                $block .= "<p><strong>Real context:</strong> recurring issues appear with no visible pattern and weak traceability for decision-making.</p>\n";
+                $block .= "<p><strong>Application:</strong> log every case with date, impact, probable cause, corrective action, and closure date in a single board.</p>\n";
+                $block .= "<p><strong>30-day measurable result:</strong> faster prioritization, clearer decisions, and less rework.</p>\n";
+                $block .= "<h3>Scenario 3: " . esc_html($topics[2]) . "</h3>\n";
+                $block .= "<p><strong>Real context:</strong> different teams solve the same situation in inconsistent ways, increasing avoidable mistakes.</p>\n";
+                $block .= "<p><strong>Application:</strong> implement a 5-step operational sequence with cross-checks and weekly feedback.</p>\n";
+                $block .= "<p><strong>30-day measurable result:</strong> stronger consistency, fewer omissions, and better coordination.</p>\n";
+            }
+
+            if (preg_match('/<h2[^>]*>\\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Questions? ?FAQs?|FAQs)\\s*<\\/h2>/i', $html, $match, PREG_OFFSET_CAPTURE)) {
+                $pos = (int)$match[0][1];
+                return substr($html, 0, $pos) . $block . substr($html, $pos);
+            }
+
+            return $html . "\n" . $block;
+        }
+
+        private function extract_example_topics($html, $title) {
+            $topics = array();
+            if (preg_match_all('/<h[23][^>]*>(.*?)<\\/h[23]>/iu', (string)$html, $matches)) {
+                foreach ((array)$matches[1] as $raw_heading) {
+                    $heading = trim(wp_strip_all_tags((string)$raw_heading));
+                    if ($heading === '') continue;
+                    if (preg_match('/(faq|preguntas frecuentes|practical examples|ejemplos practicos)/iu', $heading)) continue;
+                    $topics[] = $heading;
+                    if (count($topics) >= 3) break;
+                }
+            }
+
+            $fallback = trim(wp_strip_all_tags((string)$title));
+            if ($fallback === '') $fallback = 'Aplicacion operativa';
+            if (empty($topics)) {
+                $topics = array($fallback, $fallback, $fallback);
+            }
+            while (count($topics) < 3) {
+                $topics[] = $fallback;
+            }
+
+            return array_slice(array_map('sanitize_text_field', $topics), 0, 3);
         }
 
         private function render_markers($html, $title, $images_limit, $preview_mode, $emit = null, $internal_image_style = '') {

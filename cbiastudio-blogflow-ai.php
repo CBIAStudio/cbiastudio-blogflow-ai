@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CBIAStudio BlogFlow with AI
  * Description: Base edition of CBIAStudio BlogFlow with AI for WordPress.
- * Version: 2.0.1
+ * Version: 2.0.2
  * Text Domain: cbiastudio-blogflow-ai
  * Domain Path: /languages
  *
@@ -15,7 +15,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.0.1');
+if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.0.2');
 if (!defined('CBIA_BASE_PLUGIN_FILE')) define('CBIA_BASE_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_BASE_PLUGIN_DIR')) define('CBIA_BASE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_BASE_PLUGIN_URL')) define('CBIA_BASE_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -94,6 +94,19 @@ if (!function_exists('cbia_date_mysql_from_ts')) {
 
 if (!function_exists('cbia_log')) {
 	/**
+	 * Redacta posibles secretos en mensajes de log.
+	 */
+	function cbia_mask_sensitive_log_text(string $text): string {
+		$text = (string)$text;
+		if ($text === '') return $text;
+		$text = preg_replace('/(Incorrect API key provided:\s*)([^\s\.,]+)/i', '$1[REDACTED]', $text);
+		$text = preg_replace('/(\bapi[_\s-]?key\s*:\s*)([^\s\.,]+)/i', '$1[REDACTED]', $text);
+		$text = preg_replace('/([?&](?:key|api_key)=)([^&\s]+)/i', '$1[REDACTED]', $text);
+		$text = preg_replace('/\bsk-[A-Za-z0-9_\-]{10,}\b/', 'sk-[REDACTED]', $text);
+		return (string)$text;
+	}
+
+	/**
 	 * Log general en option CBIA_OPTION_LOG (texto plano acumulado)
 	 */
 	function cbia_log(string $message, string $level = 'INFO'): void {
@@ -101,7 +114,9 @@ if (!function_exists('cbia_log')) {
 			$message = (string) cbia_fix_mojibake($message);
 		}
 		// Internal logs are stored as-is; UI strings are translated at render time.
-		$message = (string)$message;
+		$message = function_exists('cbia_mask_sensitive_log_text')
+			? cbia_mask_sensitive_log_text((string)$message)
+			: (string)$message;
 		$level = strtoupper(trim($level ?: 'INFO'));
 		$line = '[' . cbia_now_mysql() . '][' . $level . '] ' . $message;
 		$log = (string) get_option(CBIA_OPTION_LOG, '');
@@ -159,7 +174,7 @@ if (!function_exists('cbia_get_default_settings')) {
 			// OpenAI
 			'openai_api_key'        => '',
 			'openai_consent'        => 0,
-			'openai_model'          => 'gpt-4.1-mini',
+			'openai_model'          => 'gpt-5-mini',
 			'openai_temperature'    => 0.7,
 			// CAMBIO: claves por proveedor
 			'google_api_key'        => '',
@@ -168,7 +183,7 @@ if (!function_exists('cbia_get_default_settings')) {
 			'text_provider'         => 'openai',
 			'text_model'            => '',
 			'image_provider'        => 'openai',
-			'image_model'           => 'gpt-image-1-mini',
+			'image_model'           => 'gpt-image-2',
 			// CAMBIO: Google Imagen (Vertex AI)
 			'google_project_id'     => '',
 			'google_location'       => '',
@@ -179,6 +194,11 @@ if (!function_exists('cbia_get_default_settings')) {
 			'images_limit'          => 1,
 			// CAMBIO: prompt recomendado/legado (compatibilidad)
 			'blog_prompt_mode'      => 'recommended',
+			'blog_prompt_profile'   => 'discover_editorial',
+			'include_faq'           => 1,
+			'include_practical_examples' => 0,
+			'search_intent_strength' => 'balanced',
+			'blog_prompt_custom_instructions' => '',
 			'blog_prompt_editable'  => '',
 			'legacy_full_prompt'    => '',
 			'prompt_single_all'     => "Write an HTML blog article (without <h1>) about: {title}\nInclude image markers like [IMAGE: description].",

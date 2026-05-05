@@ -2179,6 +2179,11 @@
         var lengthSelect = document.getElementById('cbia-ai-length');
         var imagesSelect = document.getElementById('cbia-ai-images');
         var internalStyleSelect = document.getElementById('cbia-ai-internal-style');
+        var promptProfileSelect = document.getElementById('cbia-ai-prompt-profile');
+        var includeFaqToggle = document.getElementById('cbia-ai-include-faq');
+        var includeExamplesToggle = document.getElementById('cbia-ai-include-examples');
+        var lengthHelp = document.getElementById('cbia-ai-length-help');
+        var temperatureInput = document.getElementById('cbia-ai-temperature');
         var languageSelect = document.getElementById('cbia-ai-language');
         var summary = document.getElementById('cbia-ai-summary');
         var generateBtn = document.getElementById('cbia-ai-generate');
@@ -2265,6 +2270,19 @@
             var count = parseInt(value || 0, 10);
             if (isNaN(count) || count < 0) count = 0;
             wordCount.textContent = count + ' palabras';
+        }
+
+        function countWordsFromHtml(html) {
+            var plain = String(html || '')
+                .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+                .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/&nbsp;/gi, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            if (!plain) return 0;
+            var tokens = plain.match(/[A-Za-z0-9\u00C0-\u024F]+/g);
+            return tokens ? tokens.length : 0;
         }
 
         function escAttr(value) {
@@ -2641,16 +2659,60 @@
 
         function getLengthInstruction() {
             var mode = lengthSelect ? (lengthSelect.value || 'medium') : 'medium';
-            if (mode === 'short') return 'Write a short article around 500-700 words.';
-            if (mode === 'long') return 'Write a long article around 1200-1600 words.';
-            return 'Write a medium-length article around 800-1100 words.';
+            var faqOn = isComposerFaqEnabled();
+            if (mode === 'short') {
+                return faqOn
+                    ? 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): 950-1100 words, minimum 950. With FAQ enabled: opening 150-210, each main block 150-190, each FAQ answer 45-65, closing 80-120 words.'
+                    : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): 950-1100 words, minimum 950. Split as: opening 180-240, each main block 220-280, closing 100-160 words.';
+            }
+            if (mode === 'long') {
+                return faqOn
+                    ? 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): 2000-2200 words, minimum 2000. With FAQ enabled: opening 240-320, each main block 300-380, each FAQ answer 80-110, closing 140-220 words.'
+                    : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): 2000-2200 words, minimum 2000. Split as: opening 280-360, each main block 460-560, closing 180-260 words.';
+            }
+            return faqOn
+                ? 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): 1800-2000 words, minimum 1800. With FAQ enabled: opening 220-300, each main block 280-360, each FAQ answer 75-105, closing 130-190 words.'
+                : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): 1800-2000 words, minimum 1800. Split as: opening 260-340, each main block 420-520, closing 150-220 words.';
         }
 
         function getLengthLabel() {
             var mode = lengthSelect ? (lengthSelect.value || 'medium') : 'medium';
-            if (mode === 'short') return 'Corta';
-            if (mode === 'long') return 'Larga';
-            return 'Media';
+            if (mode === 'short') return 'Short';
+            if (mode === 'long') return 'Long';
+            return 'Medium';
+        }
+
+        function getComposerTemperature() {
+            var raw = temperatureInput ? String(temperatureInput.value || '').trim() : '';
+            raw = raw.replace(',', '.');
+            var value = parseFloat(raw);
+            if (isNaN(value)) value = 0.7;
+            if (value < 0) value = 0;
+            if (value > 2) value = 2;
+            return value;
+        }
+
+        function getPromptProfileValue() {
+            var profile = promptProfileSelect ? String(promptProfileSelect.value || '') : '';
+            if (profile !== 'seo_balanced' && profile !== 'how_to' && profile !== 'discover_editorial') {
+                profile = 'discover_editorial';
+            }
+            return profile;
+        }
+
+        function getPromptProfileLabel() {
+            var profile = getPromptProfileValue();
+            if (profile === 'seo_balanced') return 'SEO Standard';
+            if (profile === 'how_to') return 'How-to';
+            return 'Discover';
+        }
+
+        function isComposerFaqEnabled() {
+            return !!(includeFaqToggle && includeFaqToggle.checked);
+        }
+
+        function isComposerExamplesEnabled() {
+            return !!(includeExamplesToggle && includeExamplesToggle.checked);
         }
 
         function normalizeLanguageValue(value) {
@@ -2784,12 +2846,26 @@
 
         function updateSummary() {
             if (!summary) return;
-            if (!aiCfg.internalImagesEnabled) {
-                summary.textContent = 'Text: ' + getLengthLabel() + ' | Internal images: 0 (Pro only) | Language: ' + getLanguageLabel();
+            summary.textContent = 'Mode: ' + getPromptProfileLabel()
+                + ' | FAQ: ' + (isComposerFaqEnabled() ? 'On' : 'Off')
+                + ' | Examples: ' + (isComposerExamplesEnabled() ? 'On' : 'Off')
+                + ' | Language: ' + getLanguageLabel()
+                + ' | Length: ' + getLengthLabel()
+                + ' | Temp: ' + String(getComposerTemperature());
+        }
+
+        function updateLengthHelp() {
+            if (!lengthHelp) return;
+            var mode = lengthSelect ? (lengthSelect.value || 'medium') : 'medium';
+            if (mode === 'short') {
+                lengthHelp.textContent = 'Target: ~1000 words (950-1100).';
                 return;
             }
-            var styleLabel = internalStyleSelect ? ((internalStyleSelect.value === 'normal') ? 'normal' : 'banner') : 'banner';
-            summary.textContent = 'Text: ' + getLengthLabel() + ' | Internal images: ' + getInternalImagesCount() + ' (' + styleLabel + ') | Language: ' + getLanguageLabel();
+            if (mode === 'long') {
+                lengthHelp.textContent = 'Target: 2000-2200 words.';
+                return;
+            }
+            lengthHelp.textContent = 'Target: 1800-2000 words.';
         }
 
         function getComposerStorageKey() {
@@ -2806,7 +2882,11 @@
                     length: String(lengthSelect ? (lengthSelect.value || 'medium') : 'medium'),
                     internal_images: getInternalImagesCount(),
                     language: String(languageSelect ? (normalizeLanguageValue(languageSelect.value || '') || normalizeLanguageValue(aiCfg.defaultLanguage || '') || 'English') : (normalizeLanguageValue(aiCfg.defaultLanguage || '') || 'English')),
-                    internal_style: String(internalStyleSelect ? (internalStyleSelect.value || 'banner') : 'banner')
+                    internal_style: String(internalStyleSelect ? (internalStyleSelect.value || 'banner') : 'banner'),
+                    temperature: getComposerTemperature(),
+                    prompt_profile: getPromptProfileValue(),
+                    include_faq: isComposerFaqEnabled() ? 1 : 0,
+                    include_practical_examples: isComposerExamplesEnabled() ? 1 : 0
                 },
                 final_html: String(finalHtml || ''),
                 preview_html: String(preview ? (preview.innerHTML || '') : ''),
@@ -2883,7 +2963,8 @@
                     length: String(aiCfg.defaultLength || 'medium'),
                     internal_images: defaultInternalImages,
                     language: String(normalizeLanguageValue(aiCfg.defaultLanguage || '') || 'English'),
-                    internal_style: String(internalStyleSelect ? (internalStyleSelect.value || 'banner') : 'banner')
+                    internal_style: String(internalStyleSelect ? (internalStyleSelect.value || 'banner') : 'banner'),
+                    temperature: getComposerTemperature()
                 });
             }
             if (lengthSelect && controls.length) lengthSelect.value = String(controls.length);
@@ -2901,6 +2982,23 @@
                 languageSelect.value = mappedLang;
             }
             if (internalStyleSelect && controls.internal_style) internalStyleSelect.value = String(controls.internal_style);
+            if (temperatureInput && typeof controls.temperature !== 'undefined') {
+                var tempValue = parseFloat(String(controls.temperature).replace(',', '.'));
+                if (!isNaN(tempValue)) {
+                    if (tempValue < 0) tempValue = 0;
+                    if (tempValue > 2) tempValue = 2;
+                    temperatureInput.value = String(tempValue);
+                }
+            }
+            if (promptProfileSelect && typeof controls.prompt_profile !== 'undefined') {
+                promptProfileSelect.value = String(controls.prompt_profile || 'discover_editorial');
+            }
+            if (includeFaqToggle && typeof controls.include_faq !== 'undefined') {
+                includeFaqToggle.checked = !!parseInt(controls.include_faq || 0, 10);
+            }
+            if (includeExamplesToggle && typeof controls.include_practical_examples !== 'undefined') {
+                includeExamplesToggle.checked = !!parseInt(controls.include_practical_examples || 0, 10);
+            }
 
             finalHtml = String(snapshot.final_html || '');
             finalFocusKeyphrase = String(snapshot.focus_keyphrase || '');
@@ -4410,8 +4508,13 @@
             fd.append('images_limit', String(getTotalImagesForEngine()));
             fd.append('internal_image_style', internalStyleSelect ? (internalStyleSelect.value || 'banner') : 'banner');
             fd.append('skip_images', (forceSkipImages || shouldSkipImages()) ? '1' : '0');
+            fd.append('post_length_variant', lengthSelect ? (lengthSelect.value || 'medium') : 'medium');
+            fd.append('openai_temperature', String(getComposerTemperature()));
             fd.append('blog_prompt_mode', 'recommended');
-            fd.append('blog_prompt_editable', getLengthInstruction());
+            fd.append('blog_prompt_profile', getPromptProfileValue());
+            fd.append('include_faq', isComposerFaqEnabled() ? '1' : '0');
+            fd.append('include_practical_examples', isComposerExamplesEnabled() ? '1' : '0');
+            fd.append('blog_prompt_custom_instructions', getLengthInstruction());
 
             return fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', body: fd })
                 .then(function (r) { return r.text(); })
@@ -4421,7 +4524,11 @@
                     if (!data || !data.success || !data.data) {
                         throw new Error((data && data.data && data.data.message) ? data.data.message : 'Could not generate preview.');
                     }
-                    setWordCount(data.data.word_count || 0);
+                    var classicCount = parseInt(data.data.word_count || 0, 10) || 0;
+                    if (classicCount <= 0) {
+                        classicCount = countWordsFromHtml(data.data.raw_html || data.data.preview_html || '');
+                    }
+                    setWordCount(classicCount);
                     return data.data;
                 })
                 .finally(function () {
@@ -4492,8 +4599,13 @@
                 params.append('images_limit', String(getTotalImagesForEngine()));
                 params.append('internal_image_style', internalStyleSelect ? (internalStyleSelect.value || 'banner') : 'banner');
                 params.append('skip_images', (forceSkipImages || shouldSkipImages()) ? '1' : '0');
+                params.append('post_length_variant', lengthSelect ? (lengthSelect.value || 'medium') : 'medium');
+                params.append('openai_temperature', String(getComposerTemperature()));
                 params.append('blog_prompt_mode', 'recommended');
-                params.append('blog_prompt_editable', getLengthInstruction());
+                params.append('blog_prompt_profile', getPromptProfileValue());
+                params.append('include_faq', isComposerFaqEnabled() ? '1' : '0');
+                params.append('include_practical_examples', isComposerExamplesEnabled() ? '1' : '0');
+                params.append('blog_prompt_custom_instructions', getLengthInstruction());
 
                 var done = false;
                 var lastEventAt = Date.now();
@@ -4751,10 +4863,14 @@
                             }
                         }
                         if (finalTitle) syncEditorTitle(finalTitle);
-                        setWordCount(data.word_count || 0);
                         finalHtml = textOnlyMode
                             ? injectInternalImagesIntoHtml(finalHtml, receivedInternalImages)
                             : injectInternalImagesIntoHtml(finalHtml, data.images || []);
+                        var resolvedWordCount = parseInt(data.word_count || 0, 10) || 0;
+                        if (resolvedWordCount <= 0) {
+                            resolvedWordCount = countWordsFromHtml(finalHtml);
+                        }
+                        setWordCount(resolvedWordCount);
                         if (preview) {
                             if (textOnlyMode) {
                                 // In text-only mode the stream has no image events, so force
@@ -4967,26 +5083,8 @@
                     } catch (eYoast) {}
                     persistComposerSnapshot();
                     setStatus('Contenido aplicado en servidor.', false);
-                    if (res.data && res.data.edit_url) {
-                        setStatus('Contenido aplicado en servidor. Abriendo el post...', false);
-                        var editUrl = String(res.data.edit_url);
-                        var jumpUrl = editUrl + (editUrl.indexOf('?') >= 0 ? '&' : '?') + 'cbia_ai=1&cbia_sync=' + Date.now();
-                        try {
-                            sessionStorage.setItem('cbia_ai_title_after_redirect', JSON.stringify({
-                                post_id: appliedPostId,
-                                title: titleForApply
-                            }));
-                        } catch (eStore) {}
-                        try {
-                            setTimeout(function () { window.location.assign(jumpUrl); }, 900);
-                            return;
-                        } catch (eNav) {
-                            setTimeout(function () { window.location.href = jumpUrl; }, 900);
-                            return;
-                        }
-                    }
-                    // Fallback only if backend did not return edit_url.
                     try { insertInEditor(titleForApply, htmlCandidate, focusForApply, metadForApply, appliedCats, appliedTags); } catch (eInsertUi) {}
+                    setStatus('Content inserted into editor.', false);
                     closeComposerModal();
                 }).catch(function (err) {
                     setStatus((err && err.message) ? err.message : 'Could not insert automatically. Copy and paste manually.', true);
@@ -5219,9 +5317,19 @@
             completeMissingBtn.type = 'button';
         }
 
-        if (lengthSelect) lengthSelect.addEventListener('change', updateSummary);
+        if (lengthSelect) lengthSelect.addEventListener('change', function () {
+            updateSummary();
+            updateLengthHelp();
+        });
+        if (temperatureInput) {
+            temperatureInput.addEventListener('input', updateSummary);
+            temperatureInput.addEventListener('change', updateSummary);
+        }
         if (imagesSelect) imagesSelect.addEventListener('change', updateSummary);
         if (internalStyleSelect) internalStyleSelect.addEventListener('change', updateSummary);
+        if (promptProfileSelect) promptProfileSelect.addEventListener('change', updateSummary);
+        if (includeFaqToggle) includeFaqToggle.addEventListener('change', updateSummary);
+        if (includeExamplesToggle) includeExamplesToggle.addEventListener('change', updateSummary);
         if (titleInput) {
             titleInput.addEventListener('input', function () {
                 syncEditorTitle(titleInput.value || '');
@@ -5233,6 +5341,7 @@
         schedulePendingYoastSync();
         if (languageSelect) languageSelect.addEventListener('change', updateSummary);
         updateSummary();
+        updateLengthHelp();
         renderImageCards();
         hydrateComposerSnapshot();
         restoreRedirectTitleSync();

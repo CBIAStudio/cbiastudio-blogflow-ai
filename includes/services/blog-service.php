@@ -185,6 +185,38 @@ if (!class_exists('CBIA_Pro_Blog_Service')) {
                     $settings['blog_prompt_editable'] = $editable_raw;
                 }
 
+                if (array_key_exists('blog_prompt_profile', $post_unslashed)) {
+                    $profile = sanitize_key((string)($post_unslashed['blog_prompt_profile'] ?? 'discover_editorial'));
+                    $profile_options = function_exists('cbia_prompt_get_profile_options') ? cbia_prompt_get_profile_options() : array();
+                    if (!array_key_exists($profile, $profile_options)) {
+                        $profile = 'discover_editorial';
+                    }
+                    $settings['blog_prompt_profile'] = $profile;
+                }
+                if (array_key_exists('include_faq', $post_unslashed)) {
+                    $settings['include_faq'] = !empty($post_unslashed['include_faq']) ? 1 : 0;
+                } elseif (array_key_exists('blog_prompt_profile', $post_unslashed)) {
+                    $settings['include_faq'] = 0;
+                }
+                if (array_key_exists('include_practical_examples', $post_unslashed)) {
+                    $settings['include_practical_examples'] = !empty($post_unslashed['include_practical_examples']) ? 1 : 0;
+                } elseif (array_key_exists('blog_prompt_profile', $post_unslashed)) {
+                    $settings['include_practical_examples'] = 0;
+                }
+                if (array_key_exists('search_intent_strength', $post_unslashed)) {
+                    $strength = sanitize_key((string)($post_unslashed['search_intent_strength'] ?? 'balanced'));
+                    if (!in_array($strength, array('soft', 'balanced', 'strong'), true)) {
+                        $strength = 'balanced';
+                    }
+                    $settings['search_intent_strength'] = $strength;
+                }
+                if (array_key_exists('blog_prompt_custom_instructions', $post_unslashed)) {
+                    $custom = (string)($post_unslashed['blog_prompt_custom_instructions'] ?? '');
+                    $settings['blog_prompt_custom_instructions'] = function_exists('cbia_prompt_sanitize_custom_instructions')
+                        ? cbia_prompt_sanitize_custom_instructions($custom)
+                        : sanitize_textarea_field($custom);
+                }
+
                 $legacy_input = (string)($post_unslashed['legacy_full_prompt'] ?? '');
                 if ($legacy_input !== '') {
                     if (function_exists('cbia_prompt_clean_legacy_template')) {
@@ -208,8 +240,10 @@ if (!class_exists('CBIA_Pro_Blog_Service')) {
                         $prompt_warnings[] = 'Advanced prompt: does not include [IMAGE: ...] markers.';
                     }
                 } else {
-                    if (function_exists('cbia_prompt_build_recommended_template')) {
-                        $settings['prompt_single_all'] = cbia_prompt_build_recommended_template($settings['blog_prompt_editable'], $prompt_language);
+                    if (function_exists('cbia_prompt_build_recommended_template_from_settings')) {
+                        $settings['prompt_single_all'] = cbia_prompt_build_recommended_template_from_settings($settings, $prompt_language);
+                    } elseif (function_exists('cbia_prompt_build_recommended_template')) {
+                        $settings['prompt_single_all'] = cbia_prompt_build_recommended_template((string)($settings['blog_prompt_editable'] ?? ''), $prompt_language);
                     }
                 }
 

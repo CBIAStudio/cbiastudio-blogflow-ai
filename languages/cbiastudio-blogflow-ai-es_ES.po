@@ -1,5 +1,5 @@
 # Spanish translations for CBIAStudio BlogFlow with AI package
-# Traducciones al espa�ol para el paquete CBIAStudio BlogFlow Pro.
+# Traducciones al espaÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ol para el paquete CBIAStudio BlogFlow Pro.
 # Copyright (C) 2026 THE CBIAStudio BlogFlow with AI'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the CBIAStudio BlogFlow with AI package.
 # Automatically generated, 2026.
@@ -1408,8 +1408,7 @@ msgstr "solo destacada"
 
 #: includes/admin/views/oldposts.php:395
 msgid "AI actions that may consume credits will run. Continue?"
-msgstr ""
-"Se van a ejecutar acciones con IA que pueden consumir creditos. ¿Continuar?"
+msgstr "Se van a ejecutar acciones con IA que pueden consumir creditos. Continuar?"
 
 #: includes/admin/views/oldposts.php:396
 msgid "Non-JSON response from AJAX"
@@ -1432,7 +1431,7 @@ msgid ""
 "Background queue created. Processing will continue even if you leave this "
 "tab."
 msgstr ""
-"Cola en background creada. El proceso seguira aunque salgas de esta pestaña."
+"Cola en segundo plano creada. El proceso seguira aunque salgas de esta pestana."
 
 #: includes/admin/views/oldposts.php:401
 msgid ""
@@ -1478,8 +1477,7 @@ msgid ""
 "There is already a background batch running. This tab has been reattached to "
 "it."
 msgstr ""
-"Ya hay un lote en background ejecutandose. Esta pestaña se ha reenganchado a "
-"ese proceso."
+"Ya hay un lote en background ejecutandose. Esta pestana se ha reenganchado a ese proceso."
 
 #: includes/admin/views/oldposts.php:408
 msgid "Unknown error"
@@ -2432,7 +2430,7 @@ msgstr ""
 #, php-format
 msgid ""
 "Last %1$d calculation: posts=%2$d real=%3$d est=%4$d real_calls=%5$d "
-"real_fails=%6$d tokens_in=%7$d tokens_out=%8$d total€=%9$s"
+"real_fails=%6$d tokens_in=%7$d tokens_out=%8$d totalÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬=%9$s"
 msgstr ""
 
 #: includes/domain/costs.php:1250
@@ -2444,7 +2442,7 @@ msgstr ""
 #, php-format
 msgid ""
 "REAL-only last %1$d calculation: posts=%2$d real=%3$d real_calls=%4$d "
-"real_fails=%5$d tokens_in=%6$d tokens_out=%7$d total€=%8$s"
+"real_fails=%5$d tokens_in=%6$d tokens_out=%7$d totalÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬=%8$s"
 msgstr ""
 
 #: includes/domain/costs.php:1275
@@ -2454,7 +2452,7 @@ msgstr ""
 
 #: includes/domain/costs.php:1305
 #, php-format
-msgid "REAL calibration applied: billing=%1$s€ real_calc=%2$s€ mult=%3$s"
+msgid "REAL calibration applied: billing=%1$sÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ real_calc=%2$sÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ mult=%3$s"
 msgstr ""
 
 #: includes/domain/costs.php:1313

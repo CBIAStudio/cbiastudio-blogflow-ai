@@ -525,11 +525,11 @@ $model_options = array();
 $provider_settings = function_exists('cbia_providers_get_settings') ? cbia_providers_get_settings() : array();
 $providers_all = function_exists('cbia_providers_get_all') ? cbia_providers_get_all() : array();
 $provider_key = function_exists('cbia_providers_get_current_provider') ? cbia_providers_get_current_provider() : 'openai';
-$provider = $providers_all[$provider_key] ?? ($providers_all['openai'] ?? array('label' => 'OpenAI', 'models' => array('gpt-4.1-mini')));
+$provider = $providers_all[$provider_key] ?? ($providers_all['openai'] ?? array('label' => 'OpenAI', 'models' => array('gpt-5-mini')));
 $provider_label = (string) ($provider['label'] ?? $provider_key);
 $provider_logo = plugins_url('assets/images/providers/' . $provider_key . '.svg', CBIA_PRO_PLUGIN_FILE);
 $provider_cfg = function_exists('cbia_providers_get_provider') ? cbia_providers_get_provider($provider_key) : array();
-$current_model = (string) ($provider_cfg['model'] ?? ($provider['models'][0] ?? 'gpt-4.1-mini'));
+$current_model = (string) ($provider_cfg['model'] ?? ($provider['models'][0] ?? 'gpt-5-mini'));
 
 $export_url = wp_nonce_url(
     admin_url('admin-post.php?action=cbia_usage_export&usage_days=' . (int) $days . '&usage_model=' . rawurlencode((string) $requested_model)),
