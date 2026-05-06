@@ -163,8 +163,32 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             } else {
                 $text_html = cbia_normalize_faq_heading($text_html);
             }
+            $length_variant = sanitize_key((string)($settings['post_length_variant'] ?? 'medium'));
+            if (!in_array($length_variant, array('short', 'medium', 'long'), true)) {
+                $length_variant = 'medium';
+            }
             if (!empty($settings['include_practical_examples'])) {
-                $text_html = $this->ensure_practical_examples_block($text_html, $title, (string)($settings['post_language'] ?? 'English'));
+                $text_html = $this->ensure_practical_examples_block(
+                    $text_html,
+                    $title,
+                    (string)($settings['post_language'] ?? 'English'),
+                    $length_variant
+                );
+            }
+            if (function_exists('cbia_pick_length_target_words') && function_exists('cbia_count_words_from_html') && function_exists('cbia_expand_text_to_length_target')) {
+                list($min_words, $max_words) = cbia_pick_length_target_words($length_variant, !empty($settings['include_faq']));
+                $current_words = (int) cbia_count_words_from_html((string) $text_html);
+                if ($current_words < (int) $min_words) {
+                    $text_html = cbia_expand_text_to_length_target($title, (string)$text_html, (array)$settings, (int)$min_words, (int)$max_words);
+                    if (!empty($settings['include_practical_examples'])) {
+                        $text_html = $this->ensure_practical_examples_block(
+                            (string)$text_html,
+                            $title,
+                            (string)($settings['post_language'] ?? 'English'),
+                            $length_variant
+                        );
+                    }
+                }
             }
             if (function_exists('cbia_log')) {
                 cbia_log(sprintf("AI preview text OK: HTML generated for '%s'", (string)$title), 'INFO');
@@ -911,51 +935,80 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): between 1800 and 2000 real words. Minimum 1800. Split as: opening 260-340 words; each main block 420-520; closing 150-220.';
         }
 
-        private function ensure_practical_examples_block($html, $title, $language) {
+        private function ensure_practical_examples_block($html, $title, $language, $length_variant = 'medium') {
             $html = (string)$html;
+            $length_variant = sanitize_key((string)$length_variant);
+            if (!in_array($length_variant, array('short', 'medium', 'long'), true)) {
+                $length_variant = 'medium';
+            }
             $plain = strtolower(wp_strip_all_tags($html));
             $example_hits = preg_match_all('/\b(por ejemplo|ejemplo|caso practico|caso real|escenario|example|for example|use case|real-world|scenario)\b/u', $plain, $m);
+            $required_scenarios = ($length_variant === 'short') ? 3 : 4;
+            $min_words_per_scenario = ($length_variant === 'short') ? 55 : 85;
             $has_examples_heading = (bool)preg_match('/<h[23][^>]*>[^<]*(ejemplos|casos practicos|practical examples|use cases)[^<]*<\/h[23]>/iu', $html);
-            $has_quality_examples = (bool)preg_match(
-                '/<h3[^>]*>[^<]*(escenario|scenario)\s*[0-9][^<]*<\/h3>[\s\S]{120,}/iu',
-                $html
-            );
-            if ($has_examples_heading && $example_hits >= 3 && $has_quality_examples) {
+            $scenario_matches = array();
+            $scenario_count = preg_match_all('/<h3[^>]*>[^<]*(escenario|scenario)\s*[0-9][^<]*<\/h3>([\s\S]*?)(?=<h3\b|<h2\b|$)/iu', $html, $scenario_matches, PREG_SET_ORDER);
+            $quality_ok = false;
+            if ($scenario_count && is_array($scenario_matches)) {
+                $valid_blocks = 0;
+                foreach ($scenario_matches as $row) {
+                    $segment_plain = wp_strip_all_tags((string)($row[0] ?? ''));
+                    preg_match_all('/\p{L}[\p{L}\p{N}\-_]*/u', $segment_plain, $wm);
+                    $segment_words = count((array)($wm[0] ?? array()));
+                    if ($segment_words >= $min_words_per_scenario) {
+                        $valid_blocks++;
+                    }
+                }
+                $quality_ok = ($valid_blocks >= $required_scenarios);
+            }
+            if ($has_examples_heading && $example_hits >= 4 && $quality_ok) {
                 return $html;
             }
 
             $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
-            $topics = $this->extract_example_topics($html, $title);
+            $topics = $this->extract_example_topics($html, $title, $required_scenarios);
 
             $block = '';
             if ($is_spanish) {
                 $block .= "<h2>Ejemplos practicos aplicados</h2>\n";
                 $block .= "<h3>Escenario 1: " . esc_html($topics[0]) . "</h3>\n";
-                $block .= "<p><strong>Contexto real:</strong> en una operativa semanal se detectan senales tempranas relacionadas con este bloque antes de que se conviertan en incidencias costosas.</p>\n";
-                $block .= "<p><strong>Aplicacion:</strong> se define una revision breve con responsables, checklist y umbral de alerta para actuar en menos de 24 horas.</p>\n";
-                $block .= "<p><strong>Resultado medible (30 dias):</strong> menos incidencias repetidas y mejor tiempo medio de respuesta.</p>\n";
+                $block .= "<p><strong>Contexto real:</strong> durante el cierre semanal aparecen dos senales repetidas (desviaciones, errores o retrasos) que se estaban normalizando y no se escalaban a tiempo.</p>\n";
+                $block .= "<p><strong>Aplicacion paso a paso:</strong> se crea una revision de 20 minutos con 3 responsables fijos, checklist de 8 puntos y un criterio de escalado (si se repite 2 veces en 7 dias, se abre accion correctiva).</p>\n";
+                $block .= "<p><strong>Resultado medible (30 dias):</strong> reduccion del tiempo de deteccion, menos incidencias recurrentes y respuesta mas consistente entre turnos/equipos.</p>\n";
                 $block .= "<h3>Escenario 2: " . esc_html($topics[1]) . "</h3>\n";
-                $block .= "<p><strong>Contexto real:</strong> el equipo acumula problemas puntuales sin patron claro y no existe trazabilidad suficiente para tomar decisiones.</p>\n";
-                $block .= "<p><strong>Aplicacion:</strong> se registra cada caso con fecha, impacto, causa probable, accion correctiva y fecha de cierre en un unico tablero.</p>\n";
-                $block .= "<p><strong>Resultado medible (30 dias):</strong> decisiones mas rapidas, priorizacion objetiva y menos reprocesos.</p>\n";
+                $block .= "<p><strong>Contexto real:</strong> el equipo acumula casos aislados sin patron visible y las decisiones se toman por urgencia, no por impacto real.</p>\n";
+                $block .= "<p><strong>Aplicacion paso a paso:</strong> cada incidencia se documenta con fecha, impacto operativo, coste estimado, causa probable y accion correctiva; se revisa en una reunion quincenal con matriz impacto/esfuerzo.</p>\n";
+                $block .= "<p><strong>Resultado medible (30 dias):</strong> priorizacion objetiva, menos reprocesos y mayor capacidad para anticipar puntos de fallo.</p>\n";
                 $block .= "<h3>Escenario 3: " . esc_html($topics[2]) . "</h3>\n";
-                $block .= "<p><strong>Contexto real:</strong> distintos turnos resuelven situaciones similares de forma diferente, generando errores evitables.</p>\n";
-                $block .= "<p><strong>Aplicacion:</strong> se implanta una mini secuencia operativa con 5 pasos, verificacion cruzada y retroalimentacion semanal.</p>\n";
-                $block .= "<p><strong>Resultado medible (30 dias):</strong> mayor consistencia, menos fallos por omision y mejor coordinacion entre equipos.</p>\n";
+                $block .= "<p><strong>Contexto real:</strong> situaciones parecidas se resuelven de forma distinta segun la persona, lo que genera variabilidad y errores evitables.</p>\n";
+                $block .= "<p><strong>Aplicacion paso a paso:</strong> se implanta un protocolo corto de 5 pasos (detectar, validar, actuar, registrar, verificar) con doble comprobacion en los puntos criticos y retro semanal.</p>\n";
+                $block .= "<p><strong>Resultado medible (30 dias):</strong> mayor consistencia operativa, menos omisiones y mejor coordinacion interdepartamental.</p>\n";
+                if ($required_scenarios > 3) {
+                    $block .= "<h3>Escenario 4: " . esc_html($topics[3]) . "</h3>\n";
+                    $block .= "<p><strong>Contexto real:</strong> cuando el volumen sube, el equipo prioriza la velocidad y se pierde control de calidad en pasos clave.</p>\n";
+                    $block .= "<p><strong>Aplicacion paso a paso:</strong> se define un umbral de carga para activar un modo de contingencia con tareas redistribuidas, checklist abreviado y control de cierre obligatorio.</p>\n";
+                    $block .= "<p><strong>Resultado medible (30 dias):</strong> se mantiene la productividad sin disparar errores de calidad ni retrabajo al final del ciclo.</p>\n";
+                }
             } else {
                 $block .= "<h2>Practical examples</h2>\n";
                 $block .= "<h3>Scenario 1: " . esc_html($topics[0]) . "</h3>\n";
-                $block .= "<p><strong>Real context:</strong> a weekly operation review reveals early signals in this area before they become expensive incidents.</p>\n";
-                $block .= "<p><strong>Application:</strong> define a short review ritual with owners, a checklist, and escalation thresholds for action within 24 hours.</p>\n";
-                $block .= "<p><strong>30-day measurable result:</strong> fewer repeated incidents and better average response time.</p>\n";
+                $block .= "<p><strong>Real context:</strong> two recurring signals appear in weekly execution and are being normalized instead of escalated early.</p>\n";
+                $block .= "<p><strong>Step-by-step application:</strong> run a 20-minute weekly review with 3 owners, an 8-point checklist, and one escalation rule (if repeated twice in 7 days, open a corrective action).</p>\n";
+                $block .= "<p><strong>30-day measurable result:</strong> faster detection, fewer repeated incidents, and more consistent response quality.</p>\n";
                 $block .= "<h3>Scenario 2: " . esc_html($topics[1]) . "</h3>\n";
-                $block .= "<p><strong>Real context:</strong> recurring issues appear with no visible pattern and weak traceability for decision-making.</p>\n";
-                $block .= "<p><strong>Application:</strong> log every case with date, impact, probable cause, corrective action, and closure date in a single board.</p>\n";
-                $block .= "<p><strong>30-day measurable result:</strong> faster prioritization, clearer decisions, and less rework.</p>\n";
+                $block .= "<p><strong>Real context:</strong> isolated issues accumulate without a clear pattern and decisions are made by urgency, not impact.</p>\n";
+                $block .= "<p><strong>Step-by-step application:</strong> document each case with date, impact, estimated cost, likely root cause, corrective action, and closure date; review bi-weekly with an impact/effort matrix.</p>\n";
+                $block .= "<p><strong>30-day measurable result:</strong> objective prioritization, less rework, and better anticipation of future failures.</p>\n";
                 $block .= "<h3>Scenario 3: " . esc_html($topics[2]) . "</h3>\n";
-                $block .= "<p><strong>Real context:</strong> different teams solve the same situation in inconsistent ways, increasing avoidable mistakes.</p>\n";
-                $block .= "<p><strong>Application:</strong> implement a 5-step operational sequence with cross-checks and weekly feedback.</p>\n";
-                $block .= "<p><strong>30-day measurable result:</strong> stronger consistency, fewer omissions, and better coordination.</p>\n";
+                $block .= "<p><strong>Real context:</strong> similar situations are solved differently across shifts or teams, which creates avoidable variance.</p>\n";
+                $block .= "<p><strong>Step-by-step application:</strong> deploy a 5-step protocol (detect, validate, act, log, verify) with cross-checks on critical points and a weekly retro.</p>\n";
+                $block .= "<p><strong>30-day measurable result:</strong> stronger consistency, fewer omissions, and better team coordination.</p>\n";
+                if ($required_scenarios > 3) {
+                    $block .= "<h3>Scenario 4: " . esc_html($topics[3]) . "</h3>\n";
+                    $block .= "<p><strong>Real context:</strong> when workload peaks, speed is prioritized and quality checks are skipped.</p>\n";
+                    $block .= "<p><strong>Step-by-step application:</strong> define a load threshold that triggers a contingency mode with redistributed tasks, a shortened checklist, and mandatory closure validation.</p>\n";
+                    $block .= "<p><strong>30-day measurable result:</strong> productivity remains stable without a spike in quality defects or end-of-cycle rework.</p>\n";
+                }
             }
 
             if (preg_match('/<h2[^>]*>\\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Questions? ?FAQs?|FAQs)\\s*<\\/h2>/i', $html, $match, PREG_OFFSET_CAPTURE)) {
@@ -966,7 +1019,8 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             return $html . "\n" . $block;
         }
 
-        private function extract_example_topics($html, $title) {
+        private function extract_example_topics($html, $title, $needed = 3) {
+            $needed = max(3, (int)$needed);
             $topics = array();
             if (preg_match_all('/<h[23][^>]*>(.*?)<\\/h[23]>/iu', (string)$html, $matches)) {
                 foreach ((array)$matches[1] as $raw_heading) {
@@ -974,20 +1028,20 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     if ($heading === '') continue;
                     if (preg_match('/(faq|preguntas frecuentes|practical examples|ejemplos practicos)/iu', $heading)) continue;
                     $topics[] = $heading;
-                    if (count($topics) >= 3) break;
+                    if (count($topics) >= $needed) break;
                 }
             }
 
             $fallback = trim(wp_strip_all_tags((string)$title));
             if ($fallback === '') $fallback = 'Aplicacion operativa';
             if (empty($topics)) {
-                $topics = array($fallback, $fallback, $fallback);
+                $topics = array_fill(0, $needed, $fallback);
             }
-            while (count($topics) < 3) {
+            while (count($topics) < $needed) {
                 $topics[] = $fallback;
             }
 
-            return array_slice(array_map('sanitize_text_field', $topics), 0, 3);
+            return array_slice(array_map('sanitize_text_field', $topics), 0, $needed);
         }
 
         private function render_markers($html, $title, $images_limit, $preview_mode, $emit = null, $internal_image_style = '') {

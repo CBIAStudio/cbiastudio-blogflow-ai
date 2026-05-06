@@ -3161,6 +3161,12 @@ if (!function_exists('cbia_ajax_preview_article')) {
         if (function_exists('cbia_set_stop_flag')) {
             cbia_set_stop_flag(false);
         }
+        $openai_temperature_raw = isset($_POST['openai_temperature'])
+            ? sanitize_text_field((string) wp_unslash($_POST['openai_temperature']))
+            : '';
+        $blog_prompt_custom_raw = isset($_POST['blog_prompt_custom_instructions'])
+            ? (string) wp_unslash($_POST['blog_prompt_custom_instructions'])
+            : '';
 
         $payload = array(
             'title' => isset($_POST['title']) ? sanitize_text_field(wp_unslash($_POST['title'])) : '',
@@ -3173,9 +3179,13 @@ if (!function_exists('cbia_ajax_preview_article')) {
             'post_language' => isset($_POST['post_language']) ? sanitize_text_field(wp_unslash($_POST['post_language'])) : '',
             'blog_prompt_mode' => isset($_POST['blog_prompt_mode']) ? sanitize_key((string)wp_unslash($_POST['blog_prompt_mode'])) : '',
             'blog_prompt_profile' => isset($_POST['blog_prompt_profile']) ? sanitize_key((string)wp_unslash($_POST['blog_prompt_profile'])) : 'discover_editorial',
+            'post_length_variant' => isset($_POST['post_length_variant']) ? sanitize_key((string)wp_unslash($_POST['post_length_variant'])) : 'medium',
             'include_faq' => isset($_POST['include_faq']) ? absint(wp_unslash($_POST['include_faq'])) : 1,
             'include_practical_examples' => isset($_POST['include_practical_examples']) ? absint(wp_unslash($_POST['include_practical_examples'])) : 0,
             'openai_temperature' => ($openai_temperature_raw !== '') ? (float) str_replace(',', '.', $openai_temperature_raw) : null,
+            'blog_prompt_custom_instructions' => function_exists('cbia_prompt_sanitize_custom_instructions')
+                ? cbia_prompt_sanitize_custom_instructions($blog_prompt_custom_raw)
+                : sanitize_textarea_field($blog_prompt_custom_raw),
             'blog_prompt_editable' => isset($_POST['blog_prompt_editable']) ? sanitize_textarea_field(wp_unslash($_POST['blog_prompt_editable'])) : '',
             'legacy_full_prompt' => isset($_POST['legacy_full_prompt']) ? sanitize_textarea_field(wp_unslash($_POST['legacy_full_prompt'])) : '',
         );
@@ -3252,6 +3262,9 @@ if (!function_exists('cbia_ajax_preview_article_stream')) {
         $openai_temperature_raw = isset($_GET['openai_temperature'])
             ? sanitize_text_field((string) wp_unslash($_GET['openai_temperature']))
             : '';
+        $blog_prompt_custom_raw = isset($_GET['blog_prompt_custom_instructions'])
+            ? (string) wp_unslash($_GET['blog_prompt_custom_instructions'])
+            : '';
         $payload = array(
             'title' => isset($_GET['title']) ? sanitize_text_field(wp_unslash($_GET['title'])) : '',
             'preview_mode' => isset($_GET['preview_mode']) ? sanitize_key((string)wp_unslash($_GET['preview_mode'])) : 'fast',
@@ -3263,10 +3276,14 @@ if (!function_exists('cbia_ajax_preview_article_stream')) {
             'post_language' => isset($_GET['post_language']) ? sanitize_text_field(wp_unslash($_GET['post_language'])) : '',
             'blog_prompt_mode' => isset($_GET['blog_prompt_mode']) ? sanitize_key((string)wp_unslash($_GET['blog_prompt_mode'])) : '',
             'blog_prompt_profile' => isset($_GET['blog_prompt_profile']) ? sanitize_key((string)wp_unslash($_GET['blog_prompt_profile'])) : 'discover_editorial',
+            'post_length_variant' => isset($_GET['post_length_variant']) ? sanitize_key((string)wp_unslash($_GET['post_length_variant'])) : 'medium',
             'include_faq' => isset($_GET['include_faq']) ? absint(wp_unslash($_GET['include_faq'])) : 1,
             'include_practical_examples' => isset($_GET['include_practical_examples']) ? absint(wp_unslash($_GET['include_practical_examples'])) : 0,
             'openai_temperature' => ($openai_temperature_raw !== '') ? (float) str_replace(',', '.', $openai_temperature_raw) : null,
-            // El SSE usa GET: no aceptar payload largo aqui para evitar URL enorme.
+            // En SSE aceptamos solo instrucciones compactas para no crecer demasiado la URL.
+            'blog_prompt_custom_instructions' => function_exists('cbia_prompt_sanitize_custom_instructions')
+                ? cbia_prompt_sanitize_custom_instructions($blog_prompt_custom_raw)
+                : sanitize_textarea_field($blog_prompt_custom_raw),
             'blog_prompt_editable' => '',
             'legacy_full_prompt' => '',
         );
@@ -4488,6 +4505,7 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
             'featured_attach_id' => (int)get_post_thumbnail_id($post_id),
             'category_ids' => array_values(array_map('intval', wp_get_post_categories($post_id, array('fields' => 'ids')))),
             'tag_ids' => array_values(array_map('intval', wp_get_post_terms($post_id, 'post_tag', array('fields' => 'ids')))),
+            'tag_names' => array_values(array_map('sanitize_text_field', wp_get_post_terms($post_id, 'post_tag', array('fields' => 'names')))),
         ));
     }
 }

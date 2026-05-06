@@ -1997,9 +1997,15 @@
         }
 
         function closeComposerModal() {
-            if (!modal) return;
             try { persistComposerSnapshot(); } catch (eSave) {}
-            modal.style.display = 'none';
+            if (modal) {
+                modal.style.display = 'none';
+            }
+            if (typeof closeComposerModalFallback === 'function') {
+                closeComposerModalFallback();
+            } else if (root && (!modal || !modal.contains(root))) {
+                root.style.display = 'none';
+            }
             document.body.classList.remove('cbia-modal-open');
         }
 
@@ -4136,23 +4142,23 @@
               });
         }
 
-        function ensureYoastMetaPersisted(payload) {
+        function ensureYoastMetaPersisted(payload, postIdOverride) {
             if (!payload) return;
             pendingYoastPayload = payload;
-            var pid = resolveCurrentPostId();
+            var pid = parseInt(postIdOverride || 0, 10) || resolveCurrentPostId();
             persistYoastMetaForPost(pid, payload).then(function (ok) {
                 if (!ok) {
                     setStatus('Contenido insertado. Reintentando sincronizar Yoast...', false);
                 }
             });
             setTimeout(function () {
-                persistYoastMetaForPost(resolveCurrentPostId(), payload);
+                persistYoastMetaForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), payload);
             }, 2500);
             setTimeout(function () {
-                persistYoastMetaForPost(resolveCurrentPostId(), payload);
+                persistYoastMetaForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), payload);
             }, 6000);
             setTimeout(function () {
-                persistYoastMetaForPost(resolveCurrentPostId(), payload);
+                persistYoastMetaForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), payload);
             }, 12000);
         }
 
@@ -4218,13 +4224,14 @@
               });
         }
 
-        function ensureTermsPersisted(cats, tags) {
+        function ensureTermsPersisted(cats, tags, postIdOverride) {
             var arrCats = Array.isArray(cats) ? cats : [];
             var arrTags = Array.isArray(tags) ? tags : [];
             if (!arrCats.length && !arrTags.length) return;
-            persistTermsForPost(resolveCurrentPostId(), arrCats, arrTags);
-            setTimeout(function () { persistTermsForPost(resolveCurrentPostId(), arrCats, arrTags); }, 2500);
-            setTimeout(function () { persistTermsForPost(resolveCurrentPostId(), arrCats, arrTags); }, 6000);
+            var pid = parseInt(postIdOverride || 0, 10) || resolveCurrentPostId();
+            persistTermsForPost(pid, arrCats, arrTags);
+            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags); }, 2500);
+            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags); }, 6000);
         }
 
         function schedulePendingYoastSync() {
@@ -4388,7 +4395,7 @@
             } catch (e3) {}
         }
 
-        function insertInEditor(title, html, focusKeyphrase, metaDescription, categoryIds, tagIds) {
+        function insertInEditor(title, html, focusKeyphrase, metaDescription, categoryIds, tagIds, tagNames) {
             var content = String(html || '');
             var postTitle = String(title || '');
             var focus = String(focusKeyphrase || '');
@@ -4397,6 +4404,9 @@
             if (!metad) metad = clampMetaDescription(String(content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()));
             var cats = Array.isArray(categoryIds) ? categoryIds.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; }) : [];
             var tags = Array.isArray(tagIds) ? tagIds.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; }) : [];
+            var tagLabels = Array.isArray(tagNames)
+                ? tagNames.map(function (v) { return String(v || '').trim(); }).filter(function (v) { return !!v; })
+                : [];
             var yoastPayload = {
                 focus_keyphrase: focus,
                 meta_description: metad,
@@ -4485,6 +4495,13 @@
                         var cb = document.querySelector('#categorychecklist input[type=\"checkbox\"][value=\"' + id + '\"]');
                         if (cb) cb.checked = true;
                     });
+                }
+                if (tagLabels.length) {
+                    var tagsInput = document.getElementById('tax-input-post_tag');
+                    if (tagsInput) {
+                        tagsInput.value = tagLabels.join(', ');
+                        triggerInputSync(tagsInput);
+                    }
                 }
                 ensureYoastMetaPersisted(yoastPayload);
                 ensureTermsPersisted(cats, tags);
@@ -5045,6 +5062,9 @@
                     var appliedTags = Array.isArray(res.data.tag_ids)
                         ? res.data.tag_ids.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; })
                         : finalTagIds;
+                    var appliedTagNames = Array.isArray(res.data.tag_names)
+                        ? res.data.tag_names.map(function (v) { return String(v || '').trim(); }).filter(function (v) { return !!v; })
+                        : finalTagNames;
                     if (res.data && res.data.featured_attach_id) {
                         finalFeaturedAttachId = parseInt(res.data.featured_attach_id || 0, 10) || finalFeaturedAttachId;
                         syncFeaturedMediaUi(finalFeaturedAttachId);
@@ -5058,6 +5078,11 @@
                             });
                         }
                     }
+                    finalCategoryIds = appliedCats.slice();
+                    finalTagIds = appliedTags.slice();
+                    finalTagNames = appliedTagNames.slice();
+                    finalFocusKeyphrase = focusForApply;
+                    finalMetaDescription = metadForApply;
                     // Keep editor UI in sync after server-side atomic write.
                     syncEditorTitle(titleForApply);
                     // Classic editor can re-render title late; enforce once more from backend-applied title.
@@ -5067,7 +5092,7 @@
                     setTimeout(function () { syncEditorTitle(titleForApply); }, 2200);
                     // Secondary persistence pass (Yoast + terms) for editor/plugin stacks that lag.
                     try {
-                        ensureTermsPersisted(appliedCats, appliedTags);
+                        ensureTermsPersisted(appliedCats, appliedTags, appliedPostId);
                     } catch (eTerms) {}
                     try {
                         ensureYoastMetaPersisted({
@@ -5079,11 +5104,11 @@
                             tw_title: titleForApply,
                             tw_description: metadForApply,
                             primary_category: appliedCats.length ? appliedCats[0] : 0
-                        });
+                        }, appliedPostId);
                     } catch (eYoast) {}
                     persistComposerSnapshot();
                     setStatus('Contenido aplicado en servidor.', false);
-                    try { insertInEditor(titleForApply, htmlCandidate, focusForApply, metadForApply, appliedCats, appliedTags); } catch (eInsertUi) {}
+                    try { insertInEditor(titleForApply, htmlCandidate, focusForApply, metadForApply, appliedCats, appliedTags, appliedTagNames); } catch (eInsertUi) {}
                     setStatus('Content inserted into editor.', false);
                     closeComposerModal();
                 }).catch(function (err) {
