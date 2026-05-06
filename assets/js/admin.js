@@ -4972,7 +4972,7 @@
                 var params = new URLSearchParams();
                 params.append('action', 'cbia_ai_composer_apply_full_post');
                 params.append('_ajax_nonce', nonce);
-                params.append('post_id', String(resolveCurrentPostId() || 0));
+                params.append('post_id', String(parseInt(payload && payload.post_id ? payload.post_id : 0, 10) || resolveCurrentPostId() || 0));
                 params.append('title', String(payload.title || ''));
                 params.append('content_html', String(payload.content_html || ''));
                 params.append('focus_keyphrase', String(payload.focus_keyphrase || ''));
@@ -4997,6 +4997,34 @@
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
                     body: params.toString()
                 }).then(function (r) { return r.json(); });
+        }
+
+        function ensureEditorPostIdForApply() {
+                var pid = parseInt(resolveCurrentPostId() || 0, 10) || 0;
+                if (pid > 0) {
+                    return Promise.resolve(pid);
+                }
+                var canSave =
+                    !!(window.wp && window.wp.data && window.wp.data.dispatch && window.wp.data.dispatch('core/editor') &&
+                    typeof window.wp.data.dispatch('core/editor').savePost === 'function');
+                if (!canSave) {
+                    return Promise.resolve(0);
+                }
+                try {
+                    window.wp.data.dispatch('core/editor').savePost();
+                } catch (_eSaveStart) {}
+                return new Promise(function (resolve) {
+                    var maxTries = 24;
+                    var tries = 0;
+                    var timer = setInterval(function () {
+                        tries++;
+                        var nextId = parseInt(resolveCurrentPostId() || 0, 10) || 0;
+                        if (nextId > 0 || tries >= maxTries) {
+                            clearInterval(timer);
+                            resolve(nextId > 0 ? nextId : 0);
+                        }
+                    }, 300);
+                });
         }
 
         function onInsertClick() {
@@ -5036,7 +5064,9 @@
                 }
                 var focusForApply = String(finalFocusKeyphrase || '').trim();
                 if (!focusForApply) focusForApply = String(titleForApply || '').trim();
-                applyFullPostAtomic({
+                ensureEditorPostIdForApply().then(function (effectivePostId) {
+                    return applyFullPostAtomic({
+                    post_id: effectivePostId,
                     title: titleForApply,
                     content_html: htmlCandidate,
                     focus_keyphrase: focusForApply,
@@ -5046,6 +5076,7 @@
                     tag_names: finalTagNames,
                     featured_attach_id: finalFeaturedAttachId
                     ,internal_image_style: modeForApply
+                });
                 }).then(function (res) {
                     if (!res || !res.success || !res.data) {
                         throw new Error((res && res.data && res.data.message) ? res.data.message : 'Could not apply content to the post.');
