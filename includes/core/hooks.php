@@ -4389,6 +4389,12 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
             wp_set_post_terms($post_id, $tag_ids, 'post_tag', false);
         } elseif (!empty($tag_names)) {
             wp_set_post_terms($post_id, $tag_names, 'post_tag', false);
+        } elseif (function_exists('cbia_pick_tags_for_post')) {
+            $tag_names = (array)cbia_pick_tags_for_post($title, $html, 7);
+            $tag_names = array_values(array_unique(array_filter(array_map('sanitize_text_field', $tag_names))));
+            if (!empty($tag_names)) {
+                wp_set_post_terms($post_id, $tag_names, 'post_tag', false);
+            }
         } elseif (function_exists('cbia_pick_tags_from_content_allowed')) {
             $tag_names = (array)cbia_pick_tags_from_content_allowed($title, $html, 7);
             $tag_names = array_values(array_unique(array_filter(array_map('sanitize_text_field', $tag_names))));

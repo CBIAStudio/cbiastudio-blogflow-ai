@@ -5112,8 +5112,10 @@
                     finalCategoryIds = appliedCats.slice();
                     finalTagIds = appliedTags.slice();
                     finalTagNames = appliedTagNames.slice();
-                    finalFocusKeyphrase = focusForApply;
-                    finalMetaDescription = metadForApply;
+                    var appliedFocus = String((res.data && res.data.focus_keyphrase) ? res.data.focus_keyphrase : focusForApply).trim();
+                    var appliedMeta = clampMetaDescription((res.data && res.data.meta_description) ? res.data.meta_description : metadForApply);
+                    finalFocusKeyphrase = appliedFocus || focusForApply;
+                    finalMetaDescription = appliedMeta || metadForApply;
                     // Keep editor UI in sync after server-side atomic write.
                     syncEditorTitle(titleForApply);
                     // Classic editor can re-render title late; enforce once more from backend-applied title.
@@ -5127,21 +5129,23 @@
                     } catch (eTerms) {}
                     try {
                         ensureYoastMetaPersisted({
-                            focus_keyphrase: focusForApply,
-                            meta_description: metadForApply,
+                            focus_keyphrase: finalFocusKeyphrase,
+                            meta_description: finalMetaDescription,
                             seo_title: titleForApply,
                             og_title: titleForApply,
-                            og_description: metadForApply,
+                            og_description: finalMetaDescription,
                             tw_title: titleForApply,
-                            tw_description: metadForApply,
+                            tw_description: finalMetaDescription,
                             primary_category: appliedCats.length ? appliedCats[0] : 0
                         }, appliedPostId);
                     } catch (eYoast) {}
                     persistComposerSnapshot();
                     setStatus('Contenido aplicado en servidor.', false);
-                    try { insertInEditor(titleForApply, htmlCandidate, focusForApply, metadForApply, appliedCats, appliedTags, appliedTagNames); } catch (eInsertUi) {}
+                    try { insertInEditor(titleForApply, htmlCandidate, finalFocusKeyphrase, finalMetaDescription, appliedCats, appliedTags, appliedTagNames); } catch (eInsertUi) {}
                     setStatus('Content inserted into editor.', false);
                     closeComposerModal();
+                    setTimeout(function () { try { closeComposerModal(); } catch (_e1) {} }, 80);
+                    setTimeout(function () { try { closeComposerModalFallback(); } catch (_e2) {} }, 260);
                 }).catch(function (err) {
                     setStatus((err && err.message) ? err.message : 'Could not insert automatically. Copy and paste manually.', true);
                 }).finally(function () {

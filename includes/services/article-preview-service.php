@@ -139,7 +139,11 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             }
             $GLOBALS['cbia_runtime_settings_overrides'] = array_replace_recursive(
                 (array)$GLOBALS['cbia_runtime_settings_overrides'],
-                array('openai_temperature' => (float)($settings['openai_temperature'] ?? 0.7))
+                array(
+                    'openai_temperature' => (float)($settings['openai_temperature'] ?? 0.7),
+                    'post_language' => (string)($settings['post_language'] ?? 'English'),
+                    'faq_heading_custom' => (string)($settings['faq_heading_custom'] ?? ''),
+                )
             );
             if (array_key_exists('legacy_full_prompt', $payload)) {
                 $settings['legacy_full_prompt'] = sanitize_textarea_field((string)$payload['legacy_full_prompt']);
@@ -178,7 +182,8 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             if (function_exists('cbia_pick_length_target_words') && function_exists('cbia_count_words_from_html') && function_exists('cbia_expand_text_to_length_target')) {
                 list($min_words, $max_words) = cbia_pick_length_target_words($length_variant, !empty($settings['include_faq']));
                 $current_words = (int) cbia_count_words_from_html((string) $text_html);
-                if ($current_words < (int) $min_words) {
+                $soft_floor = $this->get_soft_length_floor((int)$min_words);
+                if ($current_words < (int) $soft_floor) {
                     $text_html = cbia_expand_text_to_length_target($title, (string)$text_html, (array)$settings, (int)$min_words, (int)$max_words);
                     if (!empty($settings['include_practical_examples'])) {
                         $text_html = $this->ensure_practical_examples_block(
@@ -189,6 +194,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         );
                     }
                 }
+                $text_html = $this->enforce_length_ceiling((string)$text_html, (int)$max_words, !empty($settings['include_faq']));
             }
             if (function_exists('cbia_log')) {
                 cbia_log(sprintf("AI preview text OK: HTML generated for '%s'", (string)$title), 'INFO');
@@ -286,9 +292,11 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $focus = function_exists('cbia_generate_focus_keyphrase')
                 ? cbia_generate_focus_keyphrase($title, $final_html)
                 : '';
-            $tags = function_exists('cbia_pick_tags_from_content_allowed')
-                ? cbia_pick_tags_from_content_allowed($title, $final_html, 7)
-                : array();
+            $tags = function_exists('cbia_pick_tags_for_post')
+                ? cbia_pick_tags_for_post($title, $final_html, 7)
+                : (function_exists('cbia_pick_tags_from_content_allowed')
+                    ? cbia_pick_tags_from_content_allowed($title, $final_html, 7)
+                    : array());
             $seo = array(
                 'excerpt' => $excerpt,
                 'meta_description' => $meta,
@@ -642,9 +650,11 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 update_post_meta($post_id, '_yoast_wpseo_primary_category', (int)$cat_ids[0]);
             }
 
-            $tags = !empty($seo['tags']) ? $seo['tags'] : (function_exists('cbia_pick_tags_from_content_allowed')
-                ? cbia_pick_tags_from_content_allowed($title, $final_html, 7)
-                : array());
+            $tags = !empty($seo['tags']) ? $seo['tags'] : (function_exists('cbia_pick_tags_for_post')
+                ? cbia_pick_tags_for_post($title, $final_html, 7)
+                : (function_exists('cbia_pick_tags_from_content_allowed')
+                    ? cbia_pick_tags_from_content_allowed($title, $final_html, 7)
+                    : array()));
             if (!empty($tags)) {
                 wp_set_post_tags($post_id, $tags, false);
             }
@@ -935,6 +945,99 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 : 'ABSOLUTE LENGTH PRIORITY (overrides any previous range): between 1800 and 2000 real words. Minimum 1800. Split as: opening 260-340 words; each main block 420-520; closing 150-220.';
         }
 
+        private function get_soft_length_floor(int $min_words): int {
+            $slack = max(120, (int)floor($min_words * 0.08));
+            return max(1, $min_words - $slack);
+        }
+
+        private function enforce_length_ceiling(string $html, int $max_words, bool $include_faq): string {
+            if ($max_words <= 0 || !function_exists('cbia_count_words_from_html')) {
+                return $html;
+            }
+            $current_words = (int)cbia_count_words_from_html($html);
+            if ($current_words <= $max_words) {
+                return $html;
+            }
+
+            $faq_pattern = '/<h2[^>]*>\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Frequently Asked Questions|Questions? ?FAQs?|FAQs)\s*<\/h2>/i';
+            if ($include_faq && preg_match($faq_pattern, $html, $m, PREG_OFFSET_CAPTURE)) {
+                $faq_start = (int)$m[0][1];
+                $before = trim((string)substr($html, 0, $faq_start));
+                $faq = trim((string)substr($html, $faq_start));
+                $faq_words = (int)cbia_count_words_from_html($faq);
+                if ($faq_words > 0 && $faq_words < (int)floor($max_words * 0.45)) {
+                    $budget_before = max(350, $max_words - $faq_words);
+                    $before_trimmed = $this->truncate_html_to_word_limit($before, $budget_before);
+                    $merged = trim($before_trimmed . "\n\n" . $faq);
+                    if ((int)cbia_count_words_from_html($merged) <= $max_words) {
+                        return $merged;
+                    }
+                }
+            }
+
+            return $this->truncate_html_to_word_limit($html, $max_words);
+        }
+
+        private function truncate_html_to_word_limit(string $html, int $max_words): string {
+            if ($max_words <= 0 || !function_exists('cbia_count_words_from_html')) {
+                return $html;
+            }
+            if ((int)cbia_count_words_from_html($html) <= $max_words) {
+                return $html;
+            }
+
+            $pattern = '/(<div\b[^>]*cbia-inline-image-wrap[^>]*>[\s\S]*?<\/div>|<h[2-3]\b[^>]*>[\s\S]*?<\/h[2-3]>|<p\b[^>]*>[\s\S]*?<\/p>|<ul\b[^>]*>[\s\S]*?<\/ul>|<ol\b[^>]*>[\s\S]*?<\/ol>)/iu';
+            preg_match_all($pattern, $html, $matches);
+            $blocks = (array)($matches[0] ?? array());
+            if (empty($blocks)) {
+                return $html;
+            }
+
+            $kept = array();
+            $count = 0;
+            foreach ($blocks as $block) {
+                $block = trim((string)$block);
+                if ($block === '') continue;
+                $block_words = (int)cbia_count_words_from_html($block);
+                if ($block_words <= 0) {
+                    $kept[] = $block;
+                    continue;
+                }
+                if ($count + $block_words <= $max_words) {
+                    $kept[] = $block;
+                    $count += $block_words;
+                    continue;
+                }
+                $remaining = $max_words - $count;
+                if ($remaining >= 35) {
+                    $partial = $this->truncate_block_preserving_html($block, $remaining);
+                    if ($partial !== '') {
+                        $kept[] = $partial;
+                    }
+                }
+                break;
+            }
+
+            $out = trim(implode("\n", $kept));
+            return $out !== '' ? $out : $html;
+        }
+
+        private function truncate_block_preserving_html(string $block, int $max_words): string {
+            if ($max_words <= 0) return '';
+            $plain = trim(preg_replace('/\s+/u', ' ', wp_strip_all_tags($block)));
+            if ($plain === '') return '';
+            preg_match_all('/[\p{L}\p{N}\']+/u', $plain, $m);
+            $words = (array)($m[0] ?? array());
+            if (empty($words)) return '';
+            if (count($words) <= $max_words) return $block;
+
+            $snippet = implode(' ', array_slice($words, 0, $max_words));
+            if (preg_match('/^<p\b/i', $block)) {
+                return '<p>' . esc_html($snippet) . '...</p>';
+            }
+            return '<p>' . esc_html($snippet) . '...</p>';
+        }
+
         private function ensure_practical_examples_block($html, $title, $language, $length_variant = 'medium') {
             $html = (string)$html;
             $length_variant = sanitize_key((string)$length_variant);
@@ -1011,7 +1114,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 }
             }
 
-            if (preg_match('/<h2[^>]*>\\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Questions? ?FAQs?|FAQs)\\s*<\\/h2>/i', $html, $match, PREG_OFFSET_CAPTURE)) {
+            if (preg_match('/<h2[^>]*>\\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Frequently Asked Questions|Questions? ?FAQs?|FAQs)\\s*<\\/h2>/i', $html, $match, PREG_OFFSET_CAPTURE)) {
                 $pos = (int)$match[0][1];
                 return substr($html, 0, $pos) . $block . substr($html, $pos);
             }

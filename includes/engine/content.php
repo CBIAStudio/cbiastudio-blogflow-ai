@@ -427,6 +427,7 @@ if (!function_exists('cbia_get_faq_heading')) {
         if ($custom !== '') return $custom;
 
         $lang = strtolower(trim((string)($s['post_language'] ?? 'english')));
+        if (strpos($lang, 'espa') !== false || strpos($lang, 'span') !== false || $lang === 'es') return 'Preguntas frecuentes';
         if (strpos($lang, 'ingl') !== false || strpos($lang, 'english') !== false) return 'Frequently Asked Questions';
         if (strpos($lang, 'fran') !== false || strpos($lang, 'franÃƒÂ§ais') !== false || strpos($lang, 'franc') !== false) return 'Questions frÃƒÂ©quentes';
         if (strpos($lang, 'deut') !== false || strpos($lang, 'alem') !== false || strpos($lang, 'german') !== false) return 'HÃƒÂ¤ufige Fragen';
@@ -440,7 +441,7 @@ if (!function_exists('cbia_get_faq_heading')) {
 if (!function_exists('cbia_insert_faq_heading_if_missing')) {
     function cbia_insert_faq_heading_if_missing($html) {
         $html = (string)$html;
-        if (preg_match('/<h2[^>]*>[^<]*(FAQ|Preguntas frecuentes|Questions|FAQs)/i', $html)) {
+        if (preg_match('/<h2[^>]*>[^<]*(FAQ|Preguntas frecuentes|Frequently Asked Questions|Questions|FAQs)/i', $html)) {
             return $html;
         }
 
@@ -459,7 +460,7 @@ if (!function_exists('cbia_normalize_faq_heading')) {
         if ($heading === '') return $html;
 
         // Reemplaza cualquier H2 de FAQ conocido por el heading deseado.
-        $pattern = '/<h2[^>]*>\\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Questions? ?FAQs?|FAQs)\\s*<\\/h2>/i';
+        $pattern = '/<h2[^>]*>\\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Frequently Asked Questions|Questions? ?FAQs?|FAQs)\\s*<\\/h2>/i';
         $replacement = '<h2>' . esc_html($heading) . '</h2>';
         $html = preg_replace($pattern, $replacement, $html);
 
@@ -495,7 +496,7 @@ if (!function_exists('cbia_runtime_include_faq_enabled')) {
 if (!function_exists('cbia_strip_faq_section')) {
     function cbia_strip_faq_section($html) {
         $html = (string)$html;
-        $faq_h2 = '/<h2[^>]*>\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Questions? ?FAQs?|FAQs)\s*<\/h2>/i';
+        $faq_h2 = '/<h2[^>]*>\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Frequently Asked Questions|Questions? ?FAQs?|FAQs)\s*<\/h2>/i';
 
         while (preg_match($faq_h2, $html, $m, PREG_OFFSET_CAPTURE)) {
             $start = (int)$m[0][1];

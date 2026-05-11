@@ -35,6 +35,84 @@ if (!function_exists('cbia_count_words_from_html')) {
 	}
 }
 
+if (!function_exists('cbia_get_soft_length_floor_words')) {
+	function cbia_get_soft_length_floor_words($min_words): int {
+		$min_words = (int)$min_words;
+		$slack = max(120, (int)floor($min_words * 0.08));
+		return max(1, $min_words - $slack);
+	}
+}
+
+if (!function_exists('cbia_truncate_html_block_to_words')) {
+	function cbia_truncate_html_block_to_words($block, $max_words): string {
+		$max_words = (int)$max_words;
+		if ($max_words <= 0) return '';
+		$plain = trim(preg_replace('/\s+/u', ' ', wp_strip_all_tags((string)$block)));
+		if ($plain === '') return '';
+		preg_match_all('/[\p{L}\p{N}\']+/u', $plain, $m);
+		$words = (array)($m[0] ?? array());
+		if (empty($words)) return '';
+		if (count($words) <= $max_words) return (string)$block;
+		$snippet = implode(' ', array_slice($words, 0, $max_words));
+		return '<p>' . esc_html($snippet) . '...</p>';
+	}
+}
+
+if (!function_exists('cbia_enforce_length_ceiling_html')) {
+	function cbia_enforce_length_ceiling_html($html, $max_words, $include_faq = false): string {
+		$html = (string)$html;
+		$max_words = (int)$max_words;
+		if ($max_words <= 0) return $html;
+		$current = cbia_count_words_from_html($html);
+		if ($current <= $max_words) return $html;
+
+		$faq_pattern = '/<h2[^>]*>\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Frequently Asked Questions|Questions? ?FAQs?|FAQs)\s*<\/h2>/i';
+		if ($include_faq && preg_match($faq_pattern, $html, $m, PREG_OFFSET_CAPTURE)) {
+			$faq_start = (int)$m[0][1];
+			$before = trim((string)substr($html, 0, $faq_start));
+			$faq = trim((string)substr($html, $faq_start));
+			$faq_words = cbia_count_words_from_html($faq);
+			if ($faq_words > 0 && $faq_words < (int)floor($max_words * 0.45)) {
+				$budget_before = max(350, $max_words - $faq_words);
+				$trim_before = cbia_enforce_length_ceiling_html($before, $budget_before, false);
+				$merged = trim($trim_before . "\n\n" . $faq);
+				if (cbia_count_words_from_html($merged) <= $max_words) return $merged;
+			}
+		}
+
+		$pattern = '/(<div\b[^>]*cbia-inline-image-wrap[^>]*>[\s\S]*?<\/div>|<h[2-3]\b[^>]*>[\s\S]*?<\/h[2-3]>|<p\b[^>]*>[\s\S]*?<\/p>|<ul\b[^>]*>[\s\S]*?<\/ul>|<ol\b[^>]*>[\s\S]*?<\/ol>)/iu';
+		preg_match_all($pattern, $html, $matches);
+		$blocks = (array)($matches[0] ?? array());
+		if (empty($blocks)) return $html;
+
+		$kept = array();
+		$count = 0;
+		foreach ($blocks as $block) {
+			$block = trim((string)$block);
+			if ($block === '') continue;
+			$words = cbia_count_words_from_html($block);
+			if ($words <= 0) {
+				$kept[] = $block;
+				continue;
+			}
+			if ($count + $words <= $max_words) {
+				$kept[] = $block;
+				$count += $words;
+				continue;
+			}
+			$remaining = $max_words - $count;
+			if ($remaining >= 35) {
+				$partial = cbia_truncate_html_block_to_words($block, $remaining);
+				if ($partial !== '') $kept[] = $partial;
+			}
+			break;
+		}
+
+		$out = trim(implode("\n", $kept));
+		return $out !== '' ? $out : $html;
+	}
+}
+
 if (!function_exists('cbia_pick_length_target_words')) {
 	function cbia_pick_length_target_words($variant, $include_faq = false): array {
 		$variant = sanitize_key((string)$variant);
@@ -265,7 +343,9 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 		}
 
 		// Tags (solo permitidas)
-		$tags = cbia_pick_tags_from_content_allowed($title, $final_html, 7);
+		$tags = function_exists('cbia_pick_tags_for_post')
+			? cbia_pick_tags_for_post($title, $final_html, 7)
+			: cbia_pick_tags_from_content_allowed($title, $final_html, 7);
 		if (!empty($tags)) {
 			wp_set_post_tags($post_id, $tags, false);
 		}
@@ -418,12 +498,9 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		}
 
 		$current_words = cbia_count_words_from_html($text_html);
-		$effective_min_words = (int)$min_words;
-		// Optimización de coste: en Medium sin FAQ aceptamos un margen corto
-		// para evitar una segunda llamada cuando el texto ya es suficientemente útil.
-		if ($length_variant === 'medium' && empty($s['include_faq'])) {
-			$effective_min_words = max(1650, (int)$min_words - 150);
-		}
+		$effective_min_words = function_exists('cbia_get_soft_length_floor_words')
+			? cbia_get_soft_length_floor_words((int)$min_words)
+			: (int)$min_words;
 		if ($current_words < $effective_min_words) {
 			cbia_log(sprintf(
 				"Length below target on '%s': %d words (min=%d, effective_min=%d). Expanding content...",
@@ -436,8 +513,6 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			if (!empty($s['include_practical_examples'])) {
 				$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'));
 			}
-			$current_words = cbia_count_words_from_html($text_html);
-			cbia_log(sprintf("Final text length on '%s': %d words.", (string)$title, (int)$current_words), 'INFO');
 		} elseif ($current_words < (int)$min_words) {
 			cbia_log(sprintf(
 				"Length accepted without expansion on '%s': %d words (soft threshold active, nominal min=%d).",
@@ -446,6 +521,9 @@ if (!function_exists('cbia_create_single_blog_post')) {
 				(int)$min_words
 			), 'INFO');
 		}
+		$text_html = cbia_enforce_length_ceiling_html($text_html, (int)$max_words, !empty($s['include_faq']));
+		$current_words = cbia_count_words_from_html($text_html);
+		cbia_log(sprintf("Final text length on '%s': %d words.", (string)$title, (int)$current_words), 'INFO');
 
 			cbia_log(sprintf("AI text OK: generated HTML for '%s'", (string)$title), 'INFO');
         // 3) Procesar marcadores de imagen

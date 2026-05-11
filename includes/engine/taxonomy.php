@@ -115,3 +115,70 @@ if (!function_exists('cbia_pick_tags_from_content_allowed')) {
 	}
 }
 
+if (!function_exists('cbia_tag_stopwords')) {
+	function cbia_tag_stopwords() {
+		return array(
+			'de','del','la','las','el','los','y','o','u','en','con','sin','para','por','a','al','como','que','se','su','sus','un','una','unos','unas','lo','le','les',
+			'the','and','for','with','without','from','that','this','these','those','your','you','our','their','into','onto','over','under','about','using'
+		);
+	}
+}
+
+if (!function_exists('cbia_pick_tags_from_text_fallback')) {
+	function cbia_pick_tags_from_text_fallback($title, $content_html, $max = 7) {
+		$max = max(1, (int)$max);
+		$title = trim(wp_strip_all_tags((string)$title));
+		$content_text = trim(wp_strip_all_tags((string)$content_html));
+		$corpus = trim($title . ' ' . mb_substr($content_text, 0, 2200));
+		if ($corpus === '') return array();
+
+		preg_match_all('/\p{L}[\p{L}\p{N}\-]{2,}/u', (string)$corpus, $m);
+		$tokens = array_map('trim', (array)($m[0] ?? array()));
+		if (empty($tokens)) return array();
+
+		$stop = array_fill_keys(array_map('mb_strtolower', cbia_tag_stopwords()), true);
+		$freq = array();
+		foreach ($tokens as $token) {
+			$lower = mb_strtolower((string)$token);
+			if (isset($stop[$lower])) continue;
+			if (mb_strlen($lower) < 4) continue;
+			if (!isset($freq[$lower])) $freq[$lower] = 0;
+			$freq[$lower]++;
+		}
+		arsort($freq);
+
+		$picked = array();
+		foreach ($freq as $token => $hits) {
+			if ($hits <= 0) continue;
+			$label = sanitize_text_field((string)$token);
+			if ($label === '') continue;
+			$picked[] = $label;
+			if (count($picked) >= $max) break;
+		}
+
+		if (empty($picked) && $title !== '') {
+			preg_match_all('/\p{L}[\p{L}\p{N}\-]{2,}/u', (string)$title, $tm);
+			foreach ((array)($tm[0] ?? array()) as $token) {
+				$token = sanitize_text_field((string)$token);
+				if ($token === '') continue;
+				if (mb_strlen($token) < 4) continue;
+				$picked[] = $token;
+				if (count($picked) >= $max) break;
+			}
+		}
+
+		return array_slice(array_values(array_unique($picked)), 0, $max);
+	}
+}
+
+if (!function_exists('cbia_pick_tags_for_post')) {
+	function cbia_pick_tags_for_post($title, $content_html, $max = 7) {
+		$max = max(1, (int)$max);
+		$allowed_tags = cbia_pick_tags_from_content_allowed($title, $content_html, $max);
+		if (!empty($allowed_tags)) {
+			return array_slice(array_values(array_unique(array_map('sanitize_text_field', (array)$allowed_tags))), 0, $max);
+		}
+		$fallback = cbia_pick_tags_from_text_fallback($title, $content_html, $max);
+		return array_slice(array_values(array_unique(array_map('sanitize_text_field', (array)$fallback))), 0, $max);
+	}
+}
