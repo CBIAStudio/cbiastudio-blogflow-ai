@@ -1,8 +1,8 @@
-﻿=== CBIAStudio BlogFlow with AI ===
+=== CBIAStudio BlogFlow with AI ===
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 6.9
-Stable tag: 2.0.3
+Stable tag: 2.0.4
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -156,6 +156,11 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Changelog ==
 
+= 2.0.4 =
+* Removed UTF-8 BOM from PHP entrypoint/router files to prevent premature output and WordPress 'Cannot modify header information' warnings during redirects or admin actions.
+* Regenerated clean release packages after byte-level validation.
+
+
 = 2.0.3 =
 * Fixed the editor `Complete missing` action so generated internal images are injected into the final HTML before applying the post, instead of only updating the featured image.
 * Hardened first-time editor insertion: created drafts now persist content, featured image, categories, tags, and Yoast metadata through the server-side apply flow.
@@ -196,6 +201,10 @@ This plugin can connect to third-party AI services only when the site administra
 * Improved preview/create flows by returning real preview URLs for scheduled drafts and stabilizing admin-side usage rendering.
 
 == Upgrade Notice ==
+
+= 2.0.4 =
+Recommended header-safety update. Fixes premature PHP output that can break redirects or admin actions on some hosts.
+
 
 = 2.0.3 =
 Recommended update. Fixes editor completion of missing internal images, improves first-insert metadata persistence, and keeps generated packages clean for WordPress upload.

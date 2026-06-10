@@ -1,4 +1,4 @@
-﻿# CBIAStudio BlogFlow with AI (WordPress) v2.0.3
+# CBIAStudio BlogFlow with AI (WordPress) v2.0.4
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,14 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.0.4
+- Removed UTF-8 BOM from PHP entrypoint/router files to prevent early output and 'Cannot modify header information' warnings during redirects/login/admin actions.
+- Regenerated clean release packages after byte-level ZIP validation.
+
+## Comparative: 2.0.4 vs 2.0.3
+- Keeps all 2.0.3 editor, metadata, FAQ language, date, and packaging fixes.
+- Adds header-safety hardening for WordPress runtime compatibility.
 
 ## What's New in 2.0.3
 - Fixed `Complete missing` in the editor so missing internal images are applied to the final post HTML, not only generated in memory.
