@@ -2949,6 +2949,19 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
         $composer_post_id = isset($post->ID) ? absint($post->ID) : 0;
         $initial_snapshot = array();
         if ($composer_post_id > 0) {
+            $post_snapshot = cbia_ai_composer_build_snapshot_from_post(
+                $composer_post_id,
+                (string)$default_language,
+                (string)$default_internal_style,
+                (string)$default_length,
+                (int)$default_internal_images
+            );
+            $post_has_saved_state =
+                trim((string)get_post_field('post_content', $composer_post_id)) !== ''
+                || (int)get_post_thumbnail_id($composer_post_id) > 0
+                || !empty(wp_get_post_categories($composer_post_id, array('fields' => 'ids')))
+                || !empty(wp_get_post_terms($composer_post_id, 'post_tag', array('fields' => 'ids')))
+                || trim((string)get_post_meta($composer_post_id, '_yoast_wpseo_metadesc', true)) !== '';
             $snapshot_raw = get_post_meta($composer_post_id, '_cbia_ai_composer_snapshot', true);
             if (is_array($snapshot_raw)) {
                 $initial_snapshot = $snapshot_raw;
@@ -2958,14 +2971,8 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
                     $initial_snapshot = $decoded;
                 }
             }
-            if (empty($initial_snapshot)) {
-                $initial_snapshot = cbia_ai_composer_build_snapshot_from_post(
-                    $composer_post_id,
-                    (string)$default_language,
-                    (string)$default_internal_style,
-                    (string)$default_length,
-                    (int)$default_internal_images
-                );
+            if ($post_has_saved_state || empty($initial_snapshot)) {
+                $initial_snapshot = $post_snapshot;
             }
         }
         $initial_snapshot_json = (string) wp_json_encode($initial_snapshot);
@@ -4916,6 +4923,9 @@ if (!function_exists('cbia_ajax_start_generation')) {
                 if (array_key_exists('first_publication_datetime_local', $post_unslashed) && (string)($settings_before_start['first_publication_datetime'] ?? '') !== (string)($settings['first_publication_datetime'] ?? '')) {
                     $should_clear_checkpoint = true;
                 }
+                if (array_key_exists('publication_interval', $post_unslashed) && (int)($settings_before_start['publication_interval'] ?? 5) !== (int)($settings['publication_interval'] ?? 5)) {
+                    $should_clear_checkpoint = true;
+                }
             }
             if ($should_clear_checkpoint) {
                 cbia_checkpoint_clear();
@@ -5239,7 +5249,7 @@ if (!function_exists('cbia_oldposts_log_run_start')) {
             )
         );
         if (!empty($run['post_ids'])) {
-            cbia_oldposts_log_message(__('NOTE: specific IDs were provided. Date filters are ignored.', 'cbiastudio-blogflow-ai'));
+            cbia_oldposts_log_message(__('NOTE: specific IDs were provided. Date/category/author filters are ignored.', 'cbiastudio-blogflow-ai'));
         }
     }
 }

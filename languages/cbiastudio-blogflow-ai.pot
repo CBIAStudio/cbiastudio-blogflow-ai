@@ -1621,15 +1621,15 @@ msgid "Template"
 msgstr ""
 
 #: includes/admin/views/oldposts.php:610
-msgid "Short (600-800)"
+msgid "Short (~1000)"
 msgstr ""
 
 #: includes/admin/views/oldposts.php:611
-msgid "Medium (900-1400)"
+msgid "Medium (1800-2000)"
 msgstr ""
 
 #: includes/admin/views/oldposts.php:612
-msgid "Long (1500+)"
+msgid "Long (2000-2200)"
 msgstr ""
 
 #: includes/admin/views/oldposts.php:619
@@ -2284,7 +2284,7 @@ msgid ""
 msgstr ""
 
 #: includes/core/hooks.php:3611 includes/engine/oldposts.php:1351
-msgid "NOTE: specific IDs were provided. Date filters are ignored."
+msgid "NOTE: specific IDs were provided. Date/category/author filters are ignored."
 msgstr ""
 
 #: includes/core/hooks.php:3867

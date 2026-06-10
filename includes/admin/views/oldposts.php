@@ -634,9 +634,9 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                             <div class="cbia-oldv2-field">
                                 <label for="cbia_run_post_length_variant"><?php echo esc_html__('Template', 'cbiastudio-blogflow-ai'); ?></label>
                                 <select id="cbia_run_post_length_variant" class="cbia-oldv2-select" name="run_post_length_variant">
-                                    <option value="short" <?php selected($tpl_default, 'short'); ?>><?php echo esc_html__('Short (600-800)', 'cbiastudio-blogflow-ai'); ?></option>
-                                    <option value="medium" <?php selected($tpl_default, 'medium'); ?>><?php echo esc_html__('Medium (900-1400)', 'cbiastudio-blogflow-ai'); ?></option>
-                                    <option value="long" <?php selected($tpl_default, 'long'); ?>><?php echo esc_html__('Long (1500+)', 'cbiastudio-blogflow-ai'); ?></option>
+                                    <option value="short" <?php selected($tpl_default, 'short'); ?>><?php echo esc_html__('Short (~1000)', 'cbiastudio-blogflow-ai'); ?></option>
+                                    <option value="medium" <?php selected($tpl_default, 'medium'); ?>><?php echo esc_html__('Medium (1800-2000)', 'cbiastudio-blogflow-ai'); ?></option>
+                                    <option value="long" <?php selected($tpl_default, 'long'); ?>><?php echo esc_html__('Long (2000-2200)', 'cbiastudio-blogflow-ai'); ?></option>
                                 </select>
                             </div>
                         </div>
@@ -1223,6 +1223,20 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
         }
 
         if (pickerGrid) {
+            pickerGrid.addEventListener('click', function(e){
+                const postActionLink = e.target && e.target.closest ? e.target.closest('.cbia-oldv2-post-link') : null;
+                const buttonLike = e.target && e.target.closest ? e.target.closest('button,a') : null;
+                if (postActionLink || buttonLike) return;
+                const card = e.target && e.target.closest ? e.target.closest('.cbia-oldv2-post') : null;
+                if (!card || !pickerGrid.contains(card)) return;
+                const chk = card.querySelector('.cbia-oldposts-check');
+                if (!chk) return;
+                e.preventDefault();
+                e.stopPropagation();
+                chk.checked = !chk.checked;
+                card.classList.toggle('is-selected', !!chk.checked);
+                syncIdsFromPicker();
+            }, true);
             pickerGrid.addEventListener('change', function(e){
                 const chk = e.target && e.target.classList && e.target.classList.contains('cbia-oldposts-check') ? e.target : null;
                 if (!chk) return;
@@ -1475,10 +1489,23 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                 persistUiState();
             };
             const collectRunFormData = function(action) {
+                if (pickerGrid && idsInput) {
+                    syncIdsFromPicker();
+                }
                 const formData = new FormData(actionsForm);
                 formData.set('cbia_form', 'oldposts_actions');
                 formData.set('cbia_action', action);
                 formData.set('run_custom_actions', '1');
+                if (idsInput) formData.set('run_post_ids', String(idsInput.value || ''));
+                if (runCategorySelect) formData.set('run_category_id', String(runCategorySelect.value || '0'));
+                if (runAuthorSelect) formData.set('run_author_id', String(runAuthorSelect.value || '0'));
+                if (pickerCategoryFilter) formData.set('run_category_id', String(pickerCategoryFilter.value || formData.get('run_category_id') || '0'));
+                if (pickerAuthorFilter) formData.set('run_author_id', String(pickerAuthorFilter.value || formData.get('run_author_id') || '0'));
+                if (runTemplate) formData.set('run_post_length_variant', String(runTemplate.value || 'medium'));
+                if (runTextProvider) formData.set('run_text_provider', String(runTextProvider.value || 'openai'));
+                if (runTextModel) formData.set('run_text_model', String(runTextModel.value || ''));
+                if (runImageProvider) formData.set('run_image_provider', String(runImageProvider.value || 'openai'));
+                if (runImageModel) formData.set('run_image_model', String(runImageModel.value || ''));
                 return formData;
             };
             const appendClientLog = function(message) {
@@ -1604,6 +1631,15 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                 stateProcessedIds.forEach(function(id){
                     processedRunIds.add(id);
                 });
+                if (pickerGrid) {
+                    pickerGrid.querySelectorAll('.cbia-oldv2-post').forEach(function(card){
+                        card.classList.remove('is-running');
+                    });
+                    stateProcessedIds.forEach(function(id){
+                        const doneCard = pickerGrid.querySelector('.cbia-oldv2-post[data-post-id="' + id + '"]');
+                        if (doneCard) doneCard.classList.add('is-processed');
+                    });
+                }
                 if (state.ui_state && typeof state.ui_state === 'object') {
                     applyUiState(state.ui_state);
                 }
@@ -1615,6 +1651,10 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                     const cleanId = parseInt(id || 0, 10) || 0;
                     if (cleanId > 0) {
                         processedRunIds.add(cleanId);
+                        if (pickerGrid && status === 'running') {
+                            const runningCard = pickerGrid.querySelector('.cbia-oldv2-post[data-post-id="' + cleanId + '"]');
+                            if (runningCard) runningCard.classList.add('is-running');
+                        }
                         // Refresh cards once the chunk is no longer running (when data is final).
                         if (status !== 'running') {
                             const nowTs = Date.now();

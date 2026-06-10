@@ -1181,10 +1181,10 @@ if (!function_exists('cbia_oldposts_build_query_args')) {
             );
         }
 
-        if ($category_id > 0) {
+        if (empty($post_ids) && $category_id > 0) {
             $args['cat'] = $category_id;
         }
-        if ($author_id > 0) {
+        if (empty($post_ids) && $author_id > 0) {
             $args['author'] = $author_id;
         }
 
@@ -1413,7 +1413,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
         );
 
         if (!empty($post_ids)) {
-            cbia_oldposts_log_message(__("NOTE: specific IDs were provided. Date filters are ignored.", 'cbiastudio-blogflow-ai'));
+            cbia_oldposts_log_message(__("NOTE: specific IDs were provided. Date/category/author filters are ignored.", 'cbiastudio-blogflow-ai'));
         }
         }
 
@@ -2053,6 +2053,4 @@ if (!function_exists('cbia_oldposts_handle_post')) {
 
 
 /* ------------------------- FIN includes/engine/oldposts.php ------------------------- */
-
-
 

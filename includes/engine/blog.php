@@ -118,9 +118,27 @@ if (!function_exists('cbia_checkpoint_get')) {
 if (!function_exists('cbia_checkpoint_save')) {
     function cbia_checkpoint_save($cp){ update_option('cbia_checkpoint', $cp, false); }
 }
+if (!function_exists('cbia_checkpoint_has_pending_queue')) {
+    function cbia_checkpoint_has_pending_queue($cp = null): bool {
+        if ($cp === null) {
+            $cp = cbia_checkpoint_get();
+        }
+        if (!is_array($cp) || empty($cp['running']) || empty($cp['queue']) || !is_array($cp['queue'])) {
+            return false;
+        }
+        $idx = max(0, (int)($cp['idx'] ?? 0));
+        return $idx < count((array)$cp['queue']);
+    }
+}
 if (!function_exists('cbia_blog_generation_lock_key')) {
     function cbia_blog_generation_lock_key() {
         return 'cbia_blog_generation_lock';
+    }
+}
+if (!function_exists('cbia_blog_generation_get_lock')) {
+    function cbia_blog_generation_get_lock(): array {
+        $existing = get_option(cbia_blog_generation_lock_key(), array());
+        return is_array($existing) ? $existing : array();
     }
 }
 if (!function_exists('cbia_blog_generation_lock_ttl')) {
@@ -282,8 +300,9 @@ if (!function_exists('cbia_blog_handle_post')) {
 
             } elseif ($action === 'clear_checkpoint') {
                 cbia_checkpoint_clear();
+                cbia_blog_generation_release_lock();
                 delete_option('_cbia_last_scheduled_at');
-                cbia_log_message("[INFO] Checkpoint cleared + _cbia_last_scheduled_at reset.");
+                cbia_log_message("[INFO] Checkpoint cleared + generation lock + _cbia_last_scheduled_at reset.");
                 $saved_notice = 'checkpoint';
 
             } elseif ($action === 'clear_log') {
@@ -378,10 +397,10 @@ if (!function_exists('cbia_prepare_queue_from_titles')) {
    =================== COMPUTE NEXT DATETIME ===============
    ========================================================= */
 if (!function_exists('cbia_compute_next_datetime')) {
-    function cbia_compute_next_datetime($interval_days){
+    function cbia_compute_next_datetime($interval_days, $last_override = null){
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
         $first_dt = trim((string)($settings['first_publication_datetime'] ?? ''));
-        $last = cbia_get_last_scheduled_at();
+        $last = ($last_override === null) ? cbia_get_last_scheduled_at() : trim((string)$last_override);
         $normalize_candidate = function ($candidate, $source_label) {
             $candidate = trim((string)$candidate);
             if ($candidate === '') return '';
@@ -474,7 +493,7 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
             $queue = cbia_prepare_queue_from_titles($titles);
             $idx = 0;
             cbia_set_last_scheduled_at('');
-            $cp = array('queue'=>$queue,'idx'=>$idx,'created_total'=>0,'running'=>true);
+            $cp = array('queue'=>$queue,'idx'=>$idx,'created_total'=>0,'running'=>true,'last_scheduled_at'=>'');
             cbia_checkpoint_save($cp);
             cbia_log_message("[INFO] Checkpoint created. Starting batch... queue=".count($queue));
         }
@@ -504,7 +523,8 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
                 continue;
             }
 
-            $next_dt = cbia_compute_next_datetime($interval_days);
+            $schedule_cursor = isset($cp['last_scheduled_at']) ? (string)$cp['last_scheduled_at'] : cbia_get_last_scheduled_at();
+            $next_dt = cbia_compute_next_datetime($interval_days, $schedule_cursor);
 
             if ($next_dt === '') {
                 cbia_log_message("[INFO] Creating post: {$title} | Published now");
@@ -512,6 +532,7 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
                 if (is_array($result) && !empty($result['ok'])) {
                     $post_id = (int)($result['post_id'] ?? 0);
                     $now_local = current_time('mysql');
+                    $cp['last_scheduled_at'] = $now_local;
                     cbia_set_last_scheduled_at($now_local);
                     $cp['created_total']++;
                 } else {
@@ -523,6 +544,7 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
                 $result = cbia_create_single_blog_post($title, $next_dt);
                 if (is_array($result) && !empty($result['ok'])) {
                     $post_id = (int)($result['post_id'] ?? 0);
+                    $cp['last_scheduled_at'] = $next_dt;
                     cbia_set_last_scheduled_at($next_dt);
                     $cp['created_total']++;
                 } else {
@@ -576,7 +598,13 @@ if (!function_exists('cbia_run_generate_blogs')) {
         $max_per_run = max(1, (int)$max_per_run);
         $run_id = function_exists('wp_generate_uuid4') ? wp_generate_uuid4() : uniqid('cbia-blog-', true);
         if (!cbia_blog_generation_acquire_lock($run_id)) {
-            cbia_log_message("[WARN] Blog batch already running. This start was ignored.");
+            $lock = cbia_blog_generation_get_lock();
+            $age = !empty($lock['locked_at']) ? max(0, time() - (int)$lock['locked_at']) : 0;
+            cbia_log_message("[WARN] Blog batch already running. This start was ignored. lock_age={$age}s.");
+            if (cbia_checkpoint_has_pending_queue() && !wp_next_scheduled('cbia_generation_event')) {
+                cbia_schedule_generation_event(8, false);
+                cbia_log_message("[INFO] Existing checkpoint is pending; scheduler was re-queued after locked START.");
+            }
             return array('done'=>false,'processed'=>0,'locked'=>true);
         }
 

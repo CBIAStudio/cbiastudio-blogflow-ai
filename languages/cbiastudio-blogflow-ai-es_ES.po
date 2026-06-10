@@ -530,21 +530,21 @@ msgstr ""
 #: includes/admin/views/blog.php:444
 #, fuzzy
 msgid "Scheduling"
-msgstr "Programadas"
+msgstr "Programacion"
 
 #: includes/admin/views/blog.php:451
 msgid "First date/time"
-msgstr ""
+msgstr "Primera fecha/hora"
 
 #: includes/admin/views/blog.php:454
 msgid ""
 "If left empty, generation starts immediately. If you set a date/time, the "
 "first post is scheduled and the next ones follow the interval."
-msgstr ""
+msgstr "Si lo dejas vacio, la generacion empieza inmediatamente. Si indicas fecha/hora, la primera entrada se programa y las siguientes respetan el intervalo."
 
 #: includes/admin/views/blog.php:458
 msgid "Interval between publications (days)"
-msgstr ""
+msgstr "Intervalo entre publicaciones (dias)"
 
 #: includes/admin/views/blog.php:465
 msgid "CRON: fill pending"
@@ -1673,17 +1673,17 @@ msgstr "template="
 
 #: includes/admin/views/oldposts.php:610
 #, fuzzy
-msgid "Short (600-800)"
+msgid "Short (~1000)"
 msgstr "Corto (~1000 palabras)"
 
 #: includes/admin/views/oldposts.php:611
 #, fuzzy
-msgid "Medium (900-1400)"
+msgid "Medium (1800-2000)"
 msgstr "Medio (~1800-2000 palabras)"
 
 #: includes/admin/views/oldposts.php:612
-msgid "Long (1500+)"
-msgstr ""
+msgid "Long (2000-2200)"
+msgstr "Largo (2000-2200 palabras)"
 
 #: includes/admin/views/oldposts.php:619
 msgid "AI text"
@@ -2370,8 +2370,8 @@ msgid ""
 msgstr ""
 
 #: includes/core/hooks.php:3611 includes/engine/oldposts.php:1351
-msgid "NOTE: specific IDs were provided. Date filters are ignored."
-msgstr ""
+msgid "NOTE: specific IDs were provided. Date/category/author filters are ignored."
+msgstr "Se proporcionaron IDs concretos. Se ignoran los filtros de fecha/categoria/autor."
 
 #: includes/core/hooks.php:3867
 #, php-format

@@ -4298,6 +4298,34 @@
             return legacy > 0 ? legacy : 0;
         }
 
+        function setEffectivePostIdForComposer(postId) {
+            var pid = parseInt(postId || 0, 10) || 0;
+            if (pid <= 0) return 0;
+            try { root.setAttribute('data-current-post-id', String(pid)); } catch (_eRootPid) {}
+            var hiddenPostId = document.getElementById('post_ID');
+            if (hiddenPostId) {
+                hiddenPostId.value = String(pid);
+                triggerInputSync(hiddenPostId);
+            }
+            return pid;
+        }
+
+        function saveEditorDraftAfterComposer() {
+            try {
+                if (window.wp && window.wp.data && window.wp.data.dispatch) {
+                    var editorDispatch = window.wp.data.dispatch('core/editor');
+                    if (editorDispatch && typeof editorDispatch.savePost === 'function') {
+                        var saved = editorDispatch.savePost();
+                        if (saved && typeof saved.then === 'function') {
+                            return saved;
+                        }
+                        return Promise.resolve(true);
+                    }
+                }
+            } catch (_eSaveComposer) {}
+            return Promise.resolve(false);
+        }
+
         function restoreRedirectTitleSync() {
             try {
                 var raw = sessionStorage.getItem('cbia_ai_title_after_redirect');
@@ -5185,12 +5213,8 @@
                         finalTitle = appliedTitle;
                     }
                     var appliedPostId = parseInt((res.data && res.data.post_id) ? res.data.post_id : 0, 10) || 0;
-                    if (!resolveCurrentPostId() && appliedPostId > 0) {
-                        var hiddenPostId = document.getElementById('post_ID');
-                        if (hiddenPostId) {
-                            hiddenPostId.value = String(appliedPostId);
-                            triggerInputSync(hiddenPostId);
-                        }
+                    if (appliedPostId > 0) {
+                        setEffectivePostIdForComposer(appliedPostId);
                     }
                     var appliedCats = Array.isArray(res.data.category_ids)
                         ? res.data.category_ids.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; })
@@ -5249,19 +5273,21 @@
                         }, appliedPostId);
                     } catch (eYoast) {}
                     persistComposerSnapshot();
-                    setStatus('Contenido aplicado en servidor.', false);
+                    setStatus('Contenido aplicado en servidor. Guardando borrador...', false);
                     try { insertInEditor(titleForApply, htmlCandidate, finalFocusKeyphrase, finalMetaDescription, appliedCats, appliedTags, appliedTagNames, finalFeaturedAttachId); } catch (eInsertUi) {}
-                    setStatus('Content inserted into editor.', false);
-                    if (!applyEffectivePostId && appliedPostId > 0 && res.data && res.data.edit_url) {
-                        try {
-                            sessionStorage.setItem('cbia_ai_title_after_redirect', JSON.stringify({ title: titleForApply, post_id: appliedPostId }));
-                        } catch (_eStoreRedirect) {}
-                        window.location.href = String(res.data.edit_url);
-                        return;
-                    }
-                    closeComposerModal();
-                    setTimeout(function () { try { closeComposerModal(); } catch (_e1) {} }, 80);
-                    setTimeout(function () { try { closeComposerModalFallback(); } catch (_e2) {} }, 260);
+                    return saveEditorDraftAfterComposer().catch(function(){ return false; }).then(function(){
+                        setStatus('Content inserted and saved in the editor.', false);
+                        if (!applyEffectivePostId && appliedPostId > 0 && res.data && res.data.edit_url) {
+                            try {
+                                sessionStorage.setItem('cbia_ai_title_after_redirect', JSON.stringify({ title: titleForApply, post_id: appliedPostId }));
+                            } catch (_eStoreRedirect) {}
+                            window.location.href = String(res.data.edit_url);
+                            return;
+                        }
+                        closeComposerModal();
+                        setTimeout(function () { try { closeComposerModal(); } catch (_e1) {} }, 80);
+                        setTimeout(function () { try { closeComposerModalFallback(); } catch (_e2) {} }, 260);
+                    });
                 }).catch(function (err) {
                     setStatus((err && err.message) ? err.message : 'Could not insert automatically. Copy and paste manually.', true);
                 }).finally(function () {

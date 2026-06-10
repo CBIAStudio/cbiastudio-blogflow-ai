@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CBIAStudio BlogFlow with AI
  * Description: Base edition of CBIAStudio BlogFlow with AI for WordPress.
- * Version: 2.0.4
+ * Version: 2.0.5
  * Text Domain: cbiastudio-blogflow-ai
  * Domain Path: /languages
  *
@@ -15,7 +15,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.0.4');
+if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.0.5');
 if (!defined('CBIA_BASE_PLUGIN_FILE')) define('CBIA_BASE_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_BASE_PLUGIN_DIR')) define('CBIA_BASE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_BASE_PLUGIN_URL')) define('CBIA_BASE_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -65,8 +65,8 @@ add_action('plugins_loaded', function () {
 	}
 }, 5);
 
-// Registrar loader nuevo
-add_action('plugins_loaded', function () {
+// Registrar loader nuevo after init so admin labels can use translations safely.
+add_action('init', function () {
 	if (class_exists('CBIA_Loader') && function_exists('cbia_container')) {
 		$container = cbia_container();
 		$router = $container ? $container->get('admin_router') : null;
@@ -74,7 +74,7 @@ add_action('plugins_loaded', function () {
 		$loader = new CBIA_Loader($router, $scheduler);
 		$loader->register();
 	}
-});
+}, 2);
 
 /**
  * Helpers globales (evitar duplicados)

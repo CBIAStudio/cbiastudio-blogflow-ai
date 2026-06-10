@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.0.4
+# CBIAStudio BlogFlow with AI (WordPress) v2.0.5
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -9,14 +9,16 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - live logs and STOP controls
 - optional Yoast SEO sync
 
-## What's New in 2.0.4
-- Removed UTF-8 BOM from PHP entrypoint/router files to prevent early output and 'Cannot modify header information' warnings during redirects/login/admin actions.
-- Regenerated clean release packages after byte-level ZIP validation.
+## What's New in 2.0.5
+- Composer insert now persists content, featured image, categories, tags, and Yoast metadata by saving the editor draft after the server-side apply step.
+- Reopening the editor composer now prefers the saved post state, so existing content/images/SEO can be modified instead of starting from an empty snapshot.
+- Blog scheduling now uses a checkpoint schedule cursor so the configured first date and interval are respected across queued titles.
+- Update Older Posts keeps multi-card selection stable, sends the exact selected IDs to the AJAX queue, and marks running/processed cards visually.
+- Spanish translations updated for scheduling controls, Oldposts labels, and changed runtime messages.
 
-## Comparative: 2.0.4 vs 2.0.3
-- Keeps all 2.0.3 editor, metadata, FAQ language, date, and packaging fixes.
-- Adds header-safety hardening for WordPress runtime compatibility.
-
+## Comparative: 2.0.5 vs 2.0.4
+- Keeps the 2.0.4 header-safety patch that prevents premature output and WordPress header warnings.
+- Adds workflow persistence fixes for editor metadata, deterministic scheduling intervals, and Oldposts queue/selection reliability.
 ## What's New in 2.0.3
 - Fixed `Complete missing` in the editor so missing internal images are applied to the final post HTML, not only generated in memory.
 - Hardened first-time editor insertion so content, featured image, categories, tags, and Yoast metadata persist when the draft did not exist yet.
