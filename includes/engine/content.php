@@ -420,24 +420,100 @@ if (!function_exists('cbia_split_long_paragraphs_in_html')) {
     }
 }
 
+if (!function_exists('cbia_normalize_language_key')) {
+    function cbia_normalize_language_key($language) {
+        $input = trim((string)$language);
+        if ($input === '') return 'english';
+
+        $canonical = '';
+        if (function_exists('cbia_ai_composer_normalize_language_value')) {
+            $canonical = trim((string)cbia_ai_composer_normalize_language_value($input));
+        }
+        $raw = strtolower($canonical !== '' ? $canonical : $input);
+        $raw = str_replace('_', '-', $raw);
+
+        $map = array(
+            'es' => 'spanish', 'es-es' => 'spanish', 'spanish' => 'spanish', 'espanol' => 'spanish', 'español' => 'spanish', 'castellano' => 'spanish',
+            'en' => 'english', 'en-us' => 'english', 'en-gb' => 'english', 'english' => 'english',
+            'pt' => 'portuguese', 'pt-pt' => 'portuguese', 'pt-br' => 'portuguese', 'portuguese' => 'portuguese', 'portugues' => 'portuguese',
+            'fr' => 'french', 'fr-fr' => 'french', 'french' => 'french', 'frances' => 'french',
+            'de' => 'german', 'de-de' => 'german', 'german' => 'german', 'aleman' => 'german', 'alemán' => 'german',
+            'it' => 'italian', 'it-it' => 'italian', 'italian' => 'italian', 'italiano' => 'italian',
+            'nl' => 'dutch', 'nl-nl' => 'dutch', 'dutch' => 'dutch',
+            'sv' => 'swedish', 'sv-se' => 'swedish', 'swedish' => 'swedish',
+            'da' => 'danish', 'da-dk' => 'danish', 'danish' => 'danish',
+            'no' => 'norwegian', 'nb' => 'norwegian', 'nn' => 'norwegian', 'norwegian' => 'norwegian',
+            'fi' => 'finnish', 'fi-fi' => 'finnish', 'finnish' => 'finnish',
+            'pl' => 'polish', 'pl-pl' => 'polish', 'polish' => 'polish',
+            'cs' => 'czech', 'cs-cz' => 'czech', 'czech' => 'czech',
+            'sk' => 'slovak', 'sk-sk' => 'slovak', 'slovak' => 'slovak',
+            'hu' => 'hungarian', 'hu-hu' => 'hungarian', 'hungarian' => 'hungarian',
+            'ro' => 'romanian', 'ro-ro' => 'romanian', 'romanian' => 'romanian',
+            'bg' => 'bulgarian', 'bg-bg' => 'bulgarian', 'bulgarian' => 'bulgarian',
+            'el' => 'greek', 'el-gr' => 'greek', 'greek' => 'greek',
+            'hr' => 'croatian', 'hr-hr' => 'croatian', 'croatian' => 'croatian',
+            'sl' => 'slovenian', 'sl-si' => 'slovenian', 'slovenian' => 'slovenian',
+            'et' => 'estonian', 'et-ee' => 'estonian', 'estonian' => 'estonian',
+            'lv' => 'latvian', 'lv-lv' => 'latvian', 'latvian' => 'latvian',
+            'lt' => 'lithuanian', 'lt-lt' => 'lithuanian', 'lithuanian' => 'lithuanian',
+            'ga' => 'irish', 'ga-ie' => 'irish', 'irish' => 'irish',
+            'mt' => 'maltese', 'mt-mt' => 'maltese', 'maltese' => 'maltese',
+            'rm' => 'romansh', 'rm-ch' => 'romansh', 'romansh' => 'romansh',
+        );
+        if (isset($map[$raw])) return $map[$raw];
+        if (strpos($raw, 'span') !== false || strpos($raw, 'espa') !== false || strpos($raw, 'castell') !== false) return 'spanish';
+        if (strpos($raw, 'engl') !== false || strpos($raw, 'ingl') !== false) return 'english';
+        if (strpos($raw, 'port') !== false) return 'portuguese';
+        if (strpos($raw, 'fran') !== false || strpos($raw, 'fren') !== false) return 'french';
+        if (strpos($raw, 'germ') !== false || strpos($raw, 'alem') !== false || strpos($raw, 'deut') !== false) return 'german';
+        if (strpos($raw, 'ital') !== false) return 'italian';
+        return 'english';
+    }
+}
+
+if (!function_exists('cbia_get_faq_heading_for_language')) {
+    function cbia_get_faq_heading_for_language($language) {
+        $key = cbia_normalize_language_key($language);
+        $headings = array(
+            'spanish' => 'Preguntas frecuentes',
+            'english' => 'Frequently Asked Questions',
+            'portuguese' => 'Perguntas frequentes',
+            'french' => 'Questions frequentes',
+            'german' => 'Haeufige Fragen',
+            'italian' => 'Domande frequenti',
+            'dutch' => 'Veelgestelde vragen',
+            'swedish' => 'Vanliga fragor',
+            'danish' => 'Ofte stillede sporgsmal',
+            'norwegian' => 'Ofte stilte sporsmal',
+            'finnish' => 'Usein kysytyt kysymykset',
+            'polish' => 'Najczesciej zadawane pytania',
+            'czech' => 'Casto kladene otazky',
+            'slovak' => 'Casto kladene otazky',
+            'hungarian' => 'Gyakran ismelt kerdesek',
+            'romanian' => 'Intrebari frecvente',
+            'bulgarian' => 'Chesto zadavani vaprosi',
+            'greek' => 'Sychnes erotiseis',
+            'croatian' => 'Cesto postavljana pitanja',
+            'slovenian' => 'Pogosta vprasanja',
+            'estonian' => 'Korduma kippuvad kusimused',
+            'latvian' => 'Biezak uzdotie jautajumi',
+            'lithuanian' => 'Dazniausiai uzduodami klausimai',
+            'irish' => 'Ceisteanna coitianta',
+            'maltese' => 'Mistoqsijiet frekwenti',
+            'romansh' => 'Dumondas frequentas',
+        );
+        return isset($headings[$key]) ? (string)$headings[$key] : 'Frequently Asked Questions';
+    }
+}
+
 if (!function_exists('cbia_get_faq_heading')) {
     function cbia_get_faq_heading() {
         $s = cbia_get_settings();
         $custom = trim((string)($s['faq_heading_custom'] ?? ''));
         if ($custom !== '') return $custom;
-
-        $lang = strtolower(trim((string)($s['post_language'] ?? 'english')));
-        if (strpos($lang, 'espa') !== false || strpos($lang, 'span') !== false || $lang === 'es') return 'Preguntas frecuentes';
-        if (strpos($lang, 'ingl') !== false || strpos($lang, 'english') !== false) return 'Frequently Asked Questions';
-        if (strpos($lang, 'fran') !== false || strpos($lang, 'franÃƒÂ§ais') !== false || strpos($lang, 'franc') !== false) return 'Questions frÃƒÂ©quentes';
-        if (strpos($lang, 'deut') !== false || strpos($lang, 'alem') !== false || strpos($lang, 'german') !== false) return 'HÃƒÂ¤ufige Fragen';
-        if (strpos($lang, 'ital') !== false) return 'Domande frequenti';
-        if (strpos($lang, 'port') !== false) return 'Perguntas frequentes';
-
-        return 'Frequently Asked Questions';
+        return cbia_get_faq_heading_for_language((string)($s['post_language'] ?? 'English'));
     }
 }
-
 if (!function_exists('cbia_insert_faq_heading_if_missing')) {
     function cbia_insert_faq_heading_if_missing($html) {
         $html = (string)$html;
@@ -465,6 +541,19 @@ if (!function_exists('cbia_normalize_faq_heading')) {
         $html = preg_replace($pattern, $replacement, $html);
 
         return $html;
+    }
+}
+
+if (!function_exists('cbia_normalize_faq_heading_for_language')) {
+    function cbia_normalize_faq_heading_for_language($html, $language) {
+        $html = (string)$html;
+        $heading = function_exists('cbia_get_faq_heading_for_language')
+            ? cbia_get_faq_heading_for_language($language)
+            : cbia_get_faq_heading();
+        if ($heading === '') return $html;
+
+        $pattern = '/<h2[^>]*>\\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Frequently Asked Questions|Questions? ?FAQs?|FAQs)\\s*<\\/h2>/i';
+        return preg_replace($pattern, '<h2>' . esc_html($heading) . '</h2>', $html);
     }
 }
 

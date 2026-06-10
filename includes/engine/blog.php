@@ -382,11 +382,33 @@ if (!function_exists('cbia_compute_next_datetime')) {
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
         $first_dt = trim((string)($settings['first_publication_datetime'] ?? ''));
         $last = cbia_get_last_scheduled_at();
+        $normalize_candidate = function ($candidate, $source_label) {
+            $candidate = trim((string)$candidate);
+            if ($candidate === '') return '';
+            if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/', $candidate)) {
+                $candidate .= ':00';
+            }
+            if (!preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/', $candidate)) {
+                return '';
+            }
+            try {
+                $tz = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone(wp_timezone_string());
+                $dt = new DateTime($candidate, $tz);
+                $now = new DateTime(current_time('mysql'), $tz);
+                if ($dt < $now) {
+                    cbia_log_message("[WARN] Ignoring past publication date from {$source_label}: {$candidate}. Publishing now instead.");
+                    return '';
+                }
+                return $dt->format('Y-m-d H:i:s');
+            } catch (Exception $e) {
+                cbia_log_message("[ERROR] Error validating publication date: ".$e->getMessage());
+                return '';
+            }
+        };
 
         if ($last === '') {
             if ($first_dt !== '') {
-                if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}$/', $first_dt)) return $first_dt;
-                if (preg_match('/^\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}$/', $first_dt)) return $first_dt . ':00';
+                return $normalize_candidate($first_dt, 'first_publication_datetime');
             }
             return '';
         }
@@ -395,7 +417,7 @@ if (!function_exists('cbia_compute_next_datetime')) {
             $tz = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone(wp_timezone_string());
             $dt = new DateTime($last, $tz);
             $dt->modify('+' . max(1, (int)$interval_days) . ' day');
-            return $dt->format('Y-m-d H:i:s');
+            return $normalize_candidate($dt->format('Y-m-d H:i:s'), 'last_scheduled_at');
         } catch (Exception $e) {
             cbia_log_message("[ERROR] Error calculating next date: ".$e->getMessage());
             return '';

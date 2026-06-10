@@ -1,8 +1,8 @@
-=== CBIAStudio BlogFlow with AI ===
+﻿=== CBIAStudio BlogFlow with AI ===
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 6.9
-Stable tag: 2.0.2
+Stable tag: 2.0.3
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -156,6 +156,14 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Changelog ==
 
+= 2.0.3 =
+* Fixed the editor `Complete missing` action so generated internal images are injected into the final HTML before applying the post, instead of only updating the featured image.
+* Hardened first-time editor insertion: created drafts now persist content, featured image, categories, tags, and Yoast metadata through the server-side apply flow.
+* FAQ headings now normalize to the selected post language in preview and insert flows.
+* Blog scheduling now ignores stale past publication dates and uses the current run date instead.
+* Usage in the base edition keeps Pro-only cost displays hidden while retaining operational usage data.
+* Packaging cleanup: regenerated WordPress-ready ZIP with normalized `/` paths and no Git/dev artifacts.
+* Comparison vs 2.0.2: fixes missing-image completion and first-insert metadata persistence while keeping the 2.0.2 cost/key hardening.
 = 2.0.2 =
 * Release prep for repository publication with explicit version alignment across plugin headers/constants/UI fallbacks.
 * Cost optimization in medium length flow: soft threshold for `Medium` without FAQ to reduce unnecessary expansion calls.
@@ -189,6 +197,8 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Upgrade Notice ==
 
+= 2.0.3 =
+Recommended update. Fixes editor completion of missing internal images, improves first-insert metadata persistence, and keeps generated packages clean for WordPress upload.
 = 2.0.2 =
 Recommended update. This release improves runtime API-key reliability, reduces extra generation calls in medium no-FAQ flows, and finalizes repository-ready packaging/docs.
 

@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.0.2
+﻿# CBIAStudio BlogFlow with AI (WordPress) v2.0.3
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -9,13 +9,20 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - live logs and STOP controls
 - optional Yoast SEO sync
 
-## What's New in 2.0.2
-- Release version alignment for repository handoff (header, constants, and admin fallback version labels).
-- Medium length cost optimization (`FAQ Off`): near-target outputs can be accepted without forced expansion, reducing extra calls.
-- OpenAI runtime key resolution hardened to prefer valid primary settings keys.
-- Redaction and packaging cleanup for safer logs and WordPress-ready distribution artifacts.
+## What's New in 2.0.3
+- Fixed `Complete missing` in the editor so missing internal images are applied to the final post HTML, not only generated in memory.
+- Hardened first-time editor insertion so content, featured image, categories, tags, and Yoast metadata persist when the draft did not exist yet.
+- FAQ heading normalization now follows the selected post language in preview and insert flows.
+- Blog scheduling ignores stale past publication dates and starts from the current run date.
+- Base Usage keeps Pro-only cost values hidden while preserving operational usage rows.
+- WordPress-ready package regenerated with clean `/` ZIP paths and without Git/dev artifacts.
 
-## Comparative: 2.0.2 vs 2.0.1
+## Comparative: 2.0.3 vs 2.0.2
+- Fixes editor completion/insertion regressions around images and metadata.
+- Improves localized FAQ output and stale-date handling in Blog generation.
+- Keeps the 2.0.2 API-key, redaction, and cost-optimization hardening.
+
+## What's New in 2.0.2
 - Lower operating cost in common `Medium` no-FAQ runs due to fewer expansion retries.
 - More reliable API key usage in background batches (less risk of stale/invalid key selection).
 - Cleaner release packaging and docs for publication in repositories.

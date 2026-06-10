@@ -26,6 +26,8 @@ if (!in_array($usage_section, array('overview', 'costs'), true)) {
 $is_pro_edition = defined('CBIA_EDITION') && strtolower((string) CBIA_EDITION) === 'pro';
 $usage_advanced_enabled = function_exists('cbia_cap_enabled') ? cbia_cap_enabled('usage_advanced') : $is_pro_edition;
 $costs_advanced_enabled = function_exists('cbia_cap_enabled') ? cbia_cap_enabled('costs_advanced') : $is_pro_edition;
+// Base edition must never render cost intelligence panels.
+$costs_advanced_enabled = $costs_advanced_enabled && $is_pro_edition;
 if (!$costs_advanced_enabled && $usage_section === 'costs') {
     $usage_section = 'overview';
 }
@@ -589,6 +591,7 @@ if (!$usage_advanced_enabled) {
 $dashboard_payload['defaultModel'] = $requested_model;
 $dashboard_payload['periodDays'] = $days;
 $dashboard_payload['usdToEur'] = isset($cost_settings['usd_to_eur']) ? (float) $cost_settings['usd_to_eur'] : 0.92;
+$dashboard_payload['canViewCosts'] = !empty($costs_advanced_enabled) ? 1 : 0;
 $dashboard_payload['lazyLoad'] = false;
 $dashboard_payload['ajaxUrl'] = admin_url('admin-ajax.php');
 $dashboard_payload['ajaxNonce'] = wp_create_nonce('cbia_usage_overview');
@@ -872,13 +875,15 @@ $dashboard_payload['i18n'] = array(
                                     <th>Source</th>
                                     <th><?php echo esc_html__('Type', 'cbiastudio-blogflow-ai'); ?></th>
                                     <th><?php echo esc_html__('Tokens', 'cbiastudio-blogflow-ai'); ?></th>
+                                    <?php if ($costs_advanced_enabled) : ?>
                                     <th><?php echo esc_html__('Cost', 'cbiastudio-blogflow-ai'); ?></th>
+                                    <?php endif; ?>
                                     <th><?php echo esc_html__('Model', 'cbiastudio-blogflow-ai'); ?></th>
                                 </tr>
                             </thead>
                             <tbody id="cbia-usage-table-body">
                                 <tr>
-                                    <td colspan="7" class="cbia-usage-table-placeholder"><?php echo esc_html__('Loading logs...', 'cbiastudio-blogflow-ai'); ?></td>
+                                    <td colspan="<?php echo $costs_advanced_enabled ? '7' : '6'; ?>" class="cbia-usage-table-placeholder"><?php echo esc_html__('Loading logs...', 'cbiastudio-blogflow-ai'); ?></td>
                                 </tr>
                             </tbody>
                         </table>

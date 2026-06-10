@@ -70,7 +70,6 @@
             if (modal && element === modal) {
                 e.preventDefault();
                 e.stopPropagation();
-                closeComposerModalFallback();
             }
         }
 
@@ -614,6 +613,7 @@
         var modelOptions = Array.isArray(payload.modelOptions) ? payload.modelOptions.slice() : [];
         var initialDailySeries = Array.isArray(payload.dailySeries) ? payload.dailySeries.slice() : [];
         var i18n = (payload.i18n && typeof payload.i18n === 'object') ? payload.i18n : {};
+        var canViewCosts = !!payload.canViewCosts;
         var lazyLoad = !!payload.lazyLoad;
         var ajaxUrl = String(payload.ajaxUrl || '');
         var ajaxNonce = String(payload.ajaxNonce || '');
@@ -829,7 +829,7 @@
                 tableMeta.textContent = message || t('loadingData', 'Loading real usage data...');
             }
             if (tableBody) {
-                tableBody.innerHTML = '<tr><td colspan="7" class="cbia-usage-table-placeholder">' + escapeHtml(t('loadingLogs', 'Loading logs...')) + '</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="' + (canViewCosts ? '7' : '6') + '" class="cbia-usage-table-placeholder">' + escapeHtml(t('loadingLogs', 'Loading logs...')) + '</td></tr>';
             }
             if (detailPanel) {
                 detailPanel.innerHTML = '<div class="cbia-usage-detail-skeleton" id="cbia-usage-detail-skeleton-runtime" aria-hidden="true"><span class="is-title"></span><span></span><span></span><span class="is-wide"></span><span></span><span class="is-wide"></span></div><div class="cbia-usage-detail-empty">' + escapeHtml(t('loadingDetail', 'Preparing detail view...')) + '</div>';
@@ -903,6 +903,9 @@
 
         function applyRemotePayload(remotePayload) {
             payload = remotePayload || {};
+            if (payload.canViewCosts !== undefined) {
+                canViewCosts = !!payload.canViewCosts;
+            }
             rows = Array.isArray(payload.rows) ? payload.rows.slice() : [];
             totalRows = Number(payload.totalRows || rows.length || 0);
             rowsLimited = !!payload.rowsLimited;
@@ -963,7 +966,7 @@
                         tableMeta.textContent = t('loadErrorMeta', 'Could not load usage data right now.');
                     }
                     if (tableBody) {
-                        tableBody.innerHTML = '<tr><td colspan="7" class="cbia-usage-table-placeholder">' + escapeHtml(t('loadErrorRow', 'Could not load usage data.')) + '</td></tr>';
+                        tableBody.innerHTML = '<tr><td colspan="' + (canViewCosts ? '7' : '6') + '" class="cbia-usage-table-placeholder">' + escapeHtml(t('loadErrorRow', 'Could not load usage data.')) + '</td></tr>';
                     }
                     if (detailPanel) {
                         detailPanel.innerHTML = '<div class="cbia-usage-detail-empty">' + escapeHtml(t('loadErrorDetail', 'Could not load usage data.')) + '</div>';
@@ -1550,8 +1553,8 @@
                 avg = totalCalls ? Math.round(totalTokens / totalCalls) : 0;
                 avgCostPerPost = uniquePostsCount ? (totalCost / uniquePostsCount) : 0;
             }
-            totalCost = eurToUsd(totalCost);
-            avgCostPerPost = eurToUsd(avgCostPerPost);
+            totalCost = canViewCosts ? eurToUsd(totalCost) : 0;
+            avgCostPerPost = canViewCosts ? eurToUsd(avgCostPerPost) : 0;
 
             var callsNode = document.getElementById('cbia-usage-kpi-calls');
             var postsNode = document.getElementById('cbia-usage-kpi-posts');
@@ -1564,8 +1567,8 @@
             if (postsNode) postsNode.textContent = numberFormat(uniquePostsCount);
             if (usersNode) usersNode.textContent = numberFormat(uniqueUsersCount);
             if (avgNode) avgNode.textContent = numberFormat(avg);
-            if (costTotalNode) costTotalNode.textContent = currencyFormat(totalCost);
-            if (costBlogNode) costBlogNode.textContent = currencyFormat(avgCostPerPost);
+            if (costTotalNode) costTotalNode.textContent = canViewCosts ? currencyFormat(totalCost) : '-';
+            if (costBlogNode) costBlogNode.textContent = canViewCosts ? currencyFormat(avgCostPerPost) : '-';
         }
 
         function aggregatePostSummary(row, filteredRows) {
@@ -1690,7 +1693,19 @@
 
             var applicabilityNote = tokenMetricsApplicable
                 ? ''
-                : '<div class="cbia-usage-detail-note">Image APIs do not provide reliable token breakdowns. This view compares only cost and section.</div>';
+                : '<div class="cbia-usage-detail-note">' + (canViewCosts
+                    ? 'Image APIs do not provide reliable token breakdowns. This view compares only cost and section.'
+                    : 'Image APIs do not provide reliable token breakdowns in base mode.') + '</div>';
+
+            var summaryCostStat = canViewCosts
+                ? ('<div class="cbia-usage-detail-stat"><span>Total cost</span><strong>' + (summary ? currencyFormat(eurToUsd(summary.total_cost)) : '-') + '</strong></div>')
+                : '';
+            var eventCostStat = canViewCosts
+                ? ('<div class="cbia-usage-detail-stat"><span>Event cost</span><strong>' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : '-') + '</strong></div>')
+                : '';
+            var billableFailuresRow = canViewCosts
+                ? ('<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Billable failures</div><div class="cbia-usage-detail-value">' + numberFormat(summary.billable_fail_count) + '</div></div>')
+                : '';
 
             detailPanel.innerHTML = ''
                 + '<div class="cbia-usage-detail-card">'
@@ -1702,7 +1717,7 @@
                 + '    <div class="cbia-usage-detail-stat"><span>Input</span><strong>' + summaryTokenIn + '</strong></div>'
                 + '    <div class="cbia-usage-detail-stat"><span>Output</span><strong>' + summaryTokenOut + '</strong></div>'
                 + '    <div class="cbia-usage-detail-stat"><span>Total</span><strong>' + summaryTokenTotal + '</strong></div>'
-                + '    <div class="cbia-usage-detail-stat"><span>Total cost</span><strong>' + (summary ? currencyFormat(eurToUsd(summary.total_cost)) : '-') + '</strong></div>'
+                +      summaryCostStat
                 + '  </div>'
                 + '  <div class="cbia-usage-detail-meta">'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Last activity</div><div class="cbia-usage-detail-value">' + escapeHtml(formatDateTime((summary && summary.latest_ts) || row.ts)) + '</div></div>'
@@ -1711,7 +1726,7 @@
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Models used</div><div class="cbia-usage-detail-value">' + modelSummary + '</div></div>'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Images</div><div class="cbia-usage-detail-value">' + escapeHtml(imageSummary) + '</div></div>'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Events</div><div class="cbia-usage-detail-value">' + numberFormat(summary.call_count) + ' total · ' + numberFormat(summary.ok_count) + ' OK · ' + numberFormat(summary.fail_count) + ' failed</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Billable failures</div><div class="cbia-usage-detail-value">' + numberFormat(summary.billable_fail_count) + '</div></div>'
+                +      billableFailuresRow
                 + '  </div>'
                 + '  <div class="cbia-usage-detail-separator"></div>'
                 + '  <div class="cbia-usage-detail-subtitle">Selected event</div>'
@@ -1719,7 +1734,7 @@
                 + '    <div class="cbia-usage-detail-stat"><span>Input</span><strong>' + tokenInText + '</strong></div>'
                 + '    <div class="cbia-usage-detail-stat"><span>Output</span><strong>' + tokenOutText + '</strong></div>'
                 + '    <div class="cbia-usage-detail-stat"><span>Total</span><strong>' + tokenTotalText + '</strong></div>'
-                + '    <div class="cbia-usage-detail-stat"><span>Event cost</span><strong>' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : '-') + '</strong></div>'
+                +      eventCostStat
                 + '  </div>'
                 + '  <div class="cbia-usage-detail-meta">'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Date</div><div class="cbia-usage-detail-value">' + escapeHtml(formatDateTime(row.ts)) + '</div></div>'
@@ -1749,7 +1764,7 @@
 
             if (!filtered.length) {
                 allFilteredRows = [];
-                tableBody.innerHTML = '<tr><td colspan="7" class="cbia-usage-table-placeholder">No logs found for this filter.</td></tr>';
+                tableBody.innerHTML = '<tr><td colspan="' + (canViewCosts ? '7' : '6') + '" class="cbia-usage-table-placeholder">No logs found for this filter.</td></tr>';
                 renderDetail(null, []);
                 return;
             }
@@ -1771,7 +1786,7 @@
                     + '  <td><div class="cbia-usage-source"><span class="cbia-usage-source-title">' + escapeHtml(row.post_title || '-') + '</span><span class="cbia-usage-source-meta">#' + escapeHtml(String(row.post_id || 0)) + '</span></div></td>'
                     + '  <td><span class="cbia-usage-type-badge type-' + escapeHtml(row.type) + '">' + escapeHtml(typeLabel) + '</span></td>'
                     + '  <td><span class="cbia-usage-metric">' + (tokenMetricsApplicable ? numberFormat(row.tokens_total) : 'N/A') + '</span></td>'
-                    + '  <td><span class="cbia-usage-cost">' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : '-') + '</span></td>'
+                    + (canViewCosts ? ('  <td><span class="cbia-usage-cost">' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : '-') + '</span></td>') : '')
                     + '  <td><code class="cbia-usage-model-code">' + escapeHtml(row.model || '-') + '</code></td>'
                     + '</tr>';
             }).join('');
@@ -2113,7 +2128,10 @@
                     closeComposerModal();
                     return;
                 }
-                if (e.target === modal) closeComposerModal();
+                if (e.target === modal) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
             });
         }
         document.addEventListener('keydown', function (e) {
@@ -3487,6 +3505,11 @@
                 var internalsForApply = normalizeInternalImageSlots(receivedInternalImages, getInternalImagesCount());
                 receivedInternalImages = internalsForApply;
                 sourceHtml = enforceInternalImageStyle(injectInternalImagesIntoHtml(stripLeadingTitleFromHtml(title, sourceHtml), internalsForApply), modeForApply);
+                finalHtml = sourceHtml;
+                if (preview) {
+                    preview.innerHTML = finalHtml;
+                    fillPreviewSlotsFromImages(receivedInternalImages);
+                }
                 var metad = clampMetaDescription(finalMetaDescription || '');
                 if (!metad) {
                     metad = clampMetaDescription(String(sourceHtml || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' '));
@@ -3516,6 +3539,16 @@
                 finalTagIds = Array.isArray(res.data.tag_ids)
                     ? res.data.tag_ids.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; })
                     : finalTagIds;
+                if (Array.isArray(res.data.tag_names)) {
+                    finalTagNames = res.data.tag_names.map(function (v) { return String(v || '').trim(); }).filter(function (v) { return !!v; });
+                }
+                if (res.data && typeof res.data.content_html === 'string' && canUsePreviewHtml(res.data.content_html)) {
+                    finalHtml = res.data.content_html;
+                    if (preview) {
+                        preview.innerHTML = finalHtml;
+                        fillPreviewSlotsFromImages(receivedInternalImages);
+                    }
+                }
                 if (res.data.featured_attach_id) {
                     finalFeaturedAttachId = parseInt(res.data.featured_attach_id || 0, 10) || finalFeaturedAttachId;
                     syncFeaturedMediaUi(finalFeaturedAttachId);
@@ -3530,7 +3563,7 @@
                     }
                 }
                 try {
-                    insertInEditor(title, finalHtml, finalFocusKeyphrase || title, finalMetaDescription, finalCategoryIds, finalTagIds);
+                    insertInEditor(title, finalHtml, finalFocusKeyphrase || title, finalMetaDescription, finalCategoryIds, finalTagIds, finalTagNames, finalFeaturedAttachId);
                 } catch (eInsert) {}
                 persistComposerSnapshot();
                 setStatus('Missing items completed and applied to the post.', false);
@@ -4162,7 +4195,7 @@
             }, 12000);
         }
 
-        function persistTermsForPost(postId, cats, tags, attempt) {
+        function persistTermsForPost(postId, cats, tags, attempt, tagNamesOverride) {
             var pid = parseInt(postId || 0, 10);
             var tries = parseInt(attempt || 0, 10);
             if (!ajaxUrl || !nonce) {
@@ -4176,7 +4209,7 @@
                 if (tries < 20) {
                     return new Promise(function (resolve) {
                         setTimeout(function () {
-                            resolve(persistTermsForPost(resolveCurrentPostId(), cats, tags, tries + 1));
+                            resolve(persistTermsForPost(resolveCurrentPostId(), cats, tags, tries + 1, tagNamesOverride));
                         }, 1000);
                     });
                 }
@@ -4194,6 +4227,10 @@
                 var v = parseInt(id, 10) || 0;
                 if (v > 0) params.append('tag_ids[]', String(v));
             });
+            (Array.isArray(tagNamesOverride) ? tagNamesOverride : (Array.isArray(finalTagNames) ? finalTagNames : [])).forEach(function (name) {
+                var v = String(name || '').trim();
+                if (v) params.append('tag_names[]', v);
+            });
             return fetch(ajaxUrl, {
                 method: 'POST',
                 credentials: 'same-origin',
@@ -4206,7 +4243,7 @@
                   if (tries < 20) {
                       return new Promise(function (resolve) {
                           setTimeout(function () {
-                              resolve(persistTermsForPost(pid, cats, tags, tries + 1));
+                              resolve(persistTermsForPost(pid, cats, tags, tries + 1, tagNamesOverride));
                           }, 1000);
                       });
                   }
@@ -4216,7 +4253,7 @@
                   if (tries < 20) {
                       return new Promise(function (resolve) {
                           setTimeout(function () {
-                              resolve(persistTermsForPost(pid, cats, tags, tries + 1));
+                              resolve(persistTermsForPost(pid, cats, tags, tries + 1, tagNamesOverride));
                           }, 1000);
                       });
                   }
@@ -4224,14 +4261,15 @@
               });
         }
 
-        function ensureTermsPersisted(cats, tags, postIdOverride) {
+        function ensureTermsPersisted(cats, tags, postIdOverride, tagNamesOverride) {
             var arrCats = Array.isArray(cats) ? cats : [];
             var arrTags = Array.isArray(tags) ? tags : [];
-            if (!arrCats.length && !arrTags.length) return;
+            var arrTagNames = Array.isArray(tagNamesOverride) ? tagNamesOverride : (Array.isArray(finalTagNames) ? finalTagNames : []);
+            if (!arrCats.length && !arrTags.length && !arrTagNames.length) return;
             var pid = parseInt(postIdOverride || 0, 10) || resolveCurrentPostId();
-            persistTermsForPost(pid, arrCats, arrTags);
-            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags); }, 2500);
-            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags); }, 6000);
+            persistTermsForPost(pid, arrCats, arrTags, 0, arrTagNames);
+            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags, 0, arrTagNames); }, 2500);
+            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags, 0, arrTagNames); }, 6000);
         }
 
         function schedulePendingYoastSync() {
@@ -4295,6 +4333,23 @@
             if (el.value === next) return;
             el.value = next;
             triggerInputSync(el);
+        }
+
+        function ensureClassicPostField(name, id, value, type) {
+            var form = document.getElementById('post') || document.querySelector('form[name="post"]') || document.querySelector('form#post');
+            var selector = id ? ('#' + id) : '';
+            var field = selector ? document.querySelector(selector) : null;
+            if (!field && name) field = document.querySelector('[name="' + name.replace(/"/g, '\\"') + '"]');
+            if (!field) {
+                field = document.createElement('input');
+                field.type = type || 'hidden';
+                field.name = name;
+                if (id) field.id = id;
+                (form || document.body).appendChild(field);
+            }
+            field.value = String(value || '');
+            triggerInputSync(field);
+            return field;
         }
 
         function syncEditorTitle(title) {
@@ -4395,7 +4450,7 @@
             } catch (e3) {}
         }
 
-        function insertInEditor(title, html, focusKeyphrase, metaDescription, categoryIds, tagIds, tagNames) {
+        function insertInEditor(title, html, focusKeyphrase, metaDescription, categoryIds, tagIds, tagNames, featuredAttachId) {
             var content = String(html || '');
             var postTitle = String(title || '');
             var focus = String(focusKeyphrase || '');
@@ -4407,6 +4462,7 @@
             var tagLabels = Array.isArray(tagNames)
                 ? tagNames.map(function (v) { return String(v || '').trim(); }).filter(function (v) { return !!v; })
                 : [];
+            var featuredId = parseInt(featuredAttachId || finalFeaturedAttachId || 0, 10) || 0;
             var yoastPayload = {
                 focus_keyphrase: focus,
                 meta_description: metad,
@@ -4459,7 +4515,13 @@
                         patch.meta._yoast_wpseo_primary_category = cats[0];
                     }
                     if (tags.length) patch.tags = tags;
+                    if (featuredId > 0) patch.featured_media = featuredId;
                     window.wp.data.dispatch('core/editor').editPost(patch);
+                    if (featuredId > 0) {
+                        syncFeaturedMediaUi(featuredId);
+                        setTimeout(function () { syncFeaturedMediaUi(featuredId); }, 500);
+                        setTimeout(function () { syncFeaturedMediaUi(featuredId); }, 1800);
+                    }
                     try {
                         if (window.wp.blocks && window.wp.blocks.parse && window.wp.data && window.wp.data.dispatch) {
                             window.wp.data.dispatch('core/block-editor').resetBlocks(window.wp.blocks.parse(content));
@@ -4468,9 +4530,48 @@
                     forceSetContentEverywhere();
                     updateYoastUiFields(yoastPayload);
                     try { ensureYoastMetaPersisted(yoastPayload); } catch (e2) {}
-                    try { ensureTermsPersisted(cats, tags); } catch (e3) {}
+                    try { ensureTermsPersisted(cats, tags, 0, tagLabels); } catch (e3) {}
                     return true;
                 } catch (e) {}
+            }
+
+            function applyClassicSideEffects() {
+                updateYoastUiFields(yoastPayload);
+                ensureClassicPostField('yoast_wpseo_focuskw', 'yoast_wpseo_focuskw', yoastPayload.focus_keyphrase || '');
+                ensureClassicPostField('yoast_wpseo_focuskw_text_input', 'yoast_wpseo_focuskw_text_input', yoastPayload.focus_keyphrase || '');
+                ensureClassicPostField('yoast_wpseo_metadesc', 'yoast_wpseo_metadesc', yoastPayload.meta_description || '');
+                ensureClassicPostField('yoast_wpseo_title', 'yoast_wpseo_title', yoastPayload.seo_title || '');
+                ensureClassicPostField('yoast_wpseo_opengraph-title', 'yoast_wpseo_opengraph-title', yoastPayload.og_title || '');
+                ensureClassicPostField('yoast_wpseo_opengraph-description', 'yoast_wpseo_opengraph-description', yoastPayload.og_description || '');
+                ensureClassicPostField('yoast_wpseo_twitter-title', 'yoast_wpseo_twitter-title', yoastPayload.tw_title || '');
+                ensureClassicPostField('yoast_wpseo_twitter-description', 'yoast_wpseo_twitter-description', yoastPayload.tw_description || '');
+                if (parseInt(yoastPayload.primary_category || 0, 10) > 0) {
+                    ensureClassicPostField('yoast_wpseo_primary_category', 'yoast_wpseo_primary_category', String(yoastPayload.primary_category || ''));
+                }
+                if (cats.length) {
+                    cats.forEach(function (id) {
+                        var cb = document.querySelector('#categorychecklist input[type=\"checkbox\"][value=\"' + id + '\"], #categorychecklist-pop input[type=\"checkbox\"][value=\"' + id + '\"]');
+                        if (cb) {
+                            cb.checked = true;
+                            triggerInputSync(cb);
+                        }
+                    });
+                }
+                if (featuredId > 0) {
+                    ensureClassicPostField('_thumbnail_id', '_thumbnail_id', String(featuredId));
+                    syncFeaturedMediaUi(featuredId);
+                }
+                if (tagLabels.length) {
+                    var tagsCsv = tagLabels.join(', ');
+                    ensureClassicPostField('tax_input[post_tag]', 'tax-input-post_tag', tagsCsv, 'hidden');
+                    var newTagInput = document.getElementById('new-tag-post_tag');
+                    if (newTagInput) {
+                        newTagInput.value = '';
+                        triggerInputSync(newTagInput);
+                    }
+                }
+                ensureYoastMetaPersisted(yoastPayload);
+                ensureTermsPersisted(cats, tags, 0, tagLabels);
             }
 
             var titleField = document.getElementById('title');
@@ -4479,6 +4580,12 @@
             if (window.tinyMCE && window.tinyMCE.get('content')) {
                 try {
                     window.tinyMCE.get('content').setContent(content);
+                    var hiddenContent = document.getElementById('content');
+                    if (hiddenContent) {
+                        hiddenContent.value = content;
+                        triggerInputSync(hiddenContent);
+                    }
+                    applyClassicSideEffects();
                     return true;
                 } catch (e) {}
             }
@@ -4487,24 +4594,7 @@
             if (classic) {
                 classic.value = content;
                 triggerInputSync(classic);
-                // Yoast classic fields (best-effort).
-                updateYoastUiFields(yoastPayload);
-                // Classic taxonomy fields (best-effort).
-                if (cats.length) {
-                    cats.forEach(function (id) {
-                        var cb = document.querySelector('#categorychecklist input[type=\"checkbox\"][value=\"' + id + '\"]');
-                        if (cb) cb.checked = true;
-                    });
-                }
-                if (tagLabels.length) {
-                    var tagsInput = document.getElementById('tax-input-post_tag');
-                    if (tagsInput) {
-                        tagsInput.value = tagLabels.join(', ');
-                        triggerInputSync(tagsInput);
-                    }
-                }
-                ensureYoastMetaPersisted(yoastPayload);
-                ensureTermsPersisted(cats, tags);
+                applyClassicSideEffects();
                 return true;
             }
             return false;
@@ -4716,6 +4806,11 @@
                     }
                     if (data && data.status === 'done') {
                         setStatus('Featured image ready.', false);
+                        finalFeaturedAttachId = parseInt(data.attach_id || finalFeaturedAttachId || 0, 10) || finalFeaturedAttachId;
+                        if (finalFeaturedAttachId > 0) {
+                            finalFeaturedImage = finalFeaturedImage || {};
+                            finalFeaturedImage.attach_id = finalFeaturedAttachId;
+                        }
                         setFeaturedPreview(String(data.url || ''), 'Featured image ready.');
                     }
                     if (data && data.status === 'error') {
@@ -4977,8 +5072,9 @@
                 params.append('content_html', String(payload.content_html || ''));
                 params.append('focus_keyphrase', String(payload.focus_keyphrase || ''));
                 params.append('meta_description', String(payload.meta_description || ''));
-                params.append('featured_attach_id', String(payload.featured_attach_id || 0));
+                params.append('featured_attach_id', String(parseInt(payload.featured_attach_id || (finalFeaturedImage && finalFeaturedImage.attach_id) || finalFeaturedAttachId || 0, 10) || 0));
                 params.append('internal_image_style', String(payload.internal_image_style || ''));
+                params.append('post_language', languageSelect ? (languageSelect.value || (aiCfg.defaultLanguage || 'English')) : (aiCfg.defaultLanguage || 'English'));
                 (Array.isArray(payload.category_ids) ? payload.category_ids : []).forEach(function (id) {
                     var v = parseInt(id, 10) || 0;
                     if (v > 0) params.append('category_ids[]', String(v));
@@ -5014,7 +5110,7 @@
                     window.wp.data.dispatch('core/editor').savePost();
                 } catch (_eSaveStart) {}
                 return new Promise(function (resolve) {
-                    var maxTries = 24;
+                    var maxTries = 40;
                     var tries = 0;
                     var timer = setInterval(function () {
                         tries++;
@@ -5064,7 +5160,9 @@
                 }
                 var focusForApply = String(finalFocusKeyphrase || '').trim();
                 if (!focusForApply) focusForApply = String(titleForApply || '').trim();
+                var applyEffectivePostId = 0;
                 ensureEditorPostIdForApply().then(function (effectivePostId) {
+                    applyEffectivePostId = parseInt(effectivePostId || 0, 10) || 0;
                     return applyFullPostAtomic({
                     post_id: effectivePostId,
                     title: titleForApply,
@@ -5087,6 +5185,13 @@
                         finalTitle = appliedTitle;
                     }
                     var appliedPostId = parseInt((res.data && res.data.post_id) ? res.data.post_id : 0, 10) || 0;
+                    if (!resolveCurrentPostId() && appliedPostId > 0) {
+                        var hiddenPostId = document.getElementById('post_ID');
+                        if (hiddenPostId) {
+                            hiddenPostId.value = String(appliedPostId);
+                            triggerInputSync(hiddenPostId);
+                        }
+                    }
                     var appliedCats = Array.isArray(res.data.category_ids)
                         ? res.data.category_ids.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; })
                         : finalCategoryIds;
@@ -5109,6 +5214,10 @@
                             });
                         }
                     }
+                    if (res.data && typeof res.data.content_html === 'string' && canUsePreviewHtml(res.data.content_html)) {
+                        htmlCandidate = res.data.content_html;
+                        finalHtml = res.data.content_html;
+                    }
                     finalCategoryIds = appliedCats.slice();
                     finalTagIds = appliedTags.slice();
                     finalTagNames = appliedTagNames.slice();
@@ -5125,7 +5234,7 @@
                     setTimeout(function () { syncEditorTitle(titleForApply); }, 2200);
                     // Secondary persistence pass (Yoast + terms) for editor/plugin stacks that lag.
                     try {
-                        ensureTermsPersisted(appliedCats, appliedTags, appliedPostId);
+                        ensureTermsPersisted(appliedCats, appliedTags, appliedPostId, appliedTagNames);
                     } catch (eTerms) {}
                     try {
                         ensureYoastMetaPersisted({
@@ -5141,8 +5250,15 @@
                     } catch (eYoast) {}
                     persistComposerSnapshot();
                     setStatus('Contenido aplicado en servidor.', false);
-                    try { insertInEditor(titleForApply, htmlCandidate, finalFocusKeyphrase, finalMetaDescription, appliedCats, appliedTags, appliedTagNames); } catch (eInsertUi) {}
+                    try { insertInEditor(titleForApply, htmlCandidate, finalFocusKeyphrase, finalMetaDescription, appliedCats, appliedTags, appliedTagNames, finalFeaturedAttachId); } catch (eInsertUi) {}
                     setStatus('Content inserted into editor.', false);
+                    if (!applyEffectivePostId && appliedPostId > 0 && res.data && res.data.edit_url) {
+                        try {
+                            sessionStorage.setItem('cbia_ai_title_after_redirect', JSON.stringify({ title: titleForApply, post_id: appliedPostId }));
+                        } catch (_eStoreRedirect) {}
+                        window.location.href = String(res.data.edit_url);
+                        return;
+                    }
                     closeComposerModal();
                     setTimeout(function () { try { closeComposerModal(); } catch (_e1) {} }, 80);
                     setTimeout(function () { try { closeComposerModalFallback(); } catch (_e2) {} }, 260);

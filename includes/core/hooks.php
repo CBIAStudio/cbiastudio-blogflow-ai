@@ -1953,17 +1953,66 @@ if (!function_exists('cbia_ajax_usage_overview_data')) {
         $days = isset($_REQUEST['days']) ? absint(wp_unslash((string) $_REQUEST['days'])) : 30;
         $requested_model = isset($_REQUEST['usage_model']) ? sanitize_text_field(wp_unslash((string) $_REQUEST['usage_model'])) : '';
 
+        $can_view_costs = false;
+        if (function_exists('cbia_cap_enabled') && cbia_cap_enabled('costs_advanced')) {
+            $can_view_costs = function_exists('cbia_is_pro_edition') ? cbia_is_pro_edition() : false;
+        }
+        $apply_usage_caps = static function ($payload) use ($can_view_costs) {
+            $data = is_array($payload) ? $payload : array();
+            $data['canViewCosts'] = $can_view_costs ? 1 : 0;
+            if ($can_view_costs) {
+                return $data;
+            }
+
+            if (!empty($data['rows']) && is_array($data['rows'])) {
+                foreach ($data['rows'] as $idx => $row) {
+                    if (!is_array($row)) continue;
+                    $row['cost_eur'] = null;
+                    $data['rows'][$idx] = $row;
+                }
+            }
+            if (!empty($data['monthlySeries']) && is_array($data['monthlySeries'])) {
+                foreach ($data['monthlySeries'] as $idx => $row) {
+                    if (!is_array($row)) continue;
+                    $row['text_cost_eur'] = 0.0;
+                    $row['image_cost_eur'] = 0.0;
+                    $row['seo_cost_eur'] = 0.0;
+                    $row['cost_eur'] = 0.0;
+                    $data['monthlySeries'][$idx] = $row;
+                }
+            }
+            if (!empty($data['summariesByModel']) && is_array($data['summariesByModel'])) {
+                foreach ($data['summariesByModel'] as $key => $summary) {
+                    if (!is_array($summary)) continue;
+                    $summary['totalCost'] = 0.0;
+                    $summary['avgCostPerPost'] = 0.0;
+                    if (!empty($summary['monthlySeries']) && is_array($summary['monthlySeries'])) {
+                        foreach ($summary['monthlySeries'] as $idx => $mrow) {
+                            if (!is_array($mrow)) continue;
+                            $mrow['text_cost_eur'] = 0.0;
+                            $mrow['image_cost_eur'] = 0.0;
+                            $mrow['seo_cost_eur'] = 0.0;
+                            $mrow['cost_eur'] = 0.0;
+                            $summary['monthlySeries'][$idx] = $mrow;
+                        }
+                    }
+                    $data['summariesByModel'][$key] = $summary;
+                }
+            }
+            return $data;
+        };
+
         if (function_exists('cbia_cap_enabled') && !cbia_cap_enabled('usage_advanced')) {
             if (function_exists('cbia_get_usage_dashboard_payload_fast')) {
-                wp_send_json_success(cbia_get_usage_dashboard_payload_fast($days, $requested_model));
+                wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload_fast($days, $requested_model)));
             }
-            wp_send_json_success(cbia_get_usage_dashboard_payload_basic($days, $requested_model));
+            wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload_basic($days, $requested_model)));
         }
 
         if (function_exists('cbia_get_usage_dashboard_payload_fast')) {
-            wp_send_json_success(cbia_get_usage_dashboard_payload_fast($days, $requested_model));
+            wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload_fast($days, $requested_model)));
         }
-        wp_send_json_success(cbia_get_usage_dashboard_payload($days, $requested_model));
+        wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload($days, $requested_model)));
     }
 }
 
@@ -2675,7 +2724,6 @@ if (!function_exists('cbia_render_ai_composer_footer_fallback')) {
       if(modal && el===modal){
         e.preventDefault();
         e.stopPropagation();
-        closeComposer();
       }
     }
     function maybeCloseByKey(e){
@@ -4110,6 +4158,12 @@ if (!function_exists('cbia_ajax_ai_composer_apply_yoast_meta')) {
             $written[] = 'primary_cat';
             $verify_meta('_yoast_wpseo_primary_category', (string)$primary_category);
         }
+        if (function_exists('cbia_yoast_try_reindex_post')) {
+            cbia_yoast_try_reindex_post((int)$post_id);
+        } else {
+            do_action('wpseo_save_postdata', (int)$post_id);
+            do_action('wpseo_save_post', (int)$post_id);
+        }
 
         if (function_exists('cbia_log')) {
             // Avoid log spam when the frontend retries the same payload.
@@ -4188,12 +4242,29 @@ if (!function_exists('cbia_ajax_ai_composer_apply_terms')) {
         }
         $tag_ids = array_values(array_unique($tag_ids));
 
+        $tag_names = array();
+        if (isset($_POST['tag_names']) && is_array($_POST['tag_names'])) {
+            // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- Every element is sanitized with sanitize_text_field() below.
+            $raw = wp_unslash($_POST['tag_names']);
+            foreach ($raw as $name_raw) {
+                $name = sanitize_text_field((string)$name_raw);
+                if ($name !== '') $tag_names[] = $name;
+            }
+        }
+        $tag_names = array_values(array_unique($tag_names));
+
         if (!empty($cat_ids)) {
             wp_set_post_categories($post_id, $cat_ids, false);
             update_post_meta($post_id, '_yoast_wpseo_primary_category', (int)$cat_ids[0]);
         }
         if (!empty($tag_ids)) {
             wp_set_post_terms($post_id, $tag_ids, 'post_tag', false);
+        } elseif (!empty($tag_names)) {
+            wp_set_post_terms($post_id, $tag_names, 'post_tag', false);
+        }
+        clean_object_term_cache((int)$post_id, 'post');
+        if (function_exists('cbia_yoast_try_reindex_post')) {
+            cbia_yoast_try_reindex_post((int)$post_id);
         }
 
         if (function_exists('cbia_log')) {
@@ -4216,8 +4287,9 @@ if (!function_exists('cbia_ajax_ai_composer_apply_terms')) {
 
         wp_send_json_success(array(
             'post_id' => (int)$post_id,
-            'categories' => $cat_ids,
-            'tags' => $tag_ids,
+            'categories' => array_values(array_map('intval', wp_get_post_categories($post_id, array('fields' => 'ids')))),
+            'tags' => array_values(array_map('intval', wp_get_post_terms($post_id, 'post_tag', array('fields' => 'ids')))),
+            'tag_names' => array_values(array_map('sanitize_text_field', wp_get_post_terms($post_id, 'post_tag', array('fields' => 'names')))),
         ));
     }
 }
@@ -4232,6 +4304,7 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
         $featured_attach_id = isset($_POST['featured_attach_id']) ? absint(wp_unslash($_POST['featured_attach_id'])) : 0;
         $focus = isset($_POST['focus_keyphrase']) ? sanitize_text_field((string)wp_unslash($_POST['focus_keyphrase'])) : '';
         $metad = isset($_POST['meta_description']) ? sanitize_text_field((string)wp_unslash($_POST['meta_description'])) : '';
+        $post_language = isset($_POST['post_language']) ? sanitize_text_field((string)wp_unslash($_POST['post_language'])) : '';
         $internal_image_style = isset($_POST['internal_image_style']) ? sanitize_key((string)wp_unslash($_POST['internal_image_style'])) : '';
         if (!in_array($internal_image_style, array('banner', 'normal'), true)) {
             $internal_image_style = '';
@@ -4240,6 +4313,12 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
 
         if ($title === '' || $html === '') {
             wp_send_json_error(array('message' => __('Title or content is missing.', 'cbiastudio-blogflow-ai')), 400);
+        }
+
+        if ($post_language !== '' && function_exists('cbia_normalize_faq_heading_for_language')) {
+            $html = cbia_normalize_faq_heading_for_language($html, $post_language);
+        } elseif (function_exists('cbia_normalize_faq_heading')) {
+            $html = cbia_normalize_faq_heading($html);
         }
 
         if ($internal_image_style !== '' && $internal_images_enabled) {
@@ -4323,6 +4402,14 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
                     );
                     clean_post_cache((int)$post_id);
                 }
+            }
+        }
+
+        if ($featured_attach_id <= 0 && preg_match('/<img[^>]+src=("|\')([^"\']+)\\1/i', (string)$html, $featured_match)) {
+            $fallback_src = esc_url_raw((string)($featured_match[2] ?? ''));
+            if ($fallback_src !== '') {
+                $fallback_src = preg_replace('/\\?.*$/', '', (string)$fallback_src);
+                $featured_attach_id = (int)attachment_url_to_postid($fallback_src);
             }
         }
 
@@ -4429,6 +4516,20 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
             }
         }
 
+        $stored_tag_ids = wp_get_post_terms($post_id, 'post_tag', array('fields' => 'ids'));
+        if (!is_array($stored_tag_ids) || empty($stored_tag_ids)) {
+            $fallback_tag_names = function_exists('cbia_pick_tags_for_post') ? (array)cbia_pick_tags_for_post($title, $html, 7) : array();
+            $fallback_tag_names = array_values(array_unique(array_filter(array_map('sanitize_text_field', $fallback_tag_names))));
+            if (!empty($fallback_tag_names)) {
+                wp_set_post_terms($post_id, $fallback_tag_names, 'post_tag', false);
+            }
+        }
+
+        $stored_cat_ids = wp_get_post_categories($post_id, array('fields' => 'ids'));
+        if (is_array($stored_cat_ids) && !empty($stored_cat_ids)) {
+            $cat_ids = array_values(array_map('intval', $stored_cat_ids));
+        }
+
         if ($focus === '') {
             $focus = $title;
         }
@@ -4452,6 +4553,13 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
         update_post_meta($post_id, '_yoast_wpseo_twitter-description', $metad);
         if (!empty($cat_ids)) {
             update_post_meta($post_id, '_yoast_wpseo_primary_category', (int)$cat_ids[0]);
+        }
+        clean_object_term_cache((int)$post_id, 'post');
+        if (function_exists('cbia_yoast_try_reindex_post')) {
+            cbia_yoast_try_reindex_post((int)$post_id);
+        } else {
+            do_action('wpseo_save_postdata', (int)$post_id);
+            do_action('wpseo_save_post', (int)$post_id);
         }
 
         if (function_exists('cbia_log')) {
@@ -4505,6 +4613,7 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
             'title' => function_exists('cbia_ai_composer_normalize_title_value')
                 ? cbia_ai_composer_normalize_title_value((string)get_the_title((int)$post_id), get_post((int)$post_id))
                 : (string)get_the_title((int)$post_id),
+            'content_html' => (string)get_post_field('post_content', (int)$post_id),
             'edit_url' => get_edit_post_link((int)$post_id, ''),
             'meta_description' => $metad,
             'focus_keyphrase' => $focus,
@@ -4698,6 +4807,7 @@ if (!function_exists('cbia_ajax_start_generation')) {
         }
 
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
+        $settings_before_start = $settings;
         $settings_updated = false;
 
         if (array_key_exists('title_input_mode', $post_unslashed)) {
@@ -4738,10 +4848,79 @@ if (!function_exists('cbia_ajax_start_generation')) {
             $settings['publication_interval'] = max(1, intval($post_unslashed['publication_interval'] ?? 5));
             $settings_updated = true;
         }
+        $simple_runtime_fields = array(
+            'post_length_variant' => 'key',
+            'post_language' => 'text',
+            'images_limit' => 'int',
+            'image_style' => 'text',
+            'default_author_id' => 'absint',
+            'default_category' => 'text',
+            'keywords_to_categories' => 'textarea',
+            'default_tags' => 'text',
+            'blog_prompt_profile' => 'key',
+            'search_intent_strength' => 'key',
+            'blog_prompt_mode' => 'key',
+            'blog_prompt_mode_ui' => 'key',
+            'blog_prompt_mode_state' => 'key',
+            'blog_prompt_editable' => 'textarea',
+            'legacy_full_prompt' => 'textarea',
+            'blog_prompt_custom_instructions' => 'textarea',
+        );
+        foreach ($simple_runtime_fields as $field => $kind) {
+            if (!array_key_exists($field, $post_unslashed)) continue;
+            $target_field = ($field === 'blog_prompt_mode_ui' || $field === 'blog_prompt_mode_state') ? 'blog_prompt_mode' : $field;
+            $raw_value = $post_unslashed[$field];
+            if ($kind === 'int') {
+                $settings[$target_field] = max(0, intval($raw_value));
+            } elseif ($kind === 'absint') {
+                $settings[$target_field] = absint($raw_value);
+            } elseif ($kind === 'textarea') {
+                $settings[$target_field] = sanitize_textarea_field((string)$raw_value);
+            } elseif ($kind === 'key') {
+                $settings[$target_field] = sanitize_key((string)$raw_value);
+            } else {
+                $settings[$target_field] = sanitize_text_field((string)$raw_value);
+            }
+            $settings_updated = true;
+        }
+        foreach (array('include_faq', 'include_practical_examples') as $flag_field) {
+            if (array_key_exists($flag_field, $post_unslashed)) {
+                $settings[$flag_field] = !empty($post_unslashed[$flag_field]) ? 1 : 0;
+                $settings_updated = true;
+            }
+        }
+        if (!empty($settings['blog_prompt_mode'])) {
+            $settings['blog_prompt_mode'] = in_array((string)$settings['blog_prompt_mode'], array('recommended', 'legacy'), true) ? (string)$settings['blog_prompt_mode'] : 'recommended';
+            $settings['blog_prompt_legacy_enabled'] = ($settings['blog_prompt_mode'] === 'legacy') ? 1 : 0;
+        }
         if ($settings_updated) {
             update_option('cbia_settings', $settings, false);
             if (function_exists('cbia_log_message')) {
                 cbia_log_message('[INFO] START AJAX: runtime settings synced from current Blog form values.');
+            }
+        }
+        if (function_exists('cbia_checkpoint_get') && function_exists('cbia_checkpoint_clear')) {
+            $cp = cbia_checkpoint_get();
+            $should_clear_checkpoint = false;
+            if (!empty($cp) && !empty($cp['queue']) && is_array($cp['queue'])) {
+                if (array_key_exists('manual_titles', $post_unslashed)) {
+                    $submitted_titles = array_values(array_unique(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', (string)($post_unslashed['manual_titles'] ?? ''))))));
+                    $queued_titles = array_values(array_map('strval', (array)$cp['queue']));
+                    if ($submitted_titles !== $queued_titles) {
+                        $should_clear_checkpoint = true;
+                    }
+                }
+                if (array_key_exists('csv_url', $post_unslashed) && (string)($settings_before_start['csv_url'] ?? '') !== (string)($settings['csv_url'] ?? '')) {
+                    $should_clear_checkpoint = true;
+                }
+                if (array_key_exists('first_publication_datetime_local', $post_unslashed) && (string)($settings_before_start['first_publication_datetime'] ?? '') !== (string)($settings['first_publication_datetime'] ?? '')) {
+                    $should_clear_checkpoint = true;
+                }
+            }
+            if ($should_clear_checkpoint) {
+                cbia_checkpoint_clear();
+                if (function_exists('cbia_set_last_scheduled_at')) cbia_set_last_scheduled_at('');
+                if (function_exists('cbia_log_message')) cbia_log_message('[INFO] START AJAX: old checkpoint cleared because current Blog form changed.');
             }
         }
 

@@ -142,7 +142,8 @@ if (!function_exists('cbia_estimate_output_tokens_for_length_target')) {
 }
 
 if (!function_exists('cbia_post_extract_example_topics')) {
-	function cbia_post_extract_example_topics($html, $title): array {
+	function cbia_post_extract_example_topics($html, $title, $needed = 3): array {
+		$needed = max(3, (int)$needed);
 		$topics = array();
 		if (preg_match_all('/<h[23][^>]*>(.*?)<\/h[23]>/iu', (string)$html, $matches)) {
 			foreach ((array)$matches[1] as $raw_heading) {
@@ -150,60 +151,86 @@ if (!function_exists('cbia_post_extract_example_topics')) {
 				if ($heading === '') continue;
 				if (preg_match('/(faq|preguntas frecuentes|practical examples|ejemplos practicos)/iu', $heading)) continue;
 				$topics[] = sanitize_text_field($heading);
-				if (count($topics) >= 3) break;
+				if (count($topics) >= $needed) break;
 			}
 		}
 
 		$fallback = sanitize_text_field(trim(wp_strip_all_tags((string)$title)));
 		if ($fallback === '') $fallback = 'Aplicacion operativa';
-		if (empty($topics)) $topics = array($fallback, $fallback, $fallback);
-		while (count($topics) < 3) $topics[] = $fallback;
-		return array_slice($topics, 0, 3);
+		if (empty($topics)) $topics = array_fill(0, $needed, $fallback);
+		while (count($topics) < $needed) $topics[] = $fallback;
+		return array_slice($topics, 0, $needed);
 	}
 }
 
 if (!function_exists('cbia_ensure_practical_examples_html')) {
-	function cbia_ensure_practical_examples_html($html, $title, $language) {
+	function cbia_ensure_practical_examples_html($html, $title, $language, $length_variant = 'medium') {
 		$html = (string)$html;
+		$length_variant = sanitize_key((string)$length_variant);
+		$required_scenarios = ($length_variant === 'long') ? 4 : 3;
+		$min_words_per_scenario = ($length_variant === 'short') ? 45 : 65;
 		$plain = strtolower(wp_strip_all_tags($html));
 		$example_hits = preg_match_all('/\b(por ejemplo|ejemplo|caso practico|caso real|escenario|example|for example|use case|real-world|scenario)\b/u', $plain, $m);
 		$has_examples_heading = (bool)preg_match('/<h[23][^>]*>[^<]*(ejemplos|casos practicos|practical examples|use cases)[^<]*<\/h[23]>/iu', $html);
-		$has_quality_examples = (bool)preg_match('/<h3[^>]*>[^<]*(escenario|scenario)\s*[0-9][^<]*<\/h3>[\s\S]{120,}/iu', $html);
-		if ($has_examples_heading && $example_hits >= 3 && $has_quality_examples) return $html;
+		$scenario_matches = array();
+		$scenario_count = preg_match_all('/<h3[^>]*>[^<]*(escenario|scenario)\s*[0-9][^<]*<\/h3>([\s\S]*?)(?=<h3\b|<h2\b|$)/iu', $html, $scenario_matches, PREG_SET_ORDER);
+		$valid_blocks = 0;
+		if ($scenario_count && is_array($scenario_matches)) {
+			foreach ($scenario_matches as $row) {
+				$segment_plain = wp_strip_all_tags((string)($row[0] ?? ''));
+				preg_match_all('/\p{L}[\p{L}\p{N}\-_]*/u', $segment_plain, $wm);
+				if (count((array)($wm[0] ?? array())) >= $min_words_per_scenario) {
+					$valid_blocks++;
+				}
+			}
+		}
+		if ($has_examples_heading && $example_hits >= $required_scenarios && $valid_blocks >= $required_scenarios) return $html;
 
 		$is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
-		$topics = cbia_post_extract_example_topics($html, $title);
+		$topics = cbia_post_extract_example_topics($html, $title, $required_scenarios);
 		$block = '';
 		if ($is_spanish) {
 			$block .= "<h2>Ejemplos practicos aplicados</h2>\n";
 			$block .= "<h3>Escenario 1: " . esc_html($topics[0]) . "</h3>\n";
-			$block .= "<p><strong>Contexto real:</strong> se detectan senales tempranas relacionadas con este bloque antes de que escalen en coste o impacto operativo.</p>\n";
-			$block .= "<p><strong>Aplicacion:</strong> se define un protocolo corto con responsables, checklist y umbral de alerta para reaccionar en menos de 24 horas.</p>\n";
-			$block .= "<p><strong>Resultado medible:</strong> menor repeticion de incidencias y mejor tiempo medio de respuesta.</p>\n";
+			$block .= "<p><strong>Contexto real:</strong> en un evento con invitados de perfiles distintos, este punto permite detectar que parte del publico participa poco o se queda fuera de la dinamica principal.</p>\n";
+			$block .= "<p><strong>Aplicacion:</strong> se prepara una accion sencilla con responsable, momento de activacion y criterio de seguimiento para que el fotomaton no sea solo decoracion, sino un recurso medible dentro de la experiencia.</p>\n";
+			$block .= "<p><strong>Resultado esperado:</strong> mas participacion visible, mejores recuerdos compartidos y una lectura mas clara de que elementos funcionaron realmente durante el evento.</p>\n";
 			$block .= "<h3>Escenario 2: " . esc_html($topics[1]) . "</h3>\n";
-			$block .= "<p><strong>Contexto real:</strong> hay problemas recurrentes sin trazabilidad clara para priorizar acciones.</p>\n";
-			$block .= "<p><strong>Aplicacion:</strong> se documenta cada caso con fecha, impacto, causa probable y accion correctiva en un tablero unico.</p>\n";
-			$block .= "<p><strong>Resultado medible:</strong> decisiones mas rapidas, mejor priorizacion y menos reprocesos.</p>\n";
+			$block .= "<p><strong>Contexto real:</strong> la organizacion quiere contenido espontaneo, pero tambien necesita mantener una estetica coherente con la boda, la marca o la celebracion.</p>\n";
+			$block .= "<p><strong>Aplicacion:</strong> se define antes del evento un fondo, una iluminacion y una plantilla de entrega alineados con el estilo elegido; despues se revisan las fotos mas usadas para saber que formato genero mas respuesta.</p>\n";
+			$block .= "<p><strong>Resultado esperado:</strong> imagenes mas naturales sin perder coherencia visual, mayor tasa de comparticion y menos material descartado por falta de calidad.</p>\n";
 			$block .= "<h3>Escenario 3: " . esc_html($topics[2]) . "</h3>\n";
-			$block .= "<p><strong>Contexto real:</strong> distintos equipos responden de forma desigual y aumentan errores evitables.</p>\n";
-			$block .= "<p><strong>Aplicacion:</strong> se implanta una secuencia operativa de 5 pasos con verificacion cruzada y revision semanal.</p>\n";
-			$block .= "<p><strong>Resultado medible:</strong> mayor consistencia, menos omisiones y mejor coordinacion.</p>\n";
+			$block .= "<p><strong>Contexto real:</strong> al finalizar el evento hay muchas fotos, pero pocas decisiones claras sobre cuales guardar, compartir o reutilizar.</p>\n";
+			$block .= "<p><strong>Aplicacion:</strong> se clasifica el material por grupos, momentos y nivel de espontaneidad; las mejores piezas se usan en albumes, redes o comunicacion posterior con permiso de los participantes.</p>\n";
+			$block .= "<p><strong>Resultado esperado:</strong> mejor aprovechamiento del contenido, recuerdos mas utiles para los asistentes y una vida posterior mas larga para la celebracion.</p>\n";
+			if ($required_scenarios > 3) {
+				$block .= "<h3>Escenario 4: " . esc_html($topics[3]) . "</h3>\n";
+				$block .= "<p><strong>Contexto real:</strong> en eventos largos, la participacion baja si el fotomaton no tiene momentos de reactivacion.</p>\n";
+				$block .= "<p><strong>Aplicacion:</strong> se programan pequenas llamadas a la accion en momentos concretos, como despues del banquete, durante una pausa o al inicio del baile, usando grupos diferentes cada vez.</p>\n";
+				$block .= "<p><strong>Resultado esperado:</strong> flujo de uso mas constante, mas variedad de fotos y menos dependencia de un unico pico de actividad.</p>\n";
+			}
 		} else {
 			$block .= "<h2>Practical examples</h2>\n";
 			$block .= "<h3>Scenario 1: " . esc_html($topics[0]) . "</h3>\n";
-			$block .= "<p><strong>Real context:</strong> early signals are detected in this area before they become expensive incidents.</p>\n";
-			$block .= "<p><strong>Application:</strong> define a short response protocol with owners, checklist, and escalation thresholds within 24 hours.</p>\n";
-			$block .= "<p><strong>Measurable result:</strong> fewer repeated incidents and faster response time.</p>\n";
+			$block .= "<p><strong>Real context:</strong> an event mixes different guest profiles and some people are less active in the main flow.</p>\n";
+			$block .= "<p><strong>Application:</strong> define an activation moment, one owner, and a simple participation goal so the photo booth works as a measurable experience, not just decoration.</p>\n";
+			$block .= "<p><strong>Expected result:</strong> more visible participation, stronger shared memories, and a clearer view of what worked during the event.</p>\n";
 			$block .= "<h3>Scenario 2: " . esc_html($topics[1]) . "</h3>\n";
-			$block .= "<p><strong>Real context:</strong> recurring issues lack traceability and clear prioritization criteria.</p>\n";
-			$block .= "<p><strong>Application:</strong> log each case with date, impact, probable cause, and corrective action in one board.</p>\n";
-			$block .= "<p><strong>Measurable result:</strong> faster decisions, better prioritization, and less rework.</p>\n";
+			$block .= "<p><strong>Real context:</strong> the organizer wants spontaneous content without losing visual consistency.</p>\n";
+			$block .= "<p><strong>Application:</strong> define backdrop, lighting, and output template before the event; afterwards, review which images were saved or shared most often.</p>\n";
+			$block .= "<p><strong>Expected result:</strong> natural images with stronger visual coherence, higher sharing rate, and less unusable material.</p>\n";
 			$block .= "<h3>Scenario 3: " . esc_html($topics[2]) . "</h3>\n";
-			$block .= "<p><strong>Real context:</strong> teams react inconsistently to similar situations and create avoidable mistakes.</p>\n";
-			$block .= "<p><strong>Application:</strong> implement a 5-step sequence with cross-checks and weekly feedback.</p>\n";
-			$block .= "<p><strong>Measurable result:</strong> stronger consistency, fewer omissions, and better coordination.</p>\n";
+			$block .= "<p><strong>Real context:</strong> after the event there are many images but no clear decision about what to save, publish, or reuse.</p>\n";
+			$block .= "<p><strong>Application:</strong> classify the material by group, moment, and spontaneity level; use the strongest pieces in albums, social posts, or follow-up communication with permission.</p>\n";
+			$block .= "<p><strong>Expected result:</strong> better content use, more useful memories for guests, and a longer afterlife for the event.</p>\n";
+			if ($required_scenarios > 3) {
+				$block .= "<h3>Scenario 4: " . esc_html($topics[3]) . "</h3>\n";
+				$block .= "<p><strong>Real context:</strong> in longer events, participation drops if the photo booth has no reactivation moments.</p>\n";
+				$block .= "<p><strong>Application:</strong> schedule small calls to action after dinner, during a pause, or at the start of the dance, using different groups each time.</p>\n";
+				$block .= "<p><strong>Expected result:</strong> steadier usage, more varied photos, and less dependence on a single activity peak.</p>\n";
+			}
 		}
-		if (preg_match('/<h2[^>]*>\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Questions? ?FAQs?|FAQs)\s*<\/h2>/i', $html, $match, PREG_OFFSET_CAPTURE)) {
+		if (preg_match('/<h2[^>]*>\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Frequently Asked Questions|Questions? ?FAQs?|FAQs)\s*<\/h2>/i', $html, $match, PREG_OFFSET_CAPTURE)) {
 			$pos = (int)$match[0][1];
 			return substr($html, 0, $pos) . $block . substr($html, $pos);
 		}
@@ -393,6 +420,83 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 	}
 }
 
+if (!function_exists('cbia_add_inbound_link_for_new_post')) {
+	function cbia_add_inbound_link_for_new_post($post_id): bool {
+		$post_id = (int)$post_id;
+		if ($post_id <= 0) return false;
+		$target = get_post($post_id);
+		if (!$target || $target->post_type !== 'post') return false;
+
+		$permalink = get_permalink($post_id);
+		if (!$permalink) return false;
+		$title = get_the_title($post_id);
+		if ($title === '') return false;
+
+		global $wpdb;
+		if ($wpdb) {
+			$like = '%' . $wpdb->esc_like($permalink) . '%';
+			// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching -- Fast inbound-link existence check for the newly created post.
+			$existing = (int)$wpdb->get_var($wpdb->prepare(
+				"SELECT ID FROM {$wpdb->posts} WHERE ID <> %d AND post_type='post' AND post_status IN ('publish','future') AND post_content LIKE %s LIMIT 1",
+				$post_id,
+				$like
+			));
+			if ($existing > 0) return false;
+		}
+
+		$cat_ids = wp_get_post_categories($post_id, array('fields' => 'ids'));
+		$args = array(
+			'post_type' => 'post',
+			'post_status' => 'publish',
+			'posts_per_page' => 1,
+			'post__not_in' => array($post_id),
+			'orderby' => 'date',
+			'order' => 'DESC',
+			'fields' => 'ids',
+			'no_found_rows' => true,
+			'suppress_filters' => false,
+		);
+		if (is_array($cat_ids) && !empty($cat_ids)) {
+			$args['category__in'] = array_values(array_map('intval', $cat_ids));
+		}
+		$sources = get_posts($args);
+		if (empty($sources) && !empty($args['category__in'])) {
+			unset($args['category__in']);
+			$sources = get_posts($args);
+		}
+		$source_id = !empty($sources[0]) ? (int)$sources[0] : 0;
+		if ($source_id <= 0) return false;
+
+		$source = get_post($source_id);
+		if (!$source || strpos((string)$source->post_content, 'cbia-inbound-link:' . $post_id) !== false) return false;
+		if (strpos((string)$source->post_content, (string)$permalink) !== false) return false;
+
+		$s = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
+		$lang = (string)($s['post_language'] ?? 'English');
+		$is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($lang);
+		$label = $is_spanish ? 'Tambien puede interesarte' : 'You may also like';
+		$link = sprintf(
+			"\n\n<p><!-- cbia-inbound-link:%d -->%s: <a href=\"%s\">%s</a>.</p>",
+			(int)$post_id,
+			esc_html($label),
+			esc_url($permalink),
+			esc_html($title)
+		);
+		$updated = wp_update_post(array(
+			'ID' => $source_id,
+			'post_content' => (string)$source->post_content . $link,
+		), true);
+		if (is_wp_error($updated) || !$updated) return false;
+		clean_post_cache($source_id);
+		if (function_exists('cbia_yoast_try_reindex_post')) {
+			cbia_yoast_try_reindex_post($source_id);
+			cbia_yoast_try_reindex_post($post_id);
+		}
+		cbia_log(sprintf('Inbound internal link added: source post %d -> target post %d.', (int)$source_id, (int)$post_id), 'INFO');
+		return true;
+	}
+}
+
 /* =========================================================
    =============== MAIN: CREATE SINGLE BLOG POST ============
    ========================================================= */
@@ -494,7 +598,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		}
 		}
 		if (!empty($s['include_practical_examples'])) {
-			$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'));
+			$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);
 		}
 
 		$current_words = cbia_count_words_from_html($text_html);
@@ -511,7 +615,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			), 'WARN');
 			$text_html = cbia_expand_text_to_length_target($title, $text_html, $s, (int)$min_words, (int)$max_words);
 			if (!empty($s['include_practical_examples'])) {
-				$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'));
+				$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);
 			}
 		} elseif ($current_words < (int)$min_words) {
 			cbia_log(sprintf(
@@ -522,6 +626,14 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			), 'INFO');
 		}
 		$text_html = cbia_enforce_length_ceiling_html($text_html, (int)$max_words, !empty($s['include_faq']));
+		if (!empty($s['include_practical_examples'])) {
+			$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);
+			$examples_ceiling = (int)$max_words + (($length_variant === 'long') ? 320 : 240);
+			if (cbia_count_words_from_html($text_html) > $examples_ceiling) {
+				$text_html = cbia_enforce_length_ceiling_html($text_html, $examples_ceiling, !empty($s['include_faq']));
+				$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);
+			}
+		}
 		$current_words = cbia_count_words_from_html($text_html);
 		cbia_log(sprintf("Final text length on '%s': %d words.", (string)$title, (int)$current_words), 'INFO');
 
@@ -740,6 +852,10 @@ if (!function_exists('cbia_create_single_blog_post')) {
 					));
 				}
 			}
+		}
+
+		if (function_exists('cbia_add_inbound_link_for_new_post')) {
+			cbia_add_inbound_link_for_new_post((int)$post_id);
 		}
 
 		// Hook final

@@ -137,12 +137,25 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             if (!isset($GLOBALS['cbia_runtime_settings_overrides']) || !is_array($GLOBALS['cbia_runtime_settings_overrides'])) {
                 $GLOBALS['cbia_runtime_settings_overrides'] = array();
             }
+            $runtime_language = (string)($settings['post_language'] ?? 'English');
+            if (function_exists('cbia_ai_composer_normalize_language_value')) {
+                $runtime_language = (string)cbia_ai_composer_normalize_language_value($runtime_language);
+            }
+            $settings['post_language'] = $runtime_language;
+            $runtime_faq_heading = (string)($settings['faq_heading_custom'] ?? '');
+            if ($composer_mode || array_key_exists('post_language', $payload)) {
+                if (function_exists('cbia_get_faq_heading_for_language')) {
+                    $runtime_faq_heading = (string)cbia_get_faq_heading_for_language($runtime_language);
+                } else {
+                    $runtime_faq_heading = '';
+                }
+            }
             $GLOBALS['cbia_runtime_settings_overrides'] = array_replace_recursive(
                 (array)$GLOBALS['cbia_runtime_settings_overrides'],
                 array(
                     'openai_temperature' => (float)($settings['openai_temperature'] ?? 0.7),
-                    'post_language' => (string)($settings['post_language'] ?? 'English'),
-                    'faq_heading_custom' => (string)($settings['faq_heading_custom'] ?? ''),
+                    'post_language' => $runtime_language,
+                    'faq_heading_custom' => $runtime_faq_heading,
                 )
             );
             if (array_key_exists('legacy_full_prompt', $payload)) {
@@ -162,8 +175,11 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $text_html = cbia_strip_h1_to_h2($text_html);
             $text_html = cbia_fix_bracket_headings($text_html);
             $faq_enabled = function_exists('cbia_runtime_include_faq_enabled') ? cbia_runtime_include_faq_enabled($settings) : true;
+            $preview_language = (string)($settings['post_language'] ?? 'English');
             if (!$faq_enabled && function_exists('cbia_strip_faq_section')) {
                 $text_html = cbia_strip_faq_section($text_html);
+            } elseif (function_exists('cbia_normalize_faq_heading_for_language')) {
+                $text_html = cbia_normalize_faq_heading_for_language($text_html, $preview_language);
             } else {
                 $text_html = cbia_normalize_faq_heading($text_html);
             }
@@ -252,6 +268,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     $this->emit($emit, 'featured_image_status', array(
                         'status' => 'done',
                         'url' => $featured_url,
+                        'attach_id' => (int)$featured_attach_id,
                         'message' => 'Featured image ready.',
                     ));
                 } else {
@@ -273,6 +290,11 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
             $rendered = $this->render_markers($text_html, $title, $images_limit, $preview_mode, $emit, $internal_image_style);
             $final_html = cbia_cleanup_post_html((string)($rendered['html'] ?? $text_html));
+            if ($faq_enabled && function_exists('cbia_normalize_faq_heading_for_language')) {
+                $final_html = cbia_normalize_faq_heading_for_language((string)$final_html, $preview_language);
+            } elseif ($faq_enabled && function_exists('cbia_normalize_faq_heading')) {
+                $final_html = cbia_normalize_faq_heading((string)$final_html);
+            }
             $display_html = $this->normalize_preview_html_for_display($final_html);
             $this->emit($emit, 'word_count', array('count' => $this->word_count($final_html)));
             $this->emit($emit, 'cbia_content', array('html' => $display_html));

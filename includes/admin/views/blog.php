@@ -24,6 +24,10 @@ $blog_prompt_mode = function_exists('cbia_prompt_get_mode')
     ? cbia_prompt_get_mode((array)$settings)
     : sanitize_key((string)($settings['blog_prompt_mode'] ?? 'recommended'));
 if (!in_array($blog_prompt_mode, array('recommended', 'legacy'), true)) $blog_prompt_mode = 'recommended';
+$legacy_prompt_explicit = !empty($settings['blog_prompt_legacy_enabled']);
+if ($blog_prompt_mode === 'legacy' && !$legacy_prompt_explicit) {
+    $blog_prompt_mode = 'recommended';
+}
 $blog_prompt_profile = function_exists('cbia_get_prompt_profile')
     ? cbia_get_prompt_profile((array)$settings)
     : sanitize_key((string)($settings['blog_prompt_profile'] ?? 'discover_editorial'));
@@ -132,6 +136,9 @@ $first_dt_default_local = function_exists('wp_date')
 $first_dt_local = $first_dt_default_local;
 if ($first_dt !== '') {
     $first_dt_local = substr(str_replace(' ', 'T', $first_dt), 0, 16);
+    if (strtotime(str_replace('T', ' ', $first_dt_local)) !== false && strtotime(str_replace('T', ' ', $first_dt_local)) < current_time('timestamp')) {
+        $first_dt_local = $first_dt_default_local;
+    }
 }
 
 $interval = max(1, intval($settings['publication_interval'] ?? 5));
@@ -677,7 +684,9 @@ echo '</select>';
 
 <button type="submit" class="button" name="cbia_action" value="stop_generation" style="background:#b70000;color:#fff;border-color:#7a0000;"><?php echo esc_html__('Stop (STOP)', 'cbiastudio-blogflow-ai'); ?></button>
 <button type="submit" class="button" name="cbia_action" value="fill_pending_imgs"><?php echo esc_html__('Fill pending', 'cbiastudio-blogflow-ai'); ?></button>
+<?php if ($runtime_advanced_enabled) : ?>
 <button type="submit" class="button" name="cbia_action" value="clear_checkpoint"><?php echo esc_html__('Clear checkpoint', 'cbiastudio-blogflow-ai'); ?></button>
+<?php endif; ?>
 <button type="submit" class="button" name="cbia_action" value="clear_log"><?php echo esc_html__('Clear log', 'cbiastudio-blogflow-ai'); ?></button>
 </p>
 </form>
@@ -880,6 +889,28 @@ echo '</select>';
             if (csvUrlInput) fd.append('csv_url', csvUrlInput.value || '');
             if (firstPublicationInput) fd.append('first_publication_datetime_local', firstPublicationInput.value || '');
             if (publicationIntervalInput) fd.append('publication_interval', publicationIntervalInput.value || '');
+            [
+                'post_length_variant','post_language','images_limit','image_style','include_faq','include_practical_examples',
+                'default_author_id','default_category','keywords_to_categories','default_tags',
+                'blog_prompt_profile','search_intent_strength','blog_prompt_mode','blog_prompt_mode_ui','blog_prompt_mode_state',
+                'blog_prompt_editable','legacy_full_prompt','blog_prompt_custom_instructions'
+            ].forEach(function(name){
+                const checkedRadio = document.querySelector('input[type="radio"][name="' + name + '"]:checked');
+                if (checkedRadio) {
+                    fd.set(name, checkedRadio.value || '');
+                    return;
+                }
+                const el = document.querySelector('[name="' + name + '"]');
+                if (!el) {
+                    if (name === 'include_faq' || name === 'include_practical_examples') fd.set(name, '0');
+                    return;
+                }
+                if (el.type === 'checkbox') {
+                    fd.set(name, el.checked ? '1' : '0');
+                } else {
+                    fd.set(name, el.value || '');
+                }
+            });
 
             fetch(ajaxurl, { method:'POST', credentials:'same-origin', body: fd })
             .then(r => r.text())

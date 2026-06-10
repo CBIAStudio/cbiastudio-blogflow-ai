@@ -886,9 +886,9 @@ if (!function_exists('cbia_get_provider_model')) {
 if (!function_exists('cbia_image_api_timeout_seconds')) {
 	function cbia_image_api_timeout_seconds(): int {
 		$s = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
-		$timeout = isset($s['image_timeout_seconds']) ? (int)$s['image_timeout_seconds'] : 90;
+		$timeout = isset($s['image_timeout_seconds']) ? (int)$s['image_timeout_seconds'] : 180;
 		if ($timeout < 30) $timeout = 30;
-		if ($timeout > 180) $timeout = 180;
+		if ($timeout > 240) $timeout = 240;
 		return $timeout;
 	}
 }
@@ -896,9 +896,9 @@ if (!function_exists('cbia_image_api_timeout_seconds')) {
 if (!function_exists('cbia_image_download_timeout_seconds')) {
 	function cbia_image_download_timeout_seconds(): int {
 		$s = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
-		$timeout = isset($s['image_download_timeout_seconds']) ? (int)$s['image_download_timeout_seconds'] : 90;
+		$timeout = isset($s['image_download_timeout_seconds']) ? (int)$s['image_download_timeout_seconds'] : 180;
 		if ($timeout < 20) $timeout = 20;
-		if ($timeout > 180) $timeout = 180;
+		if ($timeout > 240) $timeout = 240;
 		return $timeout;
 	}
 }

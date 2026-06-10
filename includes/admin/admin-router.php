@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 /**
  * Admin router: register tabs and menus.
  */
@@ -150,7 +150,7 @@ if (!class_exists('CBIA_Admin_Router')) {
             echo '<img class="cbia-logo" src="' . esc_url($logo_header) . '" alt="' . esc_attr($branding['name']) . '" />';
             echo '<div class="cbia-title">' . wp_kses_post($branding['title']) . '</div>';
             echo '</div>';
-            echo '<div class="cbia-version">v' . esc_html(defined('CBIA_VERSION') ? CBIA_VERSION : '2.0.2') . '</div>';
+            echo '<div class="cbia-version">v' . esc_html(defined('CBIA_VERSION') ? CBIA_VERSION : '2.0.3') . '</div>';
             echo '</div>';
 
             echo '<div class="cbia-layout">';

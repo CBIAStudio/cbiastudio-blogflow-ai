@@ -242,7 +242,14 @@ if (!function_exists('cbia_prompt_recommended_footer_template_es')) {
 if (!function_exists('cbia_prompt_is_spanish')) {
     function cbia_prompt_is_spanish($language): bool {
         $language = strtolower(trim((string)$language));
-        return in_array($language, array('spanish', 'espanol', 'español'), true);
+        $language = str_replace('_', '-', $language);
+        if ($language === '') return false;
+        if ((bool)preg_match('/^es(?:-[a-z0-9]+)?$/', $language)) return true;
+        if (in_array($language, array('spanish', 'espanol', 'español', 'castellano'), true)) return true;
+        if (strpos($language, 'span') !== false) return true;
+        if (strpos($language, 'castell') !== false) return true;
+        if (strpos($language, 'espan') !== false) return true;
+        return false;
     }
 }
 

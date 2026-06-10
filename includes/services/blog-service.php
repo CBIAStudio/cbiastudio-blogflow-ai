@@ -135,6 +135,7 @@ if (!class_exists('CBIA_Pro_Blog_Service')) {
                 } else {
                     $prompt_post_mode = sanitize_key((string)($settings['blog_prompt_mode'] ?? 'recommended'));
                 }
+                $settings['blog_prompt_legacy_enabled'] = ($prompt_post_mode === 'legacy') ? 1 : 0;
 
                 // Compatibilidad: preservar prompt historico como legacy_full_prompt.
                 if (empty($settings['legacy_full_prompt'])) {
