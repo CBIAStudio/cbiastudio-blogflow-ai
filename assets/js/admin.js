@@ -2272,6 +2272,15 @@
         var streamTextLocked = false;
         var streamHasTextProgress = false;
         var streamContentSeeded = false;
+        var suppressComposerUnloadPrompt = false;
+
+        try {
+            window.addEventListener('beforeunload', function (evt) {
+                if (!suppressComposerUnloadPrompt) return;
+                try { evt.stopImmediatePropagation(); } catch (_eStopUnload) {}
+                try { delete evt.returnValue; } catch (_eReturnUnload) {}
+            }, true);
+        } catch (_eBeforeUnload) {}
 
         if (!aiCfg.internalImagesEnabled) {
             if (imagesSelect) {
@@ -4195,9 +4204,10 @@
             }, 12000);
         }
 
-        function persistTermsForPost(postId, cats, tags, attempt, tagNamesOverride) {
+        function persistTermsForPost(postId, cats, tags, attempt, tagNamesOverride, featuredOverride) {
             var pid = parseInt(postId || 0, 10);
             var tries = parseInt(attempt || 0, 10);
+            var featuredId = parseInt(featuredOverride || finalFeaturedAttachId || 0, 10) || 0;
             if (!ajaxUrl || !nonce) {
                 return Promise.resolve(false);
             }
@@ -4209,7 +4219,7 @@
                 if (tries < 20) {
                     return new Promise(function (resolve) {
                         setTimeout(function () {
-                            resolve(persistTermsForPost(resolveCurrentPostId(), cats, tags, tries + 1, tagNamesOverride));
+                            resolve(persistTermsForPost(resolveCurrentPostId(), cats, tags, tries + 1, tagNamesOverride, featuredId));
                         }, 1000);
                     });
                 }
@@ -4219,6 +4229,7 @@
             params.append('action', 'cbia_ai_composer_apply_terms');
             params.append('_ajax_nonce', nonce);
             params.append('post_id', String(pid));
+            if (featuredId > 0) params.append('featured_attach_id', String(featuredId));
             (Array.isArray(cats) ? cats : []).forEach(function (id) {
                 var v = parseInt(id, 10) || 0;
                 if (v > 0) params.append('category_ids[]', String(v));
@@ -4243,7 +4254,7 @@
                   if (tries < 20) {
                       return new Promise(function (resolve) {
                           setTimeout(function () {
-                              resolve(persistTermsForPost(pid, cats, tags, tries + 1, tagNamesOverride));
+                              resolve(persistTermsForPost(pid, cats, tags, tries + 1, tagNamesOverride, featuredId));
                           }, 1000);
                       });
                   }
@@ -4253,7 +4264,7 @@
                   if (tries < 20) {
                       return new Promise(function (resolve) {
                           setTimeout(function () {
-                              resolve(persistTermsForPost(pid, cats, tags, tries + 1, tagNamesOverride));
+                              resolve(persistTermsForPost(pid, cats, tags, tries + 1, tagNamesOverride, featuredId));
                           }, 1000);
                       });
                   }
@@ -4261,15 +4272,16 @@
               });
         }
 
-        function ensureTermsPersisted(cats, tags, postIdOverride, tagNamesOverride) {
+        function ensureTermsPersisted(cats, tags, postIdOverride, tagNamesOverride, featuredOverride) {
             var arrCats = Array.isArray(cats) ? cats : [];
             var arrTags = Array.isArray(tags) ? tags : [];
             var arrTagNames = Array.isArray(tagNamesOverride) ? tagNamesOverride : (Array.isArray(finalTagNames) ? finalTagNames : []);
-            if (!arrCats.length && !arrTags.length && !arrTagNames.length) return;
+            var featuredId = parseInt(featuredOverride || finalFeaturedAttachId || 0, 10) || 0;
+            if (!arrCats.length && !arrTags.length && !arrTagNames.length && featuredId <= 0) return;
             var pid = parseInt(postIdOverride || 0, 10) || resolveCurrentPostId();
-            persistTermsForPost(pid, arrCats, arrTags, 0, arrTagNames);
-            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags, 0, arrTagNames); }, 2500);
-            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags, 0, arrTagNames); }, 6000);
+            persistTermsForPost(pid, arrCats, arrTags, 0, arrTagNames, featuredId);
+            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags, 0, arrTagNames, featuredId); }, 2500);
+            setTimeout(function () { persistTermsForPost(parseInt(postIdOverride || 0, 10) || resolveCurrentPostId(), arrCats, arrTags, 0, arrTagNames, featuredId); }, 6000);
         }
 
         function schedulePendingYoastSync() {
@@ -4409,6 +4421,9 @@
             var mediaId = parseInt(attachId || 0, 10) || 0;
             if (mediaId <= 0) return;
             try {
+                ensureClassicPostField('_thumbnail_id', '_thumbnail_id', String(mediaId), 'hidden');
+            } catch (_eThumbHidden) {}
+            try {
                 if (window.wp && window.wp.data && window.wp.data.dispatch) {
                     window.wp.data.dispatch('core/editor').editPost({ featured_media: mediaId });
                     var coreDispatch = window.wp.data.dispatch('core');
@@ -4436,6 +4451,141 @@
                     }).catch(function () {});
                 }
             } catch (e2) {}
+        }
+
+        function receiveTaxonomyRecords(taxonomy, ids) {
+            var cleanIds = Array.isArray(ids)
+                ? ids.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; })
+                : [];
+            if (!cleanIds.length || !window.wp || !window.wp.apiFetch) return Promise.resolve(false);
+            var endpoint = taxonomy === 'category' ? 'categories' : 'tags';
+            return window.wp.apiFetch({ path: '/wp/v2/' + endpoint + '?context=edit&include=' + encodeURIComponent(cleanIds.join(',')) + '&per_page=100' })
+                .then(function (records) {
+                    try {
+                        var coreDispatch = (window.wp && window.wp.data && window.wp.data.dispatch)
+                            ? window.wp.data.dispatch('core')
+                            : null;
+                        if (coreDispatch && typeof coreDispatch.receiveEntityRecords === 'function' && Array.isArray(records)) {
+                            coreDispatch.receiveEntityRecords('taxonomy', taxonomy, records, undefined, true);
+                        }
+                    } catch (_eReceiveTerms) {}
+                    return true;
+                })
+                .catch(function () { return false; });
+        }
+
+        function refreshEditorPostStateFromServer(postId, fallbackCats, fallbackTags, fallbackTagNames, fallbackFeatured) {
+            var pid = parseInt(postId || 0, 10) || resolveCurrentPostId();
+            if (!pid || !window.wp || !window.wp.apiFetch || !window.wp.data || !window.wp.data.dispatch) {
+                syncEditorTermsUi(fallbackCats || [], fallbackTags || [], fallbackTagNames || []);
+                if (parseInt(fallbackFeatured || 0, 10) > 0) syncFeaturedMediaUi(fallbackFeatured);
+                return Promise.resolve(false);
+            }
+            return window.wp.apiFetch({ path: '/wp/v2/posts/' + pid + '?context=edit&_fields=id,featured_media,categories,tags,meta' })
+                .then(function (post) {
+                    var cats = Array.isArray(post && post.categories) ? post.categories : (fallbackCats || []);
+                    var tags = Array.isArray(post && post.tags) ? post.tags : (fallbackTags || []);
+                    var featured = parseInt((post && post.featured_media) || fallbackFeatured || 0, 10) || 0;
+                    var patch = {};
+                    if (cats.length) patch.categories = cats.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; });
+                    if (tags.length) patch.tags = tags.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; });
+                    if (featured > 0) patch.featured_media = featured;
+                    if (post && post.meta && typeof post.meta === 'object') patch.meta = post.meta;
+                    try {
+                        var editorDispatch = window.wp.data.dispatch('core/editor');
+                        if (editorDispatch && typeof editorDispatch.editPost === 'function' && Object.keys(patch).length) {
+                            editorDispatch.editPost(patch);
+                        }
+                        var coreDispatch = window.wp.data.dispatch('core');
+                        if (coreDispatch && typeof coreDispatch.editEntityRecord === 'function' && Object.keys(patch).length) {
+                            coreDispatch.editEntityRecord('postType', 'post', pid, patch);
+                        }
+                    } catch (_eRefreshStore) {}
+                    syncEditorTermsUi(patch.categories || cats, patch.tags || tags, fallbackTagNames || []);
+                    if (featured > 0) {
+                        syncFeaturedMediaUi(featured);
+                        setTimeout(function () { syncFeaturedMediaUi(featured); }, 500);
+                        setTimeout(function () { syncFeaturedMediaUi(featured); }, 1600);
+                    }
+                    return Promise.all([
+                        receiveTaxonomyRecords('category', patch.categories || cats),
+                        receiveTaxonomyRecords('post_tag', patch.tags || tags)
+                    ]).then(function () { return true; });
+                })
+                .catch(function () {
+                    syncEditorTermsUi(fallbackCats || [], fallbackTags || [], fallbackTagNames || []);
+                    if (parseInt(fallbackFeatured || 0, 10) > 0) syncFeaturedMediaUi(fallbackFeatured);
+                    return false;
+                });
+        }
+
+        function syncEditorTermsUi(categoryIds, tagIds, tagNames) {
+            var cats = Array.isArray(categoryIds)
+                ? categoryIds.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; })
+                : [];
+            var tags = Array.isArray(tagIds)
+                ? tagIds.map(function (v) { return parseInt(v, 10) || 0; }).filter(function (v) { return v > 0; })
+                : [];
+            var labels = Array.isArray(tagNames)
+                ? tagNames.map(function (v) { return String(v || '').trim(); }).filter(function (v) { return !!v; })
+                : [];
+            if (!cats.length && !tags.length && !labels.length) return;
+
+            try {
+                if (window.wp && window.wp.data && window.wp.data.dispatch) {
+                    var patch = {};
+                    if (cats.length) patch.categories = cats.slice();
+                    if (tags.length) patch.tags = tags.slice();
+                    if (Object.keys(patch).length) {
+                        var editorDispatch = window.wp.data.dispatch('core/editor');
+                        if (editorDispatch && typeof editorDispatch.editPost === 'function') {
+                            editorDispatch.editPost(patch);
+                        }
+                        var postId = resolveCurrentPostId();
+                        var coreDispatch = window.wp.data.dispatch('core');
+                        if (postId > 0 && coreDispatch && typeof coreDispatch.editEntityRecord === 'function') {
+                            coreDispatch.editEntityRecord('postType', 'post', postId, patch);
+                        }
+                    }
+                }
+            } catch (e0) {}
+
+            cats.forEach(function (id) {
+                try {
+                    var selector = '#categorychecklist input[type="checkbox"][value="' + id + '"], #categorychecklist-pop input[type="checkbox"][value="' + id + '"]';
+                    var boxes = document.querySelectorAll(selector);
+                    Array.prototype.forEach.call(boxes, function (cb) {
+                        cb.checked = true;
+                        triggerInputSync(cb);
+                    });
+                } catch (e1) {}
+            });
+
+            if (labels.length) {
+                var form = document.getElementById('post') || document.querySelector('form[name="post"]') || document.querySelector('form#post');
+                var holder = document.getElementById('cbia-ai-composer-hidden-tags');
+                if (!holder) {
+                    holder = document.createElement('div');
+                    holder.id = 'cbia-ai-composer-hidden-tags';
+                    holder.style.display = 'none';
+                    (form || document.body).appendChild(holder);
+                }
+                holder.innerHTML = '';
+                labels.forEach(function (name) {
+                    var input = document.createElement('input');
+                    input.type = 'hidden';
+                    input.name = 'tax_input[post_tag][]';
+                    input.value = name;
+                    input.className = 'cbia-ai-term-hidden';
+                    holder.appendChild(input);
+                });
+                ensureClassicPostField('tax_input[post_tag]', 'tax-input-post_tag', labels.join(', '), 'hidden');
+                var newTagInput = document.getElementById('new-tag-post_tag');
+                if (newTagInput) {
+                    newTagInput.value = '';
+                    triggerInputSync(newTagInput);
+                }
+            }
         }
 
         function getCurrentEditorTitle() {
@@ -4545,6 +4695,7 @@
                     if (tags.length) patch.tags = tags;
                     if (featuredId > 0) patch.featured_media = featuredId;
                     window.wp.data.dispatch('core/editor').editPost(patch);
+                    syncEditorTermsUi(cats, tags, tagLabels);
                     if (featuredId > 0) {
                         syncFeaturedMediaUi(featuredId);
                         setTimeout(function () { syncFeaturedMediaUi(featuredId); }, 500);
@@ -4558,7 +4709,7 @@
                     forceSetContentEverywhere();
                     updateYoastUiFields(yoastPayload);
                     try { ensureYoastMetaPersisted(yoastPayload); } catch (e2) {}
-                    try { ensureTermsPersisted(cats, tags, 0, tagLabels); } catch (e3) {}
+                    try { ensureTermsPersisted(cats, tags, 0, tagLabels, featuredId); } catch (e3) {}
                     return true;
                 } catch (e) {}
             }
@@ -4590,16 +4741,10 @@
                     syncFeaturedMediaUi(featuredId);
                 }
                 if (tagLabels.length) {
-                    var tagsCsv = tagLabels.join(', ');
-                    ensureClassicPostField('tax_input[post_tag]', 'tax-input-post_tag', tagsCsv, 'hidden');
-                    var newTagInput = document.getElementById('new-tag-post_tag');
-                    if (newTagInput) {
-                        newTagInput.value = '';
-                        triggerInputSync(newTagInput);
-                    }
+                    syncEditorTermsUi(cats, tags, tagLabels);
                 }
                 ensureYoastMetaPersisted(yoastPayload);
-                ensureTermsPersisted(cats, tags, 0, tagLabels);
+                ensureTermsPersisted(cats, tags, 0, tagLabels, featuredId);
             }
 
             var titleField = document.getElementById('title');
@@ -5100,6 +5245,7 @@
                 params.append('content_html', String(payload.content_html || ''));
                 params.append('focus_keyphrase', String(payload.focus_keyphrase || ''));
                 params.append('meta_description', String(payload.meta_description || ''));
+                params.append('include_faq', isComposerFaqEnabled() ? '1' : '0');
                 params.append('featured_attach_id', String(parseInt(payload.featured_attach_id || (finalFeaturedImage && finalFeaturedImage.attach_id) || finalFeaturedAttachId || 0, 10) || 0));
                 params.append('internal_image_style', String(payload.internal_image_style || ''));
                 params.append('post_language', languageSelect ? (languageSelect.value || (aiCfg.defaultLanguage || 'English')) : (aiCfg.defaultLanguage || 'English'));
@@ -5258,7 +5404,11 @@
                     setTimeout(function () { syncEditorTitle(titleForApply); }, 2200);
                     // Secondary persistence pass (Yoast + terms) for editor/plugin stacks that lag.
                     try {
-                        ensureTermsPersisted(appliedCats, appliedTags, appliedPostId, appliedTagNames);
+                        syncEditorTermsUi(appliedCats, appliedTags, appliedTagNames);
+                        setTimeout(function () { syncEditorTermsUi(appliedCats, appliedTags, appliedTagNames); }, 250);
+                    } catch (eTermsUi) {}
+                    try {
+                        ensureTermsPersisted(appliedCats, appliedTags, appliedPostId, appliedTagNames, finalFeaturedAttachId);
                     } catch (eTerms) {}
                     try {
                         ensureYoastMetaPersisted({
@@ -5275,15 +5425,38 @@
                     persistComposerSnapshot();
                     setStatus('Contenido aplicado en servidor. Guardando borrador...', false);
                     try { insertInEditor(titleForApply, htmlCandidate, finalFocusKeyphrase, finalMetaDescription, appliedCats, appliedTags, appliedTagNames, finalFeaturedAttachId); } catch (eInsertUi) {}
-                    return saveEditorDraftAfterComposer().catch(function(){ return false; }).then(function(){
-                        setStatus('Content inserted and saved in the editor.', false);
-                        if (!applyEffectivePostId && appliedPostId > 0 && res.data && res.data.edit_url) {
+                    return persistTermsForPost(appliedPostId, appliedCats, appliedTags, 0, appliedTagNames, finalFeaturedAttachId).catch(function () { return false; }).then(function () {
+                        syncEditorTermsUi(appliedCats, appliedTags, appliedTagNames);
+                        if (finalFeaturedAttachId > 0) syncFeaturedMediaUi(finalFeaturedAttachId);
+                        return saveEditorDraftAfterComposer().catch(function(){ return false; });
+                    }).then(function(){
+                        return persistTermsForPost(appliedPostId, appliedCats, appliedTags, 0, appliedTagNames, finalFeaturedAttachId).catch(function () { return false; });
+                    }).then(function(){
+                        return refreshEditorPostStateFromServer(appliedPostId, appliedCats, appliedTags, appliedTagNames, finalFeaturedAttachId).catch(function () { return false; });
+                    }).then(function(){
+                        return saveEditorDraftAfterComposer().catch(function(){ return false; });
+                    }).then(function(){
+                        syncEditorTermsUi(appliedCats, appliedTags, appliedTagNames);
+                        if (finalFeaturedAttachId > 0) {
+                            syncFeaturedMediaUi(finalFeaturedAttachId);
+                            setTimeout(function () { syncFeaturedMediaUi(finalFeaturedAttachId); }, 600);
+                            setTimeout(function () { syncFeaturedMediaUi(finalFeaturedAttachId); }, 1800);
+                        }
+                        setStatus('Content inserted and saved. Reloading editor to refresh WordPress panels...', false);
+                        if (appliedPostId > 0 && res.data && res.data.edit_url) {
                             try {
                                 sessionStorage.setItem('cbia_ai_title_after_redirect', JSON.stringify({ title: titleForApply, post_id: appliedPostId }));
                             } catch (_eStoreRedirect) {}
-                            window.location.href = String(res.data.edit_url);
+                            try {
+                                suppressComposerUnloadPrompt = true;
+                                window.onbeforeunload = null;
+                            } catch (_eUnloadPrompt) {}
+                            setTimeout(function () {
+                                window.location.replace(String(res.data.edit_url));
+                            }, 300);
                             return;
                         }
+                        setStatus('Content inserted and saved in the editor.', false);
                         closeComposerModal();
                         setTimeout(function () { try { closeComposerModal(); } catch (_e1) {} }, 80);
                         setTimeout(function () { try { closeComposerModalFallback(); } catch (_e2) {} }, 260);

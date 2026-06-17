@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CBIAStudio BlogFlow with AI
  * Description: Base edition of CBIAStudio BlogFlow with AI for WordPress.
- * Version: 2.0.5
+ * Version: 2.0.6
  * Text Domain: cbiastudio-blogflow-ai
  * Domain Path: /languages
  *
@@ -15,7 +15,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.0.5');
+if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.0.6');
 if (!defined('CBIA_BASE_PLUGIN_FILE')) define('CBIA_BASE_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_BASE_PLUGIN_DIR')) define('CBIA_BASE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_BASE_PLUGIN_URL')) define('CBIA_BASE_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -24,7 +24,7 @@ if (!defined('CBIA_TEXT_DOMAIN')) define('CBIA_TEXT_DOMAIN', 'cbiastudio-blogflo
 if (!defined('CBIA_EDITION')) define('CBIA_EDITION', 'base');
 if (!defined('CBIA_PRO_UPGRADE_URL_DEFAULT')) define('CBIA_PRO_UPGRADE_URL_DEFAULT', 'https://cbia-studio.lemonsqueezy.com/checkout');
 
-// Compatibilidad con el core compartido (nombres histÃ³ricos)
+// Compatibilidad con el core compartido (nombres histÃƒÂ³ricos)
 if (!defined('CBIA_VERSION')) define('CBIA_VERSION', CBIA_BASE_VERSION);
 if (!defined('CBIA_PLUGIN_FILE')) define('CBIA_PLUGIN_FILE', CBIA_BASE_PLUGIN_FILE);
 if (!defined('CBIA_PLUGIN_DIR')) define('CBIA_PLUGIN_DIR', CBIA_BASE_PLUGIN_DIR);
@@ -122,7 +122,7 @@ if (!function_exists('cbia_log')) {
 		$log = (string) get_option(CBIA_OPTION_LOG, '');
 		$log = $log ? ($log . "\n" . $line) : $line;
 
-		// Mantener el log con un tamaÃ±o razonable (Ãºltimos ~2000 lÃ­neas)
+		// Mantener el log con un tamaÃƒÂ±o razonable (ÃƒÂºltimos ~2000 lÃƒÂ­neas)
 		$lines = explode("\n", $log);
 		if (count($lines) > 2000) {
 			$lines = array_slice($lines, -2000);
@@ -189,7 +189,7 @@ if (!function_exists('cbia_get_default_settings')) {
 			'google_location'       => '',
 			'google_service_account_json' => '',
 
-			// Longitud / imÃ¡genes
+			// Longitud / imÃƒÂ¡genes
 			'post_length_variant'   => 'medium',
 			'images_limit'          => 1,
 			// CAMBIO: prompt recomendado/legado (compatibilidad)
@@ -210,7 +210,7 @@ if (!function_exists('cbia_get_default_settings')) {
 			'responses_max_output_tokens' => 6000,
 			'image_request_delay'   => 2,
 
-			// CategorÃ­as/Tags
+			// CategorÃƒÂ­as/Tags
 			'default_category'      => 'News',
 			'keywords_to_categories'=> "", // lines: "Category: kw1, kw2"
 			'default_tags'          => "", // tags permitidas separadas por comas
@@ -311,11 +311,11 @@ if (function_exists('cbia_register_core_hooks')) {
 }
 
 /**
- * Admin: menÃº + tabs
+ * Admin: menÃƒÂº + tabs
  */
 add_action('admin_menu', function () {
 	if (class_exists('CBIA_Admin_Router')) {
-		// El router nuevo registra su propio menÃº.
+		// El router nuevo registra su propio menÃƒÂº.
 		return;
 	}
 	add_menu_page(

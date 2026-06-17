@@ -270,6 +270,9 @@ if (!function_exists('cbia_blog_handle_post')) {
             }
 
             $settings['publication_interval'] = max(1, intval($post_unslashed['publication_interval'] ?? 5));
+            if (array_key_exists('blog_posts_per_event', $post_unslashed)) {
+                $settings['blog_posts_per_event'] = max(1, min(5, intval($post_unslashed['blog_posts_per_event'] ?? 1)));
+            }
             $settings['enable_cron_fill'] = !empty($post_unslashed['enable_cron_fill']) ? 1 : 0;
 
             update_option('cbia_settings', $settings, false);
@@ -504,7 +507,9 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
             return array('done'=>true,'processed'=>0);
         }
 
-        $max_per_run = max(1, (int)$max_per_run);
+        $max_per_run = function_exists('cbia_blog_get_posts_per_event')
+            ? cbia_blog_get_posts_per_event(array('blog_posts_per_event' => $max_per_run))
+            : max(1, min(5, (int)$max_per_run));
         $processed_this_run = 0;
 
         foreach ($queue as $i => $title) {
@@ -587,6 +592,16 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
     }
 }
 
+if (!function_exists('cbia_blog_get_posts_per_event')) {
+    function cbia_blog_get_posts_per_event($settings = null) {
+        if (!is_array($settings)) {
+            $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
+        }
+        $value = isset($settings['blog_posts_per_event']) ? (int)$settings['blog_posts_per_event'] : 1;
+        return max(1, min(5, $value));
+    }
+}
+
 /* =========================================================
    =================== ACTION: RUN GENERATION ===============
    ========================================================= */
@@ -595,7 +610,9 @@ if (!function_exists('cbia_run_generate_blogs')) {
         cbia_log_message("[DEBUG] cbia_run_generate_blogs called.");
         cbia_log_message("[INFO] Starting blog generation (checkpoint)...");
 
-        $max_per_run = max(1, (int)$max_per_run);
+        $max_per_run = function_exists('cbia_blog_get_posts_per_event')
+            ? cbia_blog_get_posts_per_event(array('blog_posts_per_event' => $max_per_run))
+            : max(1, min(5, (int)$max_per_run));
         $run_id = function_exists('wp_generate_uuid4') ? wp_generate_uuid4() : uniqid('cbia-blog-', true);
         if (!cbia_blog_generation_acquire_lock($run_id)) {
             $lock = cbia_blog_generation_get_lock();
@@ -631,7 +648,9 @@ if (!function_exists('cbia_run_generate_blogs')) {
 if (!has_action('cbia_generation_event')) {
     add_action('cbia_generation_event', function () {
         cbia_log_message('[INFO] Running batch in event (background)...');
-        cbia_run_generate_blogs(1);
+        $max_per_run = function_exists('cbia_blog_get_posts_per_event') ? cbia_blog_get_posts_per_event() : 1;
+        cbia_log_message('[INFO] Background event chunk size: ' . (int)$max_per_run . ' post(s).');
+        cbia_run_generate_blogs($max_per_run);
         cbia_log_message('[INFO] Background event finished.');
     });
 }

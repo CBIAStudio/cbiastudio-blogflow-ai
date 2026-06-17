@@ -585,7 +585,7 @@ if (!function_exists('cbia_runtime_include_faq_enabled')) {
 if (!function_exists('cbia_strip_faq_section')) {
     function cbia_strip_faq_section($html) {
         $html = (string)$html;
-        $faq_h2 = '/<h2[^>]*>\s*(FAQ|Preguntas frecuentes|Preguntas Frecuentes|Frequently Asked Questions|Questions? ?FAQs?|FAQs)\s*<\/h2>/i';
+        $faq_h2 = '/<h2[^>]*>\s*(FAQ|FAQs|Frequently Asked Questions|Questions? ?FAQs?|Preguntas frecuentes|Perguntas frequentes|Perguntas e respostas|D[uú]vidas frequentes|Questions fr[eé]quentes|Foire aux questions|H[aä]ufig gestellte Fragen|Domande frequenti|Veelgestelde vragen)\s*<\/h2>/iu';
 
         while (preg_match($faq_h2, $html, $m, PREG_OFFSET_CAPTURE)) {
             $start = (int)$m[0][1];

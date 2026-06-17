@@ -90,6 +90,9 @@ if (!class_exists('CBIA_Pro_Blog_Service')) {
                 if (array_key_exists('publication_interval', $post_unslashed)) {
                     $settings['publication_interval'] = max(1, intval($post_unslashed['publication_interval'] ?? 5));
                 }
+                if (array_key_exists('blog_posts_per_event', $post_unslashed)) {
+                    $settings['blog_posts_per_event'] = max(1, min(5, intval($post_unslashed['blog_posts_per_event'] ?? 1)));
+                }
                 if (array_key_exists('enable_cron_fill', $post_unslashed)) {
                     $settings['enable_cron_fill'] = !empty($post_unslashed['enable_cron_fill']) ? 1 : 0;
                 } elseif (array_key_exists('publication_interval', $post_unslashed) || array_key_exists('first_publication_datetime_local', $post_unslashed)) {

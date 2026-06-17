@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.0.5
+# CBIAStudio BlogFlow with AI (WordPress) v2.0.6
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,17 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.0.6
+- Create with AI insert applies content, featured image, categories, tags, and Yoast metadata through a server-side save and controlled editor refresh.
+- The controlled editor refresh suppresses the browser leave-page prompt after a successful plugin-driven insert.
+- FAQ disabled state is enforced in preview and final insert, including localized FAQ headings.
+- Blog batch chunk size is configurable to reduce checkpoint resumes when hosting timeouts allow larger chunks.
+- OpenAI temperature handling avoids unsupported temperature parameters for GPT-5 reasoning-style models.
+
+## Comparative: 2.0.6 vs 2.0.5
+- Keeps the 2.0.5 metadata/scheduling/Oldposts persistence fixes.
+- Adds FAQ-off hardening, controlled insert refresh, configurable batch chunk size, and GPT-5 temperature compatibility.
 
 ## What's New in 2.0.5
 - Composer insert now persists content, featured image, categories, tags, and Yoast metadata by saving the editor draft after the server-side apply step.
@@ -19,6 +30,7 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 ## Comparative: 2.0.5 vs 2.0.4
 - Keeps the 2.0.4 header-safety patch that prevents premature output and WordPress header warnings.
 - Adds workflow persistence fixes for editor metadata, deterministic scheduling intervals, and Oldposts queue/selection reliability.
+
 ## What's New in 2.0.3
 - Fixed `Complete missing` in the editor so missing internal images are applied to the final post HTML, not only generated in memory.
 - Hardened first-time editor insertion so content, featured image, categories, tags, and Yoast metadata persist when the draft did not exist yet.

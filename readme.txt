@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 6.9
-Stable tag: 2.0.5
+Stable tag: 2.0.6
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -156,6 +156,14 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Changelog ==
 
+= 2.0.6 =
+* Create with AI insert now applies content, featured image, categories, tags, and Yoast metadata through a server-side save and controlled editor refresh.
+* The controlled editor refresh suppresses the browser leave-page prompt after a successful plugin-driven insert.
+* FAQ disabled state is enforced in preview and final insert, including localized FAQ headings such as Portuguese, German, French, Italian, and Dutch variants.
+* Blog batch chunk size is configurable so long runs can process more than one post per event when hosting timeouts allow it.
+* OpenAI temperature handling now avoids sending unsupported temperature parameters to GPT-5 reasoning-style models.
+* Comparison vs 2.0.5: keeps the previous metadata/scheduling/Oldposts fixes and adds FAQ-off hardening, controlled insert refresh, configurable batch chunk size, and GPT-5 temperature compatibility.
+
 = 2.0.5 =
 * Composer insert now persists content, featured image, categories, tags, and Yoast metadata by saving the editor draft after the server-side apply step.
 * Reopening the editor composer now prefers the saved post state so existing content/images/SEO can be modified safely.
@@ -163,6 +171,7 @@ This plugin can connect to third-party AI services only when the site administra
 * Update Older Posts now keeps multi-card selection stable, sends exact selected IDs to the AJAX queue, and marks running/processed cards visually.
 * Spanish translations updated for scheduling controls, Oldposts labels, and changed runtime messages.
 * Comparison vs 2.0.4: keeps the header-safety patch and adds editor metadata persistence, deterministic scheduling intervals, and Oldposts queue/selection reliability.
+
 = 2.0.4 =
 * Removed UTF-8 BOM from PHP entrypoint/router files to prevent premature output and WordPress 'Cannot modify header information' warnings during redirects or admin actions.
 * Regenerated clean release packages after byte-level validation.
@@ -209,8 +218,12 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Upgrade Notice ==
 
+= 2.0.6 =
+Recommended workflow update. Fixes controlled Create with AI insert refresh, FAQ-off enforcement, configurable batch chunk size, and GPT-5 temperature compatibility.
+
 = 2.0.5 =
 Recommended workflow reliability update. Fixes Create with AI insert persistence, Blog scheduling intervals, and Update Older Posts card selection/queue execution.
+
 = 2.0.4 =
 Recommended header-safety update. Fixes premature PHP output that can break redirects or admin actions on some hosts.
 

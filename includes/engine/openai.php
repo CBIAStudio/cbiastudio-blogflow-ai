@@ -13,6 +13,13 @@ if (!function_exists('cbia_attach_attempts_meta')) {
 	}
 }
 
+if (!function_exists('cbia_openai_model_supports_temperature')) {
+	function cbia_openai_model_supports_temperature($model) {
+		$model = strtolower(trim((string)$model));
+		return !in_array($model, array('gpt-5', 'gpt-5-mini', 'gpt-5-nano'), true);
+	}
+}
+
 if (!function_exists('cbia_get_current_provider_key')) {
 	function cbia_get_current_provider_key(): string {
 		if (!empty($GLOBALS['cbia_force_text_provider'])) {
@@ -371,8 +378,10 @@ if (!function_exists('cbia_openai_responses_call')) {
 					'input' => $input,
 					// Max output prudente (luego el prompt manda)
 					'max_output_tokens' => $max_out,
-					'temperature' => $temperature,
 				];
+				if (cbia_openai_model_supports_temperature($model)) {
+					$payload['temperature'] = $temperature;
+				}
 
 				$resp = wp_remote_post('https://api.openai.com/v1/responses', [
 					'headers' => cbia_http_headers_openai($api_key),
@@ -494,9 +503,11 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 					'model' => $model,
 					'input' => $input,
 					'max_output_tokens' => $max_out,
-					'temperature' => $temperature,
 					'stream' => true,
 				];
+				if (cbia_openai_model_supports_temperature($model)) {
+					$payload['temperature'] = $temperature;
+				}
 
 				$acc_text = '';
 				$last_usage = ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0];

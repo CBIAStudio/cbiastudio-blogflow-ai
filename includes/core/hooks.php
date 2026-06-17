@@ -3223,10 +3223,11 @@ if (!function_exists('cbia_ajax_preview_article')) {
             ? (string) wp_unslash($_POST['blog_prompt_custom_instructions'])
             : '';
 
+        $composer_mode = isset($_POST['composer_mode']) ? absint(wp_unslash($_POST['composer_mode'])) : 0;
         $payload = array(
             'title' => isset($_POST['title']) ? sanitize_text_field(wp_unslash($_POST['title'])) : '',
             'preview_mode' => isset($_POST['preview_mode']) ? sanitize_key((string)wp_unslash($_POST['preview_mode'])) : 'fast',
-            'composer_mode' => isset($_POST['composer_mode']) ? absint(wp_unslash($_POST['composer_mode'])) : 0,
+            'composer_mode' => $composer_mode,
             'current_post_id' => isset($_POST['current_post_id']) ? absint(wp_unslash($_POST['current_post_id'])) : 0,
             'images_limit' => isset($_POST['images_limit']) ? absint(wp_unslash($_POST['images_limit'])) : 3,
             'internal_image_style' => isset($_POST['internal_image_style']) ? sanitize_key((string)wp_unslash($_POST['internal_image_style'])) : '',
@@ -3235,7 +3236,7 @@ if (!function_exists('cbia_ajax_preview_article')) {
             'blog_prompt_mode' => isset($_POST['blog_prompt_mode']) ? sanitize_key((string)wp_unslash($_POST['blog_prompt_mode'])) : '',
             'blog_prompt_profile' => isset($_POST['blog_prompt_profile']) ? sanitize_key((string)wp_unslash($_POST['blog_prompt_profile'])) : 'discover_editorial',
             'post_length_variant' => isset($_POST['post_length_variant']) ? sanitize_key((string)wp_unslash($_POST['post_length_variant'])) : 'medium',
-            'include_faq' => isset($_POST['include_faq']) ? absint(wp_unslash($_POST['include_faq'])) : 1,
+            'include_faq' => isset($_POST['include_faq']) ? absint(wp_unslash($_POST['include_faq'])) : ($composer_mode ? 0 : 1),
             'include_practical_examples' => isset($_POST['include_practical_examples']) ? absint(wp_unslash($_POST['include_practical_examples'])) : 0,
             'openai_temperature' => ($openai_temperature_raw !== '') ? (float) str_replace(',', '.', $openai_temperature_raw) : null,
             'blog_prompt_custom_instructions' => function_exists('cbia_prompt_sanitize_custom_instructions')
@@ -3320,10 +3321,11 @@ if (!function_exists('cbia_ajax_preview_article_stream')) {
         $blog_prompt_custom_raw = isset($_GET['blog_prompt_custom_instructions'])
             ? (string) wp_unslash($_GET['blog_prompt_custom_instructions'])
             : '';
+        $composer_mode = isset($_GET['composer_mode']) ? absint(wp_unslash($_GET['composer_mode'])) : 0;
         $payload = array(
             'title' => isset($_GET['title']) ? sanitize_text_field(wp_unslash($_GET['title'])) : '',
             'preview_mode' => isset($_GET['preview_mode']) ? sanitize_key((string)wp_unslash($_GET['preview_mode'])) : 'fast',
-            'composer_mode' => isset($_GET['composer_mode']) ? absint(wp_unslash($_GET['composer_mode'])) : 0,
+            'composer_mode' => $composer_mode,
             'current_post_id' => isset($_GET['current_post_id']) ? absint(wp_unslash($_GET['current_post_id'])) : 0,
             'images_limit' => isset($_GET['images_limit']) ? absint(wp_unslash($_GET['images_limit'])) : 3,
             'internal_image_style' => isset($_GET['internal_image_style']) ? sanitize_key((string)wp_unslash($_GET['internal_image_style'])) : '',
@@ -3332,7 +3334,7 @@ if (!function_exists('cbia_ajax_preview_article_stream')) {
             'blog_prompt_mode' => isset($_GET['blog_prompt_mode']) ? sanitize_key((string)wp_unslash($_GET['blog_prompt_mode'])) : '',
             'blog_prompt_profile' => isset($_GET['blog_prompt_profile']) ? sanitize_key((string)wp_unslash($_GET['blog_prompt_profile'])) : 'discover_editorial',
             'post_length_variant' => isset($_GET['post_length_variant']) ? sanitize_key((string)wp_unslash($_GET['post_length_variant'])) : 'medium',
-            'include_faq' => isset($_GET['include_faq']) ? absint(wp_unslash($_GET['include_faq'])) : 1,
+            'include_faq' => isset($_GET['include_faq']) ? absint(wp_unslash($_GET['include_faq'])) : ($composer_mode ? 0 : 1),
             'include_practical_examples' => isset($_GET['include_practical_examples']) ? absint(wp_unslash($_GET['include_practical_examples'])) : 0,
             'openai_temperature' => ($openai_temperature_raw !== '') ? (float) str_replace(',', '.', $openai_temperature_raw) : null,
             // En SSE aceptamos solo instrucciones compactas para no crecer demasiado la URL.
@@ -4032,6 +4034,7 @@ if (!function_exists('cbia_ajax_ai_composer_apply_yoast_meta')) {
         if (!$post_id || !current_user_can('edit_post', $post_id)) {
             wp_send_json_error(array('message' => __('Unauthorized', 'cbiastudio-blogflow-ai')), 403);
         }
+        $featured_attach_id = isset($_POST['featured_attach_id']) ? absint(wp_unslash($_POST['featured_attach_id'])) : 0;
 
         $focus = isset($_POST['focus_keyphrase']) ? sanitize_text_field((string)wp_unslash($_POST['focus_keyphrase'])) : '';
         $metad = isset($_POST['meta_description']) ? sanitize_text_field((string)wp_unslash($_POST['meta_description'])) : '';
@@ -4259,6 +4262,7 @@ if (!function_exists('cbia_ajax_ai_composer_apply_terms')) {
             }
         }
         $tag_names = array_values(array_unique($tag_names));
+        $featured_attach_id = isset($_POST['featured_attach_id']) ? absint(wp_unslash($_POST['featured_attach_id'])) : 0;
 
         if (!empty($cat_ids)) {
             wp_set_post_categories($post_id, $cat_ids, false);
@@ -4269,6 +4273,14 @@ if (!function_exists('cbia_ajax_ai_composer_apply_terms')) {
         } elseif (!empty($tag_names)) {
             wp_set_post_terms($post_id, $tag_names, 'post_tag', false);
         }
+        if ($featured_attach_id > 0) {
+            set_post_thumbnail($post_id, $featured_attach_id);
+            update_post_meta($featured_attach_id, '_cbia_keep_preview_media', '1');
+            wp_update_post(array(
+                'ID' => (int)$featured_attach_id,
+                'post_parent' => (int)$post_id,
+            ));
+        }
         clean_object_term_cache((int)$post_id, 'post');
         if (function_exists('cbia_yoast_try_reindex_post')) {
             cbia_yoast_try_reindex_post((int)$post_id);
@@ -4277,17 +4289,18 @@ if (!function_exists('cbia_ajax_ai_composer_apply_terms')) {
         if (function_exists('cbia_log')) {
             $cats_txt = empty($cat_ids) ? '-' : implode(',', array_map('intval', $cat_ids));
             $tags_txt = empty($tag_ids) ? '-' : implode(',', array_map('intval', $tag_ids));
-            $log_fingerprint = md5((string)$post_id . '|' . (string)$cats_txt . '|' . (string)$tags_txt);
+            $log_fingerprint = md5((string)$post_id . '|' . (string)$cats_txt . '|' . (string)$tags_txt . '|' . (string)$featured_attach_id);
             $log_key = 'cbia_terms_sync_log_' . (int)$post_id . '_' . $log_fingerprint;
             if (!get_transient($log_key)) {
                 set_transient($log_key, 1, 30);
                 cbia_log(sprintf(
-                    'Composer terms sync: post=%d cats=%d(%s) tags=%d(%s)',
+                    'Composer terms/media sync: post=%d cats=%d(%s) tags=%d(%s) featured=%d',
                     (int)$post_id,
                     count($cat_ids),
                     (string)$cats_txt,
                     count($tag_ids),
-                    (string)$tags_txt
+                    (string)$tags_txt,
+                    (int)$featured_attach_id
                 ), 'INFO');
             }
         }
@@ -4297,6 +4310,7 @@ if (!function_exists('cbia_ajax_ai_composer_apply_terms')) {
             'categories' => array_values(array_map('intval', wp_get_post_categories($post_id, array('fields' => 'ids')))),
             'tags' => array_values(array_map('intval', wp_get_post_terms($post_id, 'post_tag', array('fields' => 'ids')))),
             'tag_names' => array_values(array_map('sanitize_text_field', wp_get_post_terms($post_id, 'post_tag', array('fields' => 'names')))),
+            'featured_attach_id' => (int)get_post_thumbnail_id($post_id),
         ));
     }
 }
@@ -4312,6 +4326,7 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
         $focus = isset($_POST['focus_keyphrase']) ? sanitize_text_field((string)wp_unslash($_POST['focus_keyphrase'])) : '';
         $metad = isset($_POST['meta_description']) ? sanitize_text_field((string)wp_unslash($_POST['meta_description'])) : '';
         $post_language = isset($_POST['post_language']) ? sanitize_text_field((string)wp_unslash($_POST['post_language'])) : '';
+        $include_faq = isset($_POST['include_faq']) ? absint(wp_unslash($_POST['include_faq'])) : 1;
         $internal_image_style = isset($_POST['internal_image_style']) ? sanitize_key((string)wp_unslash($_POST['internal_image_style'])) : '';
         if (!in_array($internal_image_style, array('banner', 'normal'), true)) {
             $internal_image_style = '';
@@ -4326,6 +4341,9 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
             $html = cbia_normalize_faq_heading_for_language($html, $post_language);
         } elseif (function_exists('cbia_normalize_faq_heading')) {
             $html = cbia_normalize_faq_heading($html);
+        }
+        if (!$include_faq && function_exists('cbia_strip_faq_section')) {
+            $html = cbia_strip_faq_section($html);
         }
 
         if ($internal_image_style !== '' && $internal_images_enabled) {
@@ -4362,11 +4380,16 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
             if (!current_user_can('edit_post', $post_id)) {
                 wp_send_json_error(array('message' => __('Unauthorized', 'cbiastudio-blogflow-ai')), 403);
             }
-            $result = wp_update_post(array(
+            $update_postarr = array(
                 'ID' => $post_id,
                 'post_title' => $title,
                 'post_content' => $html,
-            ), true);
+            );
+            $existing_post = get_post((int)$post_id);
+            if ($existing_post instanceof WP_Post && $existing_post->post_status === 'auto-draft') {
+                $update_postarr['post_status'] = 'draft';
+            }
+            $result = wp_update_post($update_postarr, true);
             if (is_wp_error($result)) {
                 wp_send_json_error(array('message' => $result->get_error_message()), 500);
             }
@@ -4855,6 +4878,10 @@ if (!function_exists('cbia_ajax_start_generation')) {
             $settings['publication_interval'] = max(1, intval($post_unslashed['publication_interval'] ?? 5));
             $settings_updated = true;
         }
+        if (array_key_exists('blog_posts_per_event', $post_unslashed)) {
+            $settings['blog_posts_per_event'] = max(1, min(5, intval($post_unslashed['blog_posts_per_event'] ?? 1)));
+            $settings_updated = true;
+        }
         $simple_runtime_fields = array(
             'post_length_variant' => 'key',
             'post_language' => 'text',
@@ -4949,10 +4976,10 @@ if (!function_exists('cbia_ajax_start_generation')) {
             cbia_log_message('[INFO] START AJAX received.');
         }
 
-        // Ejecuta 1 tanda inmediata para que haya log visible.
-        $max_per_run = 1;
+        // Ejecuta una tanda inmediata para que haya log visible.
+        $max_per_run = function_exists('cbia_blog_get_posts_per_event') ? cbia_blog_get_posts_per_event($settings) : max(1, min(5, intval($settings['blog_posts_per_event'] ?? 1)));
         if (function_exists('cbia_log_message')) {
-            cbia_log_message('[INFO] START: running first immediate chunk (to avoid "nothing happens").');
+            cbia_log_message('[INFO] START: running first immediate chunk (chunk_size=' . (int)$max_per_run . ') to avoid "nothing happens".');
         }
         try {
             $result = $blog_service

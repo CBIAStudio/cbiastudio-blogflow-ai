@@ -142,6 +142,7 @@ if ($first_dt !== '') {
 }
 
 $interval = max(1, intval($settings['publication_interval'] ?? 5));
+$posts_per_event = max(1, min(5, intval($settings['blog_posts_per_event'] ?? 1)));
 $enable_cron = !empty($settings['enable_cron_fill']);
 
 $cp_status = __('idle', 'cbiastudio-blogflow-ai');
@@ -585,6 +586,17 @@ echo '</select>';
 <input type="number" min="1" name="publication_interval" value="<?php echo esc_attr($interval); ?>" style="width:90px;" />
 </td>
 </tr>
+<tr>
+<th><?php echo esc_html__('Posts per background chunk', 'cbiastudio-blogflow-ai'); ?></th>
+<td>
+<select name="blog_posts_per_event" style="width:160px;">
+    <?php foreach (array(1, 2, 3, 5) as $chunk_size) : ?>
+        <option value="<?php echo esc_attr((string)$chunk_size); ?>" <?php selected($posts_per_event, $chunk_size); ?>><?php echo esc_html((string)$chunk_size); ?></option>
+    <?php endforeach; ?>
+</select>
+<p class="description"><?php echo esc_html__('Controls how many posts are generated before the checkpoint resumes. Higher values reduce resumes but increase timeout risk; use 1 on shared hosting and 2-3 on stable servers.', 'cbiastudio-blogflow-ai'); ?></p>
+</td>
+</tr>
 </table>
 
 <h3 style="margin-top:20px;"><?php echo esc_html__('CRON: fill pending', 'cbiastudio-blogflow-ai'); ?></h3>
@@ -873,6 +885,7 @@ echo '</select>';
     const btn = document.getElementById('cbia_btn_generate');
     const firstPublicationInput = document.querySelector('input[name="first_publication_datetime_local"]');
     const publicationIntervalInput = document.querySelector('input[name="publication_interval"]');
+    const postsPerEventInput = document.querySelector('[name="blog_posts_per_event"]');
     const manualTitlesInput = document.querySelector('textarea[name="manual_titles"]');
     if(btn){
         btn.addEventListener('click', function(){
@@ -889,6 +902,7 @@ echo '</select>';
             if (csvUrlInput) fd.append('csv_url', csvUrlInput.value || '');
             if (firstPublicationInput) fd.append('first_publication_datetime_local', firstPublicationInput.value || '');
             if (publicationIntervalInput) fd.append('publication_interval', publicationIntervalInput.value || '');
+            if (postsPerEventInput) fd.append('blog_posts_per_event', postsPerEventInput.value || '1');
             [
                 'post_length_variant','post_language','images_limit','image_style','include_faq','include_practical_examples',
                 'default_author_id','default_category','keywords_to_categories','default_tags',
