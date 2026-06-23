@@ -861,6 +861,11 @@ echo '</select>';
 
     const cpStatus = document.getElementById('cbia_cp_status');
     const cpLast = document.getElementById('cbia_cp_last');
+    let blogWatchdogTimer = null;
+    let blogWatchdogLastIdx = null;
+    let blogWatchdogLastProgressAt = Date.now();
+    let blogWatchdogKickInFlight = false;
+    const blogWatchdogIdleMs = 5 * 60 * 1000;
 
     function refreshCheckpoint(){
         if (typeof ajaxurl === 'undefined') return;
@@ -873,6 +878,7 @@ echo '</select>';
             if (!data || !data.success || !data.data) return;
             if (cpStatus) cpStatus.textContent = data.data.status || '';
             if (cpLast) cpLast.textContent = data.data.last || '';
+            observeBlogCheckpoint(data.data);
         })
         .catch(()=>{});
     }
@@ -887,15 +893,15 @@ echo '</select>';
     const publicationIntervalInput = document.querySelector('input[name="publication_interval"]');
     const postsPerEventInput = document.querySelector('[name="blog_posts_per_event"]');
     const manualTitlesInput = document.querySelector('textarea[name="manual_titles"]');
-    if(btn){
-        btn.addEventListener('click', function(){
-            btn.disabled = true;
-            const old = btn.textContent;
-            btn.textContent = <?php echo wp_json_encode(__('Starting...', 'cbiastudio-blogflow-ai')); ?>;
 
+    function buildStartFormData(syncRuntimeSettings){
             const fd = new FormData();
             fd.append('action','cbia_start_generation');
             fd.append('_ajax_nonce', <?php echo wp_json_encode($ajax_nonce); ?>);
+            if (!syncRuntimeSettings) {
+                if (postsPerEventInput) fd.append('blog_posts_per_event', postsPerEventInput.value || '1');
+                return fd;
+            }
             const titleModeSelected = document.querySelector('input[name="title_input_mode"]:checked');
             if (titleModeSelected) fd.append('title_input_mode', titleModeSelected.value || 'manual');
             if (manualTitlesInput) fd.append('manual_titles', manualTitlesInput.value || '');
@@ -925,7 +931,60 @@ echo '</select>';
                     fd.set(name, el.value || '');
                 }
             });
+            return fd;
+    }
 
+    function startBlogWatchdog(){
+        if (blogWatchdogTimer || typeof ajaxurl === 'undefined') return;
+        blogWatchdogTimer = setInterval(refreshCheckpoint, 30000);
+        refreshCheckpoint();
+    }
+
+    function stopBlogWatchdog(){
+        if (!blogWatchdogTimer) return;
+        clearInterval(blogWatchdogTimer);
+        blogWatchdogTimer = null;
+    }
+
+    function observeBlogCheckpoint(status){
+        if (!status) return;
+        const pending = !!status.pending;
+        const idx = parseInt(status.idx || 0, 10);
+        const total = parseInt(status.total || 0, 10);
+        const lockAge = parseInt(status.lock_age || 0, 10);
+        if (!pending || (total > 0 && idx >= total)) {
+            stopBlogWatchdog();
+            blogWatchdogLastIdx = null;
+            return;
+        }
+        if (blogWatchdogLastIdx === null || idx !== blogWatchdogLastIdx) {
+            blogWatchdogLastIdx = idx;
+            blogWatchdogLastProgressAt = Date.now();
+            return;
+        }
+        const hasActiveLock = lockAge > 0 && lockAge < (15 * 60);
+        if (hasActiveLock || blogWatchdogKickInFlight || Date.now() - blogWatchdogLastProgressAt < blogWatchdogIdleMs) {
+            return;
+        }
+        blogWatchdogKickInFlight = true;
+        fetch(ajaxurl, { method:'POST', credentials:'same-origin', body: buildStartFormData(false) })
+            .then(r => r.text())
+            .then(() => {
+                blogWatchdogLastProgressAt = Date.now();
+                refreshLog();
+                refreshCheckpoint();
+            })
+            .catch(()=>{})
+            .finally(() => { blogWatchdogKickInFlight = false; });
+    }
+
+    if(btn){
+        btn.addEventListener('click', function(){
+            btn.disabled = true;
+            const old = btn.textContent;
+            btn.textContent = <?php echo wp_json_encode(__('Starting...', 'cbiastudio-blogflow-ai')); ?>;
+
+            const fd = buildStartFormData(true);
             fetch(ajaxurl, { method:'POST', credentials:'same-origin', body: fd })
             .then(r => r.text())
             .then(text => {
@@ -933,6 +992,7 @@ echo '</select>';
                 try { data = JSON.parse(text); } catch(e) { data = null; }
                 if(data && data.success){
                     btn.textContent = <?php echo wp_json_encode(__('Running (check log)...', 'cbiastudio-blogflow-ai')); ?>;
+                    startBlogWatchdog();
                     setTimeout(()=>{ btn.disabled=false; btn.textContent=old; }, 4000);
                 }else{
                     const msg = (data && data.data && (data.data.msg || data.data.error))
@@ -954,6 +1014,7 @@ echo '</select>';
             });
         });
     }
+    startBlogWatchdog();
 
     const postLanguage = document.querySelector('select[name="post_language"]');
     const legacyPrompt = document.querySelector('textarea[name="legacy_full_prompt"]');

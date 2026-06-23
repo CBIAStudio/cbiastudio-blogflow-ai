@@ -555,7 +555,7 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                                     $row_date_ts = 0;
                                 }
                                 ?>
-                                <label
+                                <div
                                     class="<?php echo esc_attr('cbia-oldv2-post' . ($row_selected ? ' is-selected' : '')); ?>"
                                     data-post-id="<?php echo esc_attr((string)$row_id); ?>"
                                     data-post-title="<?php echo esc_attr(strtolower($row_title)); ?>"
@@ -604,7 +604,7 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                                             </span>
                                         </div>
                                     </div>
-                                </label>
+                                </div>
                             <?php endforeach; ?>
                         </div>
                     <?php else: ?>
@@ -1227,6 +1227,15 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                 const postActionLink = e.target && e.target.closest ? e.target.closest('.cbia-oldv2-post-link') : null;
                 const buttonLike = e.target && e.target.closest ? e.target.closest('button,a') : null;
                 if (postActionLink || buttonLike) return;
+                const directCheck = e.target && e.target.closest ? e.target.closest('.cbia-oldposts-check') : null;
+                if (directCheck && pickerGrid.contains(directCheck)) {
+                    window.setTimeout(function(){
+                        const directCard = directCheck.closest('.cbia-oldv2-post');
+                        if (directCard) directCard.classList.toggle('is-selected', !!directCheck.checked);
+                        syncIdsFromPicker();
+                    }, 0);
+                    return;
+                }
                 const card = e.target && e.target.closest ? e.target.closest('.cbia-oldv2-post') : null;
                 if (!card || !pickerGrid.contains(card)) return;
                 const chk = card.querySelector('.cbia-oldposts-check');

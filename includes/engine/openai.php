@@ -656,6 +656,7 @@ if (!function_exists('cbia_generate_image_openai')) {
 					'prompt' => $prompt,
 					'n'      => 1,
 					'size'   => $size,
+					'quality'=> 'high',
 				];
 
 				$resp = wp_remote_post('https://api.openai.com/v1/images/generations', [
@@ -792,6 +793,7 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 					'prompt' => (string)$prompt,
 					'n'      => 1,
 					'size'   => $size,
+					'quality'=> 'high',
 				];
 
 				$resp = wp_remote_post('https://api.openai.com/v1/images/generations', [

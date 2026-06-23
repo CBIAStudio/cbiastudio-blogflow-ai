@@ -115,6 +115,9 @@ echo '<div class="cbia-view-container">';
 if (isset($_GET['saved'])) {
     echo '<div class="notice notice-success is-dismissible" style="background: rgba(34, 211, 238, 0.1); border-color: var(--abb-cyan); color: var(--abb-cyan);"><p>' . esc_html__('Settings saved successfully.', 'cbiastudio-blogflow-ai') . '</p></div>';
 }
+if (isset($_GET['keys_saved'])) {
+    echo '<div class="notice notice-success is-dismissible" style="background: rgba(34, 211, 238, 0.1); border-color: var(--abb-cyan); color: var(--abb-cyan);"><p>' . esc_html__('API keys saved successfully.', 'cbiastudio-blogflow-ai') . '</p></div>';
+}
 // CAMBIO: avisos por API key faltante
 $warnings = get_transient('cbia_config_warnings');
 if (!empty($warnings) && is_array($warnings)) {
@@ -318,6 +321,11 @@ foreach ($image_providers_list as $pkey => $pdef) {
     echo '</div>';
 }
 echo '</div>'; // api row imagen
+
+echo '<div class="abb-actions-row" style="margin-top:10px;">';
+echo '<button type="submit" name="cbia_config_save_api_keys" value="1" class="button button-secondary">' . esc_html__('Save API keys', 'cbiastudio-blogflow-ai') . '</button>';
+echo '<span class="description" style="margin-left:10px;">' . esc_html__('Saves provider keys without changing prompts, lengths, categories or other generation settings.', 'cbiastudio-blogflow-ai') . '</span>';
+echo '</div>';
 
 echo '<p class="description" style="margin-top:8px;">' . esc_html__('You can use different providers for text and image generation. DeepSeek is available only for text.', 'cbiastudio-blogflow-ai') . '</p>';
 
@@ -570,4 +578,3 @@ echo '</div>';
 }
 
 cbia_render_view_config();
-

@@ -2274,6 +2274,24 @@
         var streamContentSeeded = false;
         var suppressComposerUnloadPrompt = false;
 
+        function refreshKeyModalRefs() {
+            keyModal = document.getElementById('cbia-ai-key-modal') || keyModal;
+            keyTitle = document.getElementById('cbia-ai-key-title') || keyTitle;
+            keyHelp = document.getElementById('cbia-ai-key-help') || keyHelp;
+            keyProviderSelect = document.getElementById('cbia-ai-key-provider') || keyProviderSelect;
+            keyModelSelect = document.getElementById('cbia-ai-key-model') || keyModelSelect;
+            keyInput = document.getElementById('cbia-ai-key-input') || keyInput;
+            keySave = document.getElementById('cbia-ai-key-save') || keySave;
+            keyTest = document.getElementById('cbia-ai-key-test') || keyTest;
+            keyCancel = document.getElementById('cbia-ai-key-cancel') || keyCancel;
+            keyClose = document.getElementById('cbia-ai-key-close') || keyClose;
+            keyStatus = document.getElementById('cbia-ai-key-status') || keyStatus;
+            if (keyModal && keyModal.parentNode !== document.body) {
+                try { document.body.appendChild(keyModal); } catch (_eMoveKeyModal) {}
+            }
+            return !!keyModal;
+        }
+
         try {
             window.addEventListener('beforeunload', function (evt) {
                 if (!suppressComposerUnloadPrompt) return;
@@ -3754,6 +3772,19 @@
                 });
         }
 
+        function openKeyModalForConfigurationError(message) {
+            var text = String(message || '').toLowerCase();
+            if (text.indexOf('image provider') !== -1 || text.indexOf('image api') !== -1) {
+                openKeyModal('image');
+                return true;
+            }
+            if (text.indexOf('text provider') !== -1 || text.indexOf('text api') !== -1 || text.indexOf('api key') !== -1) {
+                openKeyModal('text');
+                return true;
+            }
+            return false;
+        }
+
         function updateKeyHelpText() {
             if (!keyHelp) return;
             var provider = activeKeyProvider || 'openai';
@@ -3835,6 +3866,7 @@
         }
 
         function openKeyModal(scope) {
+            refreshKeyModalRefs();
             if (!keyModal) return;
             activeKeyScope = scope === 'image' ? 'image' : 'text';
             activeKeyProvider = activeKeyScope === 'image' ? (aiCfg.imageProvider || 'openai') : (aiCfg.textProvider || 'openai');
@@ -3856,15 +3888,18 @@
                 setKeyStatus('', false);
             }
             keyModal.style.display = 'flex';
+            document.body.classList.add('cbia-modal-open');
             if (keyInput) keyInput.focus();
         }
 
         function closeKeyModal() {
+            refreshKeyModalRefs();
             if (!keyModal) return;
             keyModal.style.display = 'none';
         }
 
         function saveKeyFromModal() {
+            refreshKeyModalRefs();
             if (keyProviderSelect && keyProviderSelect.value) {
                 activeKeyProvider = String(keyProviderSelect.value || activeKeyProvider || 'openai');
             }
@@ -4308,6 +4343,23 @@
             var hidden = document.getElementById('post_ID');
             var legacy = parseInt((hidden && hidden.value) ? hidden.value : 0, 10);
             return legacy > 0 ? legacy : 0;
+        }
+
+        function isCurrentEditorNewPost() {
+            try {
+                if (window.wp && window.wp.data && window.wp.data.select) {
+                    var editor = window.wp.data.select('core/editor');
+                    if (editor && typeof editor.isEditedPostNew === 'function') {
+                        return !!editor.isEditedPostNew();
+                    }
+                    if (editor && typeof editor.getCurrentPost === 'function') {
+                        var post = editor.getCurrentPost();
+                        var status = String((post && post.status) || '').toLowerCase();
+                        if (status === 'auto-draft') return true;
+                    }
+                }
+            } catch (_eNewPost) {}
+            return (parseInt(resolveCurrentPostId() || 0, 10) || 0) <= 0;
         }
 
         function setEffectivePostIdForComposer(postId) {
@@ -4817,6 +4869,7 @@
         }
 
         function testKeyFromModal() {
+            refreshKeyModalRefs();
             if (keyProviderSelect && keyProviderSelect.value) {
                 activeKeyProvider = String(keyProviderSelect.value || activeKeyProvider || 'openai');
             }
@@ -5232,7 +5285,9 @@
                         generateBtn.disabled = false;
                         if (improveTextBtn) improveTextBtn.disabled = false;
                         if (insertBtn) insertBtn.disabled = !canUsePreviewHtml(finalHtml);
-                        setStatus((err && err.message) ? err.message : 'Could not validate configured API.', true);
+                        var validationMessage = (err && err.message) ? err.message : 'Could not validate configured API.';
+                        setStatus(validationMessage, true);
+                        openKeyModalForConfigurationError(validationMessage);
                     });
         }
 
@@ -5240,7 +5295,8 @@
                 var params = new URLSearchParams();
                 params.append('action', 'cbia_ai_composer_apply_full_post');
                 params.append('_ajax_nonce', nonce);
-                params.append('post_id', String(parseInt(payload && payload.post_id ? payload.post_id : 0, 10) || resolveCurrentPostId() || 0));
+                var forceNewDraft = !!(payload && payload.force_new_draft);
+                params.append('post_id', String(forceNewDraft ? 0 : (parseInt(payload && payload.post_id ? payload.post_id : 0, 10) || resolveCurrentPostId() || 0)));
                 params.append('title', String(payload.title || ''));
                 params.append('content_html', String(payload.content_html || ''));
                 params.append('focus_keyphrase', String(payload.focus_keyphrase || ''));
@@ -5338,17 +5394,37 @@
                 ensureEditorPostIdForApply().then(function (effectivePostId) {
                     applyEffectivePostId = parseInt(effectivePostId || 0, 10) || 0;
                     return applyFullPostAtomic({
-                    post_id: effectivePostId,
-                    title: titleForApply,
-                    content_html: htmlCandidate,
-                    focus_keyphrase: focusForApply,
-                    meta_description: metadForApply,
-                    category_ids: finalCategoryIds,
-                    tag_ids: finalTagIds,
-                    tag_names: finalTagNames,
-                    featured_attach_id: finalFeaturedAttachId
-                    ,internal_image_style: modeForApply
-                });
+                        post_id: effectivePostId,
+                        title: titleForApply,
+                        content_html: htmlCandidate,
+                        focus_keyphrase: focusForApply,
+                        meta_description: metadForApply,
+                        category_ids: finalCategoryIds,
+                        tag_ids: finalTagIds,
+                        tag_names: finalTagNames,
+                        featured_attach_id: finalFeaturedAttachId,
+                        internal_image_style: modeForApply
+                    }).then(function (res) {
+                        var message = String((res && res.data && res.data.message) ? res.data.message : '').toLowerCase();
+                        if (res && res.success) return res;
+                        if (applyEffectivePostId > 0 && isCurrentEditorNewPost() && message.indexOf('unauthorized') !== -1) {
+                            setStatus('WordPress rejected the provisional draft ID. Creating a fresh draft...', false);
+                            return applyFullPostAtomic({
+                                post_id: 0,
+                                force_new_draft: true,
+                                title: titleForApply,
+                                content_html: htmlCandidate,
+                                focus_keyphrase: focusForApply,
+                                meta_description: metadForApply,
+                                category_ids: finalCategoryIds,
+                                tag_ids: finalTagIds,
+                                tag_names: finalTagNames,
+                                featured_attach_id: finalFeaturedAttachId,
+                                internal_image_style: modeForApply
+                            });
+                        }
+                        return res;
+                    });
                 }).then(function (res) {
                     if (!res || !res.success || !res.data) {
                         throw new Error((res && res.data && res.data.message) ? res.data.message : 'Could not apply content to the post.');
@@ -5655,14 +5731,23 @@
             } else if (target.id === 'cbia-ai-complete-missing') {
                 e.preventDefault();
                 onCompleteMissingClick();
+            } else if (target.id === 'cbia-ai-config-text') {
+                e.preventDefault();
+                openKeyModal('text');
+            } else if (target.id === 'cbia-ai-config-image') {
+                e.preventDefault();
+                openKeyModal('image');
             }
         });
 
         // Extra fallback for editors/plugins that stop bubbling on button clicks.
         document.addEventListener('click', function (e) {
-            var target = e.target && e.target.closest ? e.target.closest('#cbia-ai-generate, #cbia-ai-improve-text, #cbia-ai-insert, #cbia-ai-complete-missing') : null;
-            if (!target || !root.contains(target)) return;
+            var target = e.target && e.target.closest ? e.target.closest('#cbia-ai-generate, #cbia-ai-improve-text, #cbia-ai-insert, #cbia-ai-complete-missing, #cbia-ai-config-text, #cbia-ai-config-image, #cbia-ai-key-save, #cbia-ai-key-test, #cbia-ai-key-cancel, #cbia-ai-key-close') : null;
+            if (!target) return;
+            var isKeyModalButton = target.id === 'cbia-ai-key-save' || target.id === 'cbia-ai-key-test' || target.id === 'cbia-ai-key-cancel' || target.id === 'cbia-ai-key-close';
+            if (!isKeyModalButton && !root.contains(target)) return;
             e.preventDefault();
+            if (e.stopPropagation) e.stopPropagation();
             if (target.id === 'cbia-ai-generate') {
                 onGenerateClick();
             } else if (target.id === 'cbia-ai-improve-text') {
@@ -5671,6 +5756,16 @@
                 onInsertClick();
             } else if (target.id === 'cbia-ai-complete-missing') {
                 onCompleteMissingClick();
+            } else if (target.id === 'cbia-ai-config-text') {
+                openKeyModal('text');
+            } else if (target.id === 'cbia-ai-config-image') {
+                openKeyModal('image');
+            } else if (target.id === 'cbia-ai-key-save') {
+                saveKeyFromModal();
+            } else if (target.id === 'cbia-ai-key-test') {
+                testKeyFromModal();
+            } else if (target.id === 'cbia-ai-key-cancel' || target.id === 'cbia-ai-key-close') {
+                closeKeyModal();
             }
         }, true);
 

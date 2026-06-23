@@ -51,6 +51,18 @@ if (!function_exists('cbia_providers_get_settings')) {
 
 if (!function_exists('cbia_providers_save_settings')) {
     function cbia_providers_save_settings(array $settings): void {
+        $current = get_option('cbia_provider_settings', array());
+        $current = is_array($current) ? $current : array();
+        if (!empty($current['providers']) && is_array($current['providers']) && !empty($settings['providers']) && is_array($settings['providers'])) {
+            foreach ($settings['providers'] as $provider => $provider_settings) {
+                if (!is_array($provider_settings)) continue;
+                $new_key = trim((string)($provider_settings['api_key'] ?? ''));
+                $old_key = trim((string)($current['providers'][$provider]['api_key'] ?? ''));
+                if ($new_key === '' && $old_key !== '') {
+                    $settings['providers'][$provider]['api_key'] = $old_key;
+                }
+            }
+        }
         update_option('cbia_provider_settings', $settings);
     }
 }

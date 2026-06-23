@@ -451,9 +451,21 @@ if (!function_exists('cbia_prompt_search_intent_line')) {
     }
 }
 
-if (!function_exists('cbia_prompt_build_length_policy_block')) {
-    function cbia_prompt_build_length_policy_block(array $opts, $language = ''): string {
+if (!function_exists('cbia_prompt_number_label')) {
+    function cbia_prompt_number_label($number, $language = ''): string {
+        $number = (int)$number;
         $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        if ($is_spanish) {
+            $map = array(3 => 'Tres', 4 => 'Cuatro', 5 => 'Cinco');
+        } else {
+            $map = array(3 => 'Three', 4 => 'Four', 5 => 'Five');
+        }
+        return (string)($map[$number] ?? (string)$number);
+    }
+}
+
+if (!function_exists('cbia_prompt_length_shape')) {
+    function cbia_prompt_length_shape(array $opts): array {
         $variant = sanitize_key((string)($opts['post_length_variant'] ?? 'medium'));
         if (!in_array($variant, array('short', 'medium', 'long'), true)) {
             $variant = 'medium';
@@ -461,36 +473,39 @@ if (!function_exists('cbia_prompt_build_length_policy_block')) {
         $faq = !empty($opts['include_faq']);
 
         if ($variant === 'short') {
-            if ($faq) {
-                return $is_spanish
-                    ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 950-1100 palabras reales (minimo 950).\n- Distribucion obligatoria: apertura 150-190; cada bloque principal 150-180; cada respuesta FAQ 45-55; cierre 80-100.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
-                    : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 950-1100 real words (minimum 950).\n- Mandatory distribution: opening 150-190; each main block 150-180; each FAQ answer 45-55; closing 80-100.\n- This policy overrides any previous range in this prompt.";
-            }
-            return $is_spanish
-                ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 950-1100 palabras reales (minimo 950).\n- Distribucion obligatoria: apertura 180-220; cada bloque principal 220-260; cierre 100-130.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
-                : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 950-1100 real words (minimum 950).\n- Mandatory distribution: opening 180-220; each main block 220-260; closing 100-130.\n- This policy overrides any previous range in this prompt.";
+            return $faq
+                ? array('target' => '950-1100', 'min' => 950, 'opening' => '140-170', 'blocks' => 3, 'block' => '140-165', 'faq' => '42-50', 'closing' => '70-90')
+                : array('target' => '950-1100', 'min' => 950, 'opening' => '150-180', 'blocks' => 4, 'block' => '160-190', 'faq' => '0', 'closing' => '90-110');
         }
 
         if ($variant === 'long') {
-            if ($faq) {
-                return $is_spanish
-                    ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 2000-2200 palabras reales (minimo 2000).\n- Distribucion obligatoria: apertura 280-320; cada bloque principal 340-370; cada respuesta FAQ 90-100; cierre 170-200.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
-                    : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 2000-2200 real words (minimum 2000).\n- Mandatory distribution: opening 280-320; each main block 340-370; each FAQ answer 90-100; closing 170-200.\n- This policy overrides any previous range in this prompt.";
-            }
-            return $is_spanish
-                ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 2000-2200 palabras reales (minimo 2000).\n- Distribucion obligatoria: apertura 320-360; cada bloque principal 500-540; cierre 190-220.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
-                : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 2000-2200 real words (minimum 2000).\n- Mandatory distribution: opening 320-360; each main block 500-540; closing 190-220.\n- This policy overrides any previous range in this prompt.";
+            return $faq
+                ? array('target' => '2000-2200', 'min' => 2000, 'opening' => '250-300', 'blocks' => 4, 'block' => '290-330', 'faq' => '80-95', 'closing' => '140-180')
+                : array('target' => '2000-2200', 'min' => 2000, 'opening' => '260-310', 'blocks' => 5, 'block' => '320-360', 'faq' => '0', 'closing' => '170-210');
         }
+
+        return $faq
+            ? array('target' => '1800-2000', 'min' => 1800, 'opening' => '220-260', 'blocks' => 4, 'block' => '260-310', 'faq' => '65-80', 'closing' => '120-150')
+            : array('target' => '1800-2000', 'min' => 1800, 'opening' => '220-260', 'blocks' => 5, 'block' => '250-300', 'faq' => '0', 'closing' => '150-190');
+    }
+}
+
+if (!function_exists('cbia_prompt_build_length_policy_block')) {
+    function cbia_prompt_build_length_policy_block(array $opts, $language = ''): string {
+        $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        $faq = !empty($opts['include_faq']);
+        $shape = cbia_prompt_length_shape($opts);
+        $blocks = (int)$shape['blocks'];
 
         if ($faq) {
             return $is_spanish
-                ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 1800-2000 palabras reales (minimo 1800).\n- Distribucion obligatoria: apertura 260-300; cada bloque principal 320-340; cada respuesta FAQ 80-88; cierre 160-180.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
-                : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 1800-2000 real words (minimum 1800).\n- Mandatory distribution: opening 260-300; each main block 320-340; each FAQ answer 80-88; closing 160-180.\n- This policy overrides any previous range in this prompt.";
+                ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: {$shape['target']} palabras reales (minimo {$shape['min']}).\n- Distribucion obligatoria: apertura {$shape['opening']}; {$blocks} bloques principales de {$shape['block']} palabras; cada respuesta FAQ {$shape['faq']}; cierre {$shape['closing']}.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+                : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: {$shape['target']} real words (minimum {$shape['min']}).\n- Mandatory distribution: opening {$shape['opening']}; {$blocks} main blocks of {$shape['block']} words; each FAQ answer {$shape['faq']}; closing {$shape['closing']}.\n- This policy overrides any previous range in this prompt.";
         }
 
         return $is_spanish
-            ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: 1800-2000 palabras reales (minimo 1800).\n- Distribucion obligatoria: apertura 300-340; cada bloque principal 450-490; cierre 170-190.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
-            : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: 1800-2000 real words (minimum 1800).\n- Mandatory distribution: opening 300-340; each main block 450-490; closing 170-190.\n- This policy overrides any previous range in this prompt.";
+            ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: {$shape['target']} palabras reales (minimo {$shape['min']}).\n- Distribucion obligatoria: apertura {$shape['opening']}; {$blocks} bloques principales de {$shape['block']} palabras; cierre {$shape['closing']}.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+            : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: {$shape['target']} real words (minimum {$shape['min']}).\n- Mandatory distribution: opening {$shape['opening']}; {$blocks} main blocks of {$shape['block']} words; closing {$shape['closing']}.\n- This policy overrides any previous range in this prompt.";
     }
 }
 
@@ -500,44 +515,13 @@ if (!function_exists('cbia_prompt_profile_discover_editorial')) {
         $variant = sanitize_key((string)($opts['post_length_variant'] ?? 'medium'));
         if (!in_array($variant, array('short', 'medium', 'long'), true)) $variant = 'medium';
         $faq = !empty($opts['include_faq']);
-
-        if ($variant === 'short') {
-            if ($faq) {
-                $opening_range = '150-190';
-                $block_range = '150-180';
-                $faq_range = '45-55';
-                $closing_range = '80-100';
-            } else {
-                $opening_range = '180-220';
-                $block_range = '220-260';
-                $faq_range = '120-150';
-                $closing_range = '100-130';
-            }
-        } elseif ($variant === 'long') {
-            if ($faq) {
-                $opening_range = '280-320';
-                $block_range = '340-370';
-                $faq_range = '90-100';
-                $closing_range = '170-200';
-            } else {
-                $opening_range = '320-360';
-                $block_range = '500-540';
-                $faq_range = '120-150';
-                $closing_range = '190-220';
-            }
-        } else {
-            if ($faq) {
-                $opening_range = '260-300';
-                $block_range = '320-340';
-                $faq_range = '80-88';
-                $closing_range = '160-180';
-            } else {
-                $opening_range = '300-340';
-                $block_range = '450-490';
-                $faq_range = '120-150';
-                $closing_range = '170-190';
-            }
-        }
+        $shape = cbia_prompt_length_shape($opts);
+        $opening_range = (string)$shape['opening'];
+        $block_range = (string)$shape['block'];
+        $faq_range = (string)$shape['faq'];
+        $closing_range = (string)$shape['closing'];
+        $block_count = (int)$shape['blocks'];
+        $block_count_label = cbia_prompt_number_label($block_count, $language);
 
         $lines = array(
             $is_spanish ? 'TONO Y ESTILO' : 'TONE AND STYLE',
@@ -562,7 +546,7 @@ if (!function_exists('cbia_prompt_profile_discover_editorial')) {
         $lines[] = $is_spanish ? ('   - Extension total: ' . $opening_range . ' palabras entre ambos parrafos.') : ('   - Total length: ' . $opening_range . ' words across both paragraphs.');
         $lines[] = $is_spanish ? '   - Objetivo: 70-110 palabras por parrafo.' : '   - Target 70-110 words per paragraph.';
         $lines[] = '';
-        $lines[] = $is_spanish ? '2) Tres bloques principales, cada uno con:' : '2) Three main blocks, each with:';
+        $lines[] = $is_spanish ? ('2) ' . $block_count_label . ' bloques principales, cada uno con:') : ('2) ' . $block_count_label . ' main blocks, each with:');
         $lines[] = $is_spanish ? '   - (Opcional) un subtitulo usando la etiqueta <h3> SOLO si aporta claridad real.' : '   - (Optional) a subtitle using <h3> ONLY if it adds real clarity.';
         $lines[] = $is_spanish ? ('   - Extension total: ' . $block_range . ' palabras por bloque.') : ('   - Total length: ' . $block_range . ' words per block.');
         $lines[] = $is_spanish ? '   - Divide cada bloque en 2 o 3 parrafos usando <p>.' : '   - Split each block into 2 or 3 paragraphs using <p>.';
@@ -597,6 +581,13 @@ if (!function_exists('cbia_prompt_profile_discover_editorial')) {
 if (!function_exists('cbia_prompt_profile_seo_balanced')) {
     function cbia_prompt_profile_seo_balanced(array $opts, $language = ''): string {
         $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        $shape = cbia_prompt_length_shape($opts);
+        $opening_range = (string)$shape['opening'];
+        $block_range = (string)$shape['block'];
+        $faq_range = (string)$shape['faq'];
+        $closing_range = (string)$shape['closing'];
+        $block_count = (int)$shape['blocks'];
+        $block_count_label = cbia_prompt_number_label($block_count, $language);
         $lines = array(
             $is_spanish ? 'TONO Y ESTILO' : 'TONE AND STYLE',
             $is_spanish ? '- Claro, util y profesional.' : '- Clear, useful and professional.',
@@ -616,11 +607,11 @@ if (!function_exists('cbia_prompt_profile_seo_balanced')) {
         $lines[] = $is_spanish ? '1) Un encabezado usando la etiqueta <h2>' : '1) One heading using <h2>';
         $lines[] = $is_spanish ? '   Apertura usando 2 parrafos con la etiqueta <p>.' : '   Opening section using 2 paragraphs with <p>.';
         $lines[] = $is_spanish ? '   - La primera respuesta util debe aparecer dentro de los primeros 120-160 palabras.' : '   - The first useful answer should appear within the first 120-160 words.';
-        $lines[] = $is_spanish ? '   - Extension total: 170-220 palabras entre ambos parrafos.' : '   - Total length: 170-220 words across both paragraphs.';
+        $lines[] = $is_spanish ? ('   - Extension total: ' . $opening_range . ' palabras entre ambos parrafos.') : ('   - Total length: ' . $opening_range . ' words across both paragraphs.');
         $lines[] = '';
-        $lines[] = $is_spanish ? '2) Tres bloques principales, cada uno con:' : '2) Three main blocks, each with:';
+        $lines[] = $is_spanish ? ('2) ' . $block_count_label . ' bloques principales, cada uno con:') : ('2) ' . $block_count_label . ' main blocks, each with:');
         $lines[] = $is_spanish ? '   - Subtitulo <h3> si ayuda a escanear mejor la respuesta.' : '   - A <h3> subtitle if it improves scanability.';
-        $lines[] = $is_spanish ? '   - 220-290 palabras por bloque.' : '   - 220-290 words per block.';
+        $lines[] = $is_spanish ? ('   - ' . $block_range . ' palabras por bloque.') : ('   - ' . $block_range . ' words per block.');
         $lines[] = $is_spanish ? '   - 2 o 3 parrafos usando <p>.' : '   - 2 or 3 paragraphs using <p>.';
         $lines[] = $is_spanish ? '   - Prioriza definiciones claras, respuesta practica y subtitulos semanticos.' : '   - Prioritize clear definitions, practical answers and semantic subheadings.';
         $lines[] = $is_spanish ? '   - Las listas (<ul>/<li>) se permiten cuando mejoren claridad o comparacion.' : '   - Lists (<ul>/<li>) are allowed when they improve clarity or comparison.';
@@ -629,11 +620,15 @@ if (!function_exists('cbia_prompt_profile_seo_balanced')) {
             $lines[] = $is_spanish ? '3) Seccion de preguntas frecuentes:' : '3) FAQ section:';
             $lines[] = $is_spanish ? '   - Un encabezado <h2> escrito en {IDIOMA_POST} como equivalente natural de "Preguntas frecuentes".' : '   - One <h2> heading written in {IDIOMA_POST} as the natural equivalent of "Frequently Asked Questions".';
             $lines[] = $is_spanish ? '   - Seis preguntas frecuentes centradas en dudas de busqueda reales.' : '   - Six FAQs focused on real search-driven questions.';
-            $lines[] = $is_spanish ? '   - Cada pregunta en <h3> y cada respuesta en 2 parrafos cortos con <p>.' : '   - Each question in <h3> and each answer in 2 short paragraphs with <p>.';
+            $lines[] = $is_spanish ? ('   - Cada pregunta en <h3> y cada respuesta en 2 parrafos cortos con <p>, con un total de ' . $faq_range . ' palabras.') : ('   - Each question in <h3> and each answer in 2 short paragraphs with <p>, with a total of ' . $faq_range . ' words.');
         } else {
             $lines[] = '';
             $lines[] = $is_spanish ? '3) NO incluir seccion de preguntas frecuentes (FAQ).' : '3) DO NOT include an FAQ section.';
         }
+        $lines[] = '';
+        $lines[] = $is_spanish ? '4) Cierre obligatorio:' : '4) Mandatory closing:';
+        $lines[] = $is_spanish ? '   - Un encabezado final en <h2> que resuma la recomendacion principal.' : '   - One final <h2> heading that summarizes the main recommendation.';
+        $lines[] = $is_spanish ? ('   - Extension total del cierre: ' . $closing_range . ' palabras en 2 parrafos <p>.') : ('   - Total closing length: ' . $closing_range . ' words in 2 <p> paragraphs.');
         $lines[] = '';
         $lines[] = $is_spanish ? 'REGLAS DE LEGIBILIDAD' : 'READABILITY RULES';
         $lines[] = $is_spanish ? '- Frases claras, directas y orientadas a resolver dudas.' : '- Use clear, direct sentences aimed at solving questions.';
@@ -646,6 +641,13 @@ if (!function_exists('cbia_prompt_profile_seo_balanced')) {
 if (!function_exists('cbia_prompt_profile_how_to')) {
     function cbia_prompt_profile_how_to(array $opts, $language = ''): string {
         $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
+        $shape = cbia_prompt_length_shape($opts);
+        $opening_range = (string)$shape['opening'];
+        $block_range = (string)$shape['block'];
+        $faq_range = (string)$shape['faq'];
+        $closing_range = (string)$shape['closing'];
+        $block_count = (int)$shape['blocks'];
+        $block_count_label = cbia_prompt_number_label($block_count, $language);
         $lines = array(
             $is_spanish ? 'TONO Y ESTILO' : 'TONE AND STYLE',
             $is_spanish ? '- Practico, claro y accionable.' : '- Practical, clear and actionable.',
@@ -665,11 +667,11 @@ if (!function_exists('cbia_prompt_profile_how_to')) {
         $lines[] = $is_spanish ? '1) Un encabezado usando la etiqueta <h2>' : '1) One heading using <h2>';
         $lines[] = $is_spanish ? '   Apertura usando 2 parrafos con la etiqueta <p>.' : '   Opening section using 2 paragraphs with <p>.';
         $lines[] = $is_spanish ? '   - Debe dejar claro que aprendera o resolvera el lector.' : '   - It must make clear what the reader will learn or solve.';
-        $lines[] = $is_spanish ? '   - Extension total: 160-210 palabras.' : '   - Total length: 160-210 words.';
+        $lines[] = $is_spanish ? ('   - Extension total: ' . $opening_range . ' palabras.') : ('   - Total length: ' . $opening_range . ' words.');
         $lines[] = '';
-        $lines[] = $is_spanish ? '2) Tres bloques practicos, cada uno con:' : '2) Three practical blocks, each with:';
+        $lines[] = $is_spanish ? ('2) ' . $block_count_label . ' bloques practicos, cada uno con:') : ('2) ' . $block_count_label . ' practical blocks, each with:');
         $lines[] = $is_spanish ? '   - Subtitulo <h3> si mejora claridad o secuencia.' : '   - A <h3> subtitle if it improves clarity or sequence.';
-        $lines[] = $is_spanish ? '   - 220-290 palabras por bloque.' : '   - 220-290 words per block.';
+        $lines[] = $is_spanish ? ('   - ' . $block_range . ' palabras por bloque.') : ('   - ' . $block_range . ' words per block.');
         $lines[] = $is_spanish ? '   - 2 o 3 parrafos con <p>.' : '   - 2 or 3 paragraphs with <p>.';
         $lines[] = $is_spanish ? '   - Explica pasos, decisiones, errores comunes o recomendaciones practicas.' : '   - Explain steps, decisions, common mistakes or practical recommendations.';
         $lines[] = $is_spanish ? '   - Las listas (<ul>/<li>) se permiten si ayudan a ordenar pasos o consejos.' : '   - Lists (<ul>/<li>) are allowed if they help order steps or advice.';
@@ -678,11 +680,15 @@ if (!function_exists('cbia_prompt_profile_how_to')) {
             $lines[] = $is_spanish ? '3) Seccion de preguntas frecuentes:' : '3) FAQ section:';
             $lines[] = $is_spanish ? '   - Un encabezado <h2> escrito en {IDIOMA_POST} como equivalente natural de "Preguntas frecuentes".' : '   - One <h2> heading written in {IDIOMA_POST} as the natural equivalent of "Frequently Asked Questions".';
             $lines[] = $is_spanish ? '   - Seis preguntas frecuentes orientadas a dudas practicas y de aplicacion.' : '   - Six FAQs focused on practical and application-oriented doubts.';
-            $lines[] = $is_spanish ? '   - Cada respuesta en 2 parrafos cortos con <p>.' : '   - Each answer in 2 short paragraphs with <p>.';
+            $lines[] = $is_spanish ? ('   - Cada respuesta en 2 parrafos cortos con <p>, con un total de ' . $faq_range . ' palabras.') : ('   - Each answer in 2 short paragraphs with <p>, with a total of ' . $faq_range . ' words.');
         } else {
             $lines[] = '';
             $lines[] = $is_spanish ? '3) NO incluir seccion de preguntas frecuentes (FAQ).' : '3) DO NOT include an FAQ section.';
         }
+        $lines[] = '';
+        $lines[] = $is_spanish ? '4) Cierre obligatorio:' : '4) Mandatory closing:';
+        $lines[] = $is_spanish ? '   - Un encabezado final en <h2> con una recomendacion accionable.' : '   - One final <h2> heading with an actionable recommendation.';
+        $lines[] = $is_spanish ? ('   - Extension total del cierre: ' . $closing_range . ' palabras en 2 parrafos <p>.') : ('   - Total closing length: ' . $closing_range . ' words in 2 <p> paragraphs.');
         $lines[] = '';
         $lines[] = $is_spanish ? 'REGLAS DE LEGIBILIDAD' : 'READABILITY RULES';
         $lines[] = $is_spanish ? '- Prioriza claridad y accion frente a teoria innecesaria.' : '- Prioritize clarity and action over unnecessary theory.';

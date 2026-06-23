@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 6.9
-Stable tag: 2.0.6
+Stable tag: 2.0.7
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -156,6 +156,16 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Changelog ==
 
+= 2.0.7 =
+* Hardened API key persistence so partial Blog/runtime saves no longer overwrite saved provider secrets with empty values.
+* Added a dedicated "Save API keys" action and rehydrated provider keys from both settings stores so model/configuration saves cannot clear existing keys.
+* Blog checkpoint handling now pauses on blocking provider/API errors without consuming queued titles, so progress reflects real created/skipped items.
+* Usage cost recalculation now updates already stored OpenAI image usage rows to the current high-quality image pricing assumptions.
+* Fixed Gutenberg Create with AI insert when WordPress reports a provisional new-post ID by retrying safely through the draft-creation path.
+* Restored Configure text API / Configure image API modal behavior in Gutenberg, including Save key and Test connection fallbacks.
+* Fixed Update Older Posts card selection when clicking directly on the checkbox square.
+* Comparison vs 2.0.6: keeps the controlled insert, FAQ-off, batch chunk and GPT-5 temperature fixes while adding API-key persistence, isolated API-key saving, checkpoint error pausing, stored usage recalculation, Gutenberg insert fallback, API modal recovery, and Oldposts checkbox reliability.
+
 = 2.0.6 =
 * Create with AI insert now applies content, featured image, categories, tags, and Yoast metadata through a server-side save and controlled editor refresh.
 * The controlled editor refresh suppresses the browser leave-page prompt after a successful plugin-driven insert.
@@ -217,6 +227,9 @@ This plugin can connect to third-party AI services only when the site administra
 * Improved preview/create flows by returning real preview URLs for scheduled drafts and stabilizing admin-side usage rendering.
 
 == Upgrade Notice ==
+
+= 2.0.7 =
+Recommended reliability update. Fixes API key persistence during runtime saves, Gutenberg Create with AI insert authorization fallback, API key modal actions, stored Usage recalculation, and Oldposts checkbox selection.
 
 = 2.0.6 =
 Recommended workflow update. Fixes controlled Create with AI insert refresh, FAQ-off enforcement, configurable batch chunk size, and GPT-5 temperature compatibility.

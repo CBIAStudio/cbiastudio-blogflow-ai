@@ -96,11 +96,11 @@ if (!class_exists('CBIA_Costs_Service')) {
 
                 // Tarifa fija por imagen
                 $cost['use_image_flat_pricing'] = !empty($u['use_image_flat_pricing']) ? 1 : 0;
-                $cost['image_flat_usd_openai_mini'] = isset($u['image_flat_usd_openai_mini']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_mini']) : (float)($cost['image_flat_usd_openai_mini'] ?? ($cost['image_flat_usd_mini'] ?? 0.011));
+                $cost['image_flat_usd_openai_mini'] = isset($u['image_flat_usd_openai_mini']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_mini']) : (float)($cost['image_flat_usd_openai_mini'] ?? ($cost['image_flat_usd_mini'] ?? 0.052));
                 if ($cost['image_flat_usd_openai_mini'] < 0) $cost['image_flat_usd_openai_mini'] = 0.0;
-                $cost['image_flat_usd_openai_full'] = isset($u['image_flat_usd_openai_full']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_full']) : (float)($cost['image_flat_usd_openai_full'] ?? ($cost['image_flat_usd_full'] ?? 0.042));
+                $cost['image_flat_usd_openai_full'] = isset($u['image_flat_usd_openai_full']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_full']) : (float)($cost['image_flat_usd_openai_full'] ?? ($cost['image_flat_usd_full'] ?? 0.250));
                 if ($cost['image_flat_usd_openai_full'] < 0) $cost['image_flat_usd_openai_full'] = 0.0;
-                $cost['image_flat_usd_openai_v2'] = isset($u['image_flat_usd_openai_v2']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_v2']) : (float)($cost['image_flat_usd_openai_v2'] ?? $cost['image_flat_usd_openai_full']);
+                $cost['image_flat_usd_openai_v2'] = isset($u['image_flat_usd_openai_v2']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_v2']) : (float)($cost['image_flat_usd_openai_v2'] ?? 0.165);
                 if ($cost['image_flat_usd_openai_v2'] < 0) $cost['image_flat_usd_openai_v2'] = 0.0;
                 $cost['image_flat_usd_imagen3'] = isset($u['image_flat_usd_imagen3']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_imagen3']) : (float)($cost['image_flat_usd_imagen3'] ?? ($cost['image_flat_usd_mini'] ?? 0.040));
                 if ($cost['image_flat_usd_imagen3'] < 0) $cost['image_flat_usd_imagen3'] = 0.0;

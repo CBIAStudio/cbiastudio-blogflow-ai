@@ -22,11 +22,11 @@ $defaults = array(
     'cached_input_ratio' => 0.0, // 0..1
     // ImÃ¡genes: usar precio fijo por generaciÃ³n (recomendado)
     'use_image_flat_pricing' => 1,
-    'image_flat_usd_mini' => 0.011,
-    'image_flat_usd_full' => 0.042,
-    'image_flat_usd_openai_mini' => 0.011,
-    'image_flat_usd_openai_full' => 0.042,
-    'image_flat_usd_openai_v2' => 0.042,
+    'image_flat_usd_mini' => 0.052,
+    'image_flat_usd_full' => 0.250,
+    'image_flat_usd_openai_mini' => 0.052,
+    'image_flat_usd_openai_full' => 0.250,
+    'image_flat_usd_openai_v2' => 0.165,
     'image_flat_usd_imagen3' => 0.040,
     'image_flat_usd_imagen4' => 0.040,
     // Ajustes finos
@@ -221,7 +221,7 @@ if (is_array($calibration_info)) {
 <div class="notice notice-info" style="margin:8px 0 16px 0;">
 <p style="margin:6px 0;"><strong><?php echo esc_html__('Current calculation mode:', 'cbiastudio-blogflow-ai'); ?></strong> <code>REAL ONLY</code> uses modern rows in <code>_cbia_usage_rows</code>, supports legacy data from <code>_cbia_usage_calls</code> and <code>_cbia_image_calls</code>, and falls back to legacy token totals only if per-call details are missing.</p>
 <p style="margin:6px 0;"><strong><?php echo esc_html__('Scope:', 'cbiastudio-blogflow-ai'); ?></strong> "<?php echo esc_html__('Last N posts', 'cbiastudio-blogflow-ai'); ?>" checks exactly the last <code>N</code> posts by WordPress date. Increase <code>N</code> or run multiple batches if you need more history.</p>
-<p style="margin:6px 0;"><strong><?php echo esc_html__('Base rates:', 'cbiastudio-blogflow-ai'); ?></strong> Internal price tables were reviewed against official references on <code>2026-03-25</code> for OpenAI, Google Vertex AI and DeepSeek. Image pricing remains manually adjustable because official rates depend on model and, depending on provider, also quality or resolution.</p>
+<p style="margin:6px 0;"><strong><?php echo esc_html__('Base rates:', 'cbiastudio-blogflow-ai'); ?></strong> Internal price tables were reviewed against official references on <code>2026-06-19</code> for OpenAI, Google Vertex AI and DeepSeek. OpenAI image estimates use the current plugin size with high quality; image pricing remains manually adjustable because official rates depend on model, quality and resolution.</p>
 <p style="margin:6px 0;"><strong><?php echo esc_html__('Adjustment rule:', 'cbiastudio-blogflow-ai'); ?></strong> No hidden per-model multiplier is applied. Only the visible field <code><?php echo esc_html__('Total multiplier adjustment (REAL)', 'cbiastudio-blogflow-ai'); ?></code> affects the result.</p>
 <p style="margin:6px 0;"><strong><?php echo esc_html__('Failed attempts:', 'cbiastudio-blogflow-ai'); ?></strong> Realistic mode only charges for plausibly billable failures (timeouts, 5xx errors, empty responses, or local failure after provider response). Immediate rejections such as <code>401/403/404</code>, invalid model, or missing API key are not billed.</p>
 </div>
@@ -461,7 +461,7 @@ echo ($eur_total_est === null)
 </select>
 <p class="description">Active image provider: <code><?php echo esc_html($image_provider_current); ?></code>. This field acts as an estimate override if you want a manual fine tune.</p>
 <p class="description"><?php echo esc_html__('Fixed image prices (USD):', 'cbiastudio-blogflow-ai'); ?> OpenAI mini <input type="number" step="0.001" min="0" name="image_flat_usd_openai_mini" value="<?php echo esc_attr((string)$cost['image_flat_usd_openai_mini']); ?>" style="width:90px;" /> &nbsp;OpenAI full <input type="number" step="0.001" min="0" name="image_flat_usd_openai_full" value="<?php echo esc_attr((string)$cost['image_flat_usd_openai_full']); ?>" style="width:90px;" /> &nbsp;OpenAI v2 <input type="number" step="0.001" min="0" name="image_flat_usd_openai_v2" value="<?php echo esc_attr((string)$cost['image_flat_usd_openai_v2']); ?>" style="width:90px;" /></p>
-<p class="description">Preloaded OpenAI reference: GPT Image 1 Mini = 0.011 USD and GPT Image 1 = 0.042 USD per image at 1024x1024 medium quality. GPT Image 2 uses the OpenAI v2 field for manual tuning.</p>
+<p class="description">Preloaded OpenAI reference for current plugin image size 1536x1024 and high quality: GPT Image 1 Mini = 0.052 USD, GPT Image 1 = 0.250 USD and GPT Image 2 = 0.165 USD per image.</p>
 <p class="description">Google Imagen 3 <input type="number" step="0.001" min="0" name="image_flat_usd_imagen3" value="<?php echo esc_attr((string)$cost['image_flat_usd_imagen3']); ?>" style="width:90px;" /> &nbsp;Google Imagen 4 <input type="number" step="0.001" min="0" name="image_flat_usd_imagen4" value="<?php echo esc_attr((string)$cost['image_flat_usd_imagen4']); ?>" style="width:90px;" /></p>
 <p class="description">Current practical reference for Google Imagen: Imagen 3 = 0.04 USD per image, Imagen 4 = 0.04 USD per image, Imagen 4 Ultra = 0.06 USD per image. Adjust this here if your real flow uses another variant.</p>
 </td>

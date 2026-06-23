@@ -297,6 +297,11 @@
     padding: 10px 12px;
 }
 
+#cbia-ai-key-input.cbia-secret-input {
+    -webkit-text-security: disc;
+    font-family: monospace;
+}
+
 .cbia-content-card .button {
     min-height: 38px;
     border-radius: 11px;

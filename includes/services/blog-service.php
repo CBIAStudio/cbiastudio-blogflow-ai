@@ -343,20 +343,55 @@ if (!class_exists('CBIA_Pro_Blog_Service')) {
                 return array(
                     'status' => __('idle', 'cbiastudio-blogflow-ai'),
                     'last' => __('(no records)', 'cbiastudio-blogflow-ai'),
+                    'running' => false,
+                    'pending' => false,
+                    'idx' => 0,
+                    'total' => 0,
+                    'lock_age' => 0,
+                    'next_event' => 0,
                 );
             }
             $cp = cbia_checkpoint_get();
-            $status = (!empty($cp) && !empty($cp['running']))
+            $queue = (array)($cp['queue'] ?? array());
+            $idx = max(0, intval($cp['idx'] ?? 0));
+            $total = count($queue);
+            $running = !empty($cp) && !empty($cp['running']);
+            $paused_error = !empty($cp['paused_error']) ? (string)$cp['paused_error'] : '';
+            $pending = $running && $total > 0 && $idx < $total;
+            if ($paused_error !== '') {
+                $status = sprintf(
+                    /* translators: 1: current checkpoint index, 2: total queued posts, 3: error message */
+                    __('PAUSED | idx %1$d of %2$d | %3$s', 'cbiastudio-blogflow-ai'),
+                    $idx,
+                    $total,
+                    $paused_error
+                );
+            } else {
+                $status = (!empty($cp) && !empty($cp['running']))
                 ? sprintf(
                     /* translators: 1: current checkpoint index, 2: total queued posts */
                     __('RUNNING | idx %1$d of %2$d', 'cbiastudio-blogflow-ai'),
-                    intval($cp['idx'] ?? 0),
-                    count((array)($cp['queue'] ?? array()))
+                    $idx,
+                    $total
                 )
                 : __('idle', 'cbiastudio-blogflow-ai');
+            }
             $last = $this->get_last_scheduled_at();
             $last = $last ?: __('(no records)', 'cbiastudio-blogflow-ai');
-            return array('status' => $status, 'last' => $last);
+            $lock = function_exists('cbia_blog_generation_get_lock') ? cbia_blog_generation_get_lock() : array();
+            $lock_age = (!empty($lock['locked_at'])) ? max(0, time() - (int)$lock['locked_at']) : 0;
+            $next_event = function_exists('wp_next_scheduled') ? (int)wp_next_scheduled('cbia_generation_event') : 0;
+            return array(
+                'status' => $status,
+                'last' => $last,
+                'running' => $running,
+                'pending' => $pending,
+                'idx' => $idx,
+                'total' => $total,
+                'paused_error' => $paused_error,
+                'lock_age' => $lock_age,
+                'next_event' => $next_event,
+            );
         }
     }
 }

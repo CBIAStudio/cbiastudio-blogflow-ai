@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.0.6
+# CBIAStudio BlogFlow with AI (WordPress) v2.0.7
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,19 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.0.7
+- API key persistence hardened so partial Blog/runtime saves do not overwrite saved provider secrets with empty values.
+- A dedicated "Save API keys" action stores provider keys without touching prompts, length, categories, or other generation settings.
+- Blog checkpoints now pause on blocking provider/API errors without consuming queued titles.
+- Stored Usage rows for OpenAI image calls are recalculated to the current high-quality image pricing assumptions.
+- Gutenberg Create with AI insert now retries safely through draft creation when WordPress rejects a provisional new-post ID.
+- Configure text/image API buttons and Save/Test key actions work again even when Gutenberg moves the composer markup.
+- Update Older Posts card selection now works when clicking directly on the checkbox square.
+
+## Comparative: 2.0.7 vs 2.0.6
+- Keeps the 2.0.6 controlled insert, FAQ-off, configurable batch chunk and GPT-5 temperature fixes.
+- Adds API-key persistence hardening, isolated API-key saving, checkpoint error pausing, stored usage recalculation, Gutenberg insert fallback, API modal recovery, and Oldposts checkbox reliability.
 
 ## What's New in 2.0.6
 - Create with AI insert applies content, featured image, categories, tags, and Yoast metadata through a server-side save and controlled editor refresh.

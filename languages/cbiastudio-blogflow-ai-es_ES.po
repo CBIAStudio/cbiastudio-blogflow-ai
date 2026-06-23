@@ -6,7 +6,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: CBIAStudio BlogFlow with AI 2.0.6\n"
+"Project-Id-Version: CBIAStudio BlogFlow with AI 2.0.7\n"
 "Report-Msgid-Bugs-To: https://github.com/CBIAStudio/cbiastudio-blogflow-ai/issues\n"
 "POT-Creation-Date: 2026-04-01 12:10+0200\n"
 "PO-Revision-Date: 2026-02-18 08:28+0100\n"
@@ -2993,3 +2993,15 @@ msgstr "Preparando cola..."
 
 #~ msgid "When resetting images, also removes the featured image."
 #~ msgstr "Al hacer reset de imagenes, tambien borra la destacada"
+
+msgid "API keys saved successfully."
+msgstr "Claves API guardadas correctamente."
+
+msgid "Save API keys"
+msgstr "Guardar claves API"
+
+msgid "Saves provider keys without changing prompts, lengths, categories or other generation settings."
+msgstr "Guarda las claves de proveedores sin cambiar prompts, longitudes, categorias ni otros ajustes de generacion."
+
+msgid "PAUSED | idx %1$d of %2$d | %3$s"
+msgstr "PAUSADO | idx %1$d de %2$d | %3$s"

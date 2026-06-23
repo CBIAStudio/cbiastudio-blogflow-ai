@@ -470,6 +470,15 @@ if (!function_exists('cbia_schedule_generation_event')) {
 /* =========================================================
    =================== BATCH con CHECKPOINT =================
    ========================================================= */
+if (!function_exists('cbia_blog_should_pause_queue_on_error')) {
+    function cbia_blog_should_pause_queue_on_error($error): bool {
+        $error_l = strtolower(trim((string)$error));
+        if ($error_l === '') return true;
+        if (in_array($error_l, array('already exists', 'empty title'), true)) return false;
+        return true;
+    }
+}
+
 if (!function_exists('cbia_create_all_posts_checkpointed')) {
     function cbia_create_all_posts_checkpointed($incoming_titles=null, $max_per_run = 1){
 
@@ -483,10 +492,19 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
 
         $cp = cbia_checkpoint_get();
 
-        if (!$incoming_titles && !empty($cp) && !empty($cp['running']) && isset($cp['queue']) && is_array($cp['queue'])) {
+        $can_resume_checkpoint = !$incoming_titles
+            && !empty($cp)
+            && isset($cp['queue'])
+            && is_array($cp['queue'])
+            && (!empty($cp['running']) || !empty($cp['paused_error']));
+
+        if ($can_resume_checkpoint) {
             cbia_log_message("[INFO] Resuming from checkpoint: ".count($cp['queue'])." in queue, idx=".intval($cp['idx'] ?? 0).".");
             $queue = $cp['queue'];
             $idx   = intval($cp['idx'] ?? 0);
+            $cp['running'] = true;
+            unset($cp['paused_error'], $cp['last_error_title'], $cp['last_error_at']);
+            cbia_checkpoint_save($cp);
         } else {
             $titles = $incoming_titles ?? cbia_get_titles();
             if (empty($titles)) {
@@ -531,6 +549,7 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
             $schedule_cursor = isset($cp['last_scheduled_at']) ? (string)$cp['last_scheduled_at'] : cbia_get_last_scheduled_at();
             $next_dt = cbia_compute_next_datetime($interval_days, $schedule_cursor);
 
+            $result = array('ok' => false, 'post_id' => 0, 'error' => '');
             if ($next_dt === '') {
                 cbia_log_message("[INFO] Creating post: {$title} | Published now");
                 $result = cbia_create_single_blog_post($title, null);
@@ -555,6 +574,20 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
                 } else {
                     $err = is_array($result) ? (string)($result['error'] ?? '') : '';
                     cbia_log_message("[ERROR] Could not schedule '{$title}'." . ($err !== '' ? " {$err}" : ''));
+                }
+            }
+
+            if (!is_array($result) || empty($result['ok'])) {
+                $err = is_array($result) ? (string)($result['error'] ?? '') : 'unknown_error';
+                if (cbia_blog_should_pause_queue_on_error($err)) {
+                    $cp['idx'] = $i;
+                    $cp['running'] = false;
+                    $cp['paused_error'] = $err;
+                    $cp['last_error_title'] = $title;
+                    $cp['last_error_at'] = current_time('mysql');
+                    cbia_checkpoint_save($cp);
+                    cbia_log_message("[WARN] Queue paused at idx={$i}/" . count((array)$queue) . " after blocking error: {$err}. Fix the issue and press Run batch again to resume the same title.");
+                    return array('done'=>true,'processed'=>$processed_this_run,'paused'=>true,'error'=>$err);
                 }
             }
 
@@ -633,6 +666,8 @@ if (!function_exists('cbia_run_generate_blogs')) {
 
         if (is_array($result) && empty($result['done'])) {
             cbia_schedule_generation_event(8, true);
+        } elseif (is_array($result) && !empty($result['paused'])) {
+            cbia_log_message("[INFO] Process paused by blocking error. No further events queued.");
         } else {
             cbia_log_message("[INFO] Process finished (no pending queue).");
         }

@@ -43,6 +43,35 @@ if (!function_exists('cbia_get_soft_length_floor_words')) {
 	}
 }
 
+if (!function_exists('cbia_get_effective_length_floor_words')) {
+	function cbia_get_effective_length_floor_words($min_words, array $settings = array()): int {
+		$min_words = max(1, (int)$min_words);
+		$variant = sanitize_key((string)($settings['post_length_variant'] ?? 'medium'));
+		if (!in_array($variant, array('short', 'medium', 'long'), true)) {
+			$variant = 'medium';
+		}
+		$include_faq = !empty($settings['include_faq']);
+		$include_examples = !empty($settings['include_practical_examples']);
+
+		if ($variant === 'short') {
+			$ratio = $include_faq ? 0.88 : 0.82;
+			if ($include_examples) $ratio = max($ratio, 0.88);
+			return max(1, (int)floor($min_words * $ratio));
+		}
+
+		if ($variant === 'long') {
+			$ratio = $include_faq ? 0.90 : 0.84;
+			if ($include_examples) $ratio = max($ratio, 0.90);
+			return max(1, (int)floor($min_words * $ratio));
+		}
+
+		if ($include_faq && $include_examples) return max(1, (int)floor($min_words * 0.92));
+		if ($include_faq) return max(1, (int)floor($min_words * 0.88));
+		if ($include_examples) return max(1, (int)floor($min_words * 0.86));
+		return 1400;
+	}
+}
+
 if (!function_exists('cbia_truncate_html_block_to_words')) {
 	function cbia_truncate_html_block_to_words($block, $max_words): string {
 		$max_words = (int)$max_words;
@@ -602,9 +631,9 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		}
 
 		$current_words = cbia_count_words_from_html($text_html);
-		$effective_min_words = function_exists('cbia_get_soft_length_floor_words')
-			? cbia_get_soft_length_floor_words((int)$min_words)
-			: (int)$min_words;
+		$effective_min_words = function_exists('cbia_get_effective_length_floor_words')
+			? cbia_get_effective_length_floor_words((int)$min_words, (array)$s)
+			: (function_exists('cbia_get_soft_length_floor_words') ? cbia_get_soft_length_floor_words((int)$min_words) : (int)$min_words);
 		if ($current_words < $effective_min_words) {
 			cbia_log(sprintf(
 				"Length below target on '%s': %d words (min=%d, effective_min=%d). Expanding content...",

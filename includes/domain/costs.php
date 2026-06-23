@@ -34,11 +34,11 @@ if (!function_exists('cbia_costes_get_settings')) {
             'usd_to_eur' => 0.92,
             'cached_input_ratio' => 0.0,
             'use_image_flat_pricing' => 1,
-            'image_flat_usd_mini' => 0.011,
-            'image_flat_usd_full' => 0.042,
-            'image_flat_usd_openai_mini' => 0.011,
-            'image_flat_usd_openai_full' => 0.042,
-            'image_flat_usd_openai_v2' => 0.042,
+            'image_flat_usd_mini' => 0.052,
+            'image_flat_usd_full' => 0.250,
+            'image_flat_usd_openai_mini' => 0.052,
+            'image_flat_usd_openai_full' => 0.250,
+            'image_flat_usd_openai_v2' => 0.165,
             'image_flat_usd_imagen3' => 0.040,
             'image_flat_usd_imagen4' => 0.040,
             'responses_fixed_usd_per_call' => 0.0,
@@ -51,7 +51,22 @@ if (!function_exists('cbia_costes_get_settings')) {
             'image_model' => 'gpt-image-2',
         );
         $s = is_array($s) ? $s : array();
-        return array_merge($defaults, $s);
+        $merged = array_merge($defaults, $s);
+        $legacy_to_current = array(
+            'image_flat_usd_openai_mini' => array(0.011, 0.052),
+            'image_flat_usd_openai_full' => array(0.042, 0.250),
+            'image_flat_usd_openai_v2' => array(0.042, 0.165),
+            'image_flat_usd_mini' => array(0.011, 0.052),
+            'image_flat_usd_full' => array(0.042, 0.250),
+        );
+        foreach ($legacy_to_current as $key => $pair) {
+            $legacy = (float)$pair[0];
+            $current = (float)$pair[1];
+            if (!array_key_exists($key, $s) || abs((float)$merged[$key] - $legacy) < 0.000001) {
+                $merged[$key] = $current;
+            }
+        }
+        return $merged;
     }
 }
 
@@ -172,10 +187,10 @@ if (!function_exists('cbia_costes_image_flat_price_usd')) {
         $model = (string)$model;
         $openai_mini = isset($cost_settings['image_flat_usd_openai_mini'])
             ? (float)$cost_settings['image_flat_usd_openai_mini']
-            : (isset($cost_settings['image_flat_usd_mini']) ? (float)$cost_settings['image_flat_usd_mini'] : 0.011);
+            : (isset($cost_settings['image_flat_usd_mini']) ? (float)$cost_settings['image_flat_usd_mini'] : 0.052);
         $openai_full = isset($cost_settings['image_flat_usd_openai_full'])
             ? (float)$cost_settings['image_flat_usd_openai_full']
-            : (isset($cost_settings['image_flat_usd_full']) ? (float)$cost_settings['image_flat_usd_full'] : 0.042);
+            : (isset($cost_settings['image_flat_usd_full']) ? (float)$cost_settings['image_flat_usd_full'] : 0.250);
         $openai_v2 = isset($cost_settings['image_flat_usd_openai_v2'])
             ? (float)$cost_settings['image_flat_usd_openai_v2']
             : $openai_full;
@@ -1147,11 +1162,11 @@ if (!function_exists('cbia_costes_handle_post')) {
 
             // Tarifa fija por imagen
             $cost['use_image_flat_pricing'] = !empty($u['use_image_flat_pricing']) ? 1 : 0;
-            $cost['image_flat_usd_openai_mini'] = isset($u['image_flat_usd_openai_mini']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_mini']) : (float)($cost['image_flat_usd_openai_mini'] ?? ($cost['image_flat_usd_mini'] ?? 0.011));
+            $cost['image_flat_usd_openai_mini'] = isset($u['image_flat_usd_openai_mini']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_mini']) : (float)($cost['image_flat_usd_openai_mini'] ?? ($cost['image_flat_usd_mini'] ?? 0.052));
             if ($cost['image_flat_usd_openai_mini'] < 0) $cost['image_flat_usd_openai_mini'] = 0.0;
-            $cost['image_flat_usd_openai_full'] = isset($u['image_flat_usd_openai_full']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_full']) : (float)($cost['image_flat_usd_openai_full'] ?? ($cost['image_flat_usd_full'] ?? 0.042));
+            $cost['image_flat_usd_openai_full'] = isset($u['image_flat_usd_openai_full']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_full']) : (float)($cost['image_flat_usd_openai_full'] ?? ($cost['image_flat_usd_full'] ?? 0.250));
             if ($cost['image_flat_usd_openai_full'] < 0) $cost['image_flat_usd_openai_full'] = 0.0;
-            $cost['image_flat_usd_openai_v2'] = isset($u['image_flat_usd_openai_v2']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_v2']) : (float)($cost['image_flat_usd_openai_v2'] ?? $cost['image_flat_usd_openai_full']);
+            $cost['image_flat_usd_openai_v2'] = isset($u['image_flat_usd_openai_v2']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_openai_v2']) : (float)($cost['image_flat_usd_openai_v2'] ?? 0.165);
             if ($cost['image_flat_usd_openai_v2'] < 0) $cost['image_flat_usd_openai_v2'] = 0.0;
             $cost['image_flat_usd_imagen3'] = isset($u['image_flat_usd_imagen3']) ? (float)str_replace(',', '.', (string)$u['image_flat_usd_imagen3']) : (float)($cost['image_flat_usd_imagen3'] ?? ($cost['image_flat_usd_mini'] ?? 0.040));
             if ($cost['image_flat_usd_imagen3'] < 0) $cost['image_flat_usd_imagen3'] = 0.0;

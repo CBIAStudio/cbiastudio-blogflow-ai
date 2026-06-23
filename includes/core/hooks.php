@@ -228,6 +228,12 @@ if (!function_exists('cbia_register_core_hooks')) {
         if (!has_action('cbia_usage_row_recorded', 'cbia_usage_store_append_row')) {
             add_action('cbia_usage_row_recorded', 'cbia_usage_store_append_row', 10, 2);
         }
+        if (!has_action('admin_init', 'cbia_usage_migrate_openai_image_high_costs')) {
+            add_action('admin_init', 'cbia_usage_migrate_openai_image_high_costs');
+        }
+        if (!has_action('admin_init', 'cbia_repair_provider_api_keys_into_main_settings')) {
+            add_action('admin_init', 'cbia_repair_provider_api_keys_into_main_settings', 2);
+        }
 
         // Frontend styles for banner images
         if (!has_action('wp_head', 'cbia_pro_output_banner_css')) {
@@ -1096,6 +1102,156 @@ if (!function_exists('cbia_usage_store_append_row')) {
         $rows = cbia_usage_get_event_store_rows(false);
         $rows[] = $formatted;
         cbia_usage_save_event_store_rows($rows);
+    }
+}
+
+if (!function_exists('cbia_usage_migrate_openai_image_high_costs')) {
+    function cbia_usage_migrate_openai_image_high_costs() {
+        if (!is_admin() || !current_user_can('manage_options')) {
+            return;
+        }
+
+        $target_version = 'openai_image_high_20260619_v1';
+        if ((string) get_option('cbia_usage_cost_recalc_version', '') === $target_version) {
+            return;
+        }
+
+        $lock_key = 'cbia_usage_cost_recalc_lock';
+        if (get_transient($lock_key)) {
+            return;
+        }
+        set_transient($lock_key, 1, 10 * MINUTE_IN_SECONDS);
+
+        $posts_scanned = 0;
+        $posts_updated = 0;
+        $rows_updated = 0;
+        $cost_settings = function_exists('cbia_costes_get_settings') ? cbia_costes_get_settings() : array();
+        $failed_ratio = isset($cost_settings['failed_image_flat_ratio']) ? (float) $cost_settings['failed_image_flat_ratio'] : 0.35;
+        if ($failed_ratio < 0) $failed_ratio = 0.0;
+        if ($failed_ratio > 1) $failed_ratio = 1.0;
+
+        $paged = 1;
+        $per_page = 250;
+        do {
+            $q = new WP_Query(array(
+                'post_type' => 'post',
+                'post_status' => array('publish', 'future', 'draft', 'pending', 'private'),
+                'posts_per_page' => $per_page,
+                'paged' => $paged,
+                'fields' => 'ids',
+                'no_found_rows' => true,
+                'orderby' => 'ID',
+                'order' => 'DESC',
+                'meta_query' => array(
+                    array('key' => '_cbia_usage_rows', 'compare' => 'EXISTS'),
+                ),
+            ));
+            $ids = !empty($q->posts) && is_array($q->posts) ? $q->posts : array();
+            foreach ($ids as $post_id) {
+                $post_id = (int) $post_id;
+                $posts_scanned++;
+                $rows = get_post_meta($post_id, '_cbia_usage_rows', true);
+                if (!is_array($rows) || empty($rows)) {
+                    continue;
+                }
+
+                $changed = false;
+                foreach ($rows as $idx => $row) {
+                    if (!is_array($row)) {
+                        continue;
+                    }
+                    $type = strtolower(trim((string) ($row['type'] ?? '')));
+                    if ($type !== 'image') {
+                        continue;
+                    }
+                    $model = strtolower(trim((string) ($row['model'] ?? '')));
+                    if ($model === '' || strpos($model, 'gpt-image') === false) {
+                        continue;
+                    }
+
+                    $flat_usd = function_exists('cbia_costes_image_flat_price_usd')
+                        ? (float) cbia_costes_image_flat_price_usd($model, $cost_settings)
+                        : 0.0;
+                    if ($flat_usd <= 0) {
+                        continue;
+                    }
+
+                    $new_row = $row;
+                    $new_row['image_quality'] = 'high';
+                    $new_row['image_size_estimate'] = '1536x1024';
+                    $new_row['cost_pricing_version'] = $target_version;
+
+                    if (empty($new_row['ok'])) {
+                        $new_row['bill_flat_usd'] = round(max(0.0, $flat_usd * $failed_ratio), 6);
+                    } elseif (isset($new_row['bill_flat_usd'])) {
+                        unset($new_row['bill_flat_usd']);
+                    }
+
+                    if ($new_row !== $row) {
+                        $rows[$idx] = $new_row;
+                        $changed = true;
+                        $rows_updated++;
+                    }
+                }
+
+                if ($changed) {
+                    update_post_meta($post_id, '_cbia_usage_rows', $rows);
+                    $posts_updated++;
+                }
+            }
+            $paged++;
+            $has_more = count($ids) === $per_page;
+            wp_reset_postdata();
+        } while ($has_more);
+
+        if (function_exists('cbia_usage_rebuild_event_store_rows')) {
+            cbia_usage_rebuild_event_store_rows();
+        }
+        if (function_exists('cbia_usage_invalidate_dashboard_cache')) {
+            cbia_usage_invalidate_dashboard_cache();
+        }
+        foreach (array(7, 30, 90) as $days) {
+            foreach (array('v5', 'v7', 'v8', 'v9') as $ver) {
+                delete_transient('cbia_pro_usage_overview_' . $ver . '_' . get_current_blog_id() . '_' . (int) $days);
+            }
+        }
+
+        update_option('cbia_usage_cost_recalc_version', $target_version, false);
+        update_option('cbia_usage_cost_recalc_last', array(
+            'version' => $target_version,
+            'time' => current_time('mysql'),
+            'posts_scanned' => $posts_scanned,
+            'posts_updated' => $posts_updated,
+            'rows_updated' => $rows_updated,
+        ), false);
+        delete_transient($lock_key);
+    }
+}
+
+if (!function_exists('cbia_repair_provider_api_keys_into_main_settings')) {
+    function cbia_repair_provider_api_keys_into_main_settings() {
+        if (!is_admin() || !current_user_can('manage_options')) {
+            return;
+        }
+        if (!function_exists('cbia_providers_get_settings')) {
+            return;
+        }
+        $settings = get_option('cbia_settings', array());
+        $settings = is_array($settings) ? $settings : array();
+        $provider_settings = cbia_providers_get_settings();
+        $map = array('openai' => 'openai_api_key', 'google' => 'google_api_key', 'deepseek' => 'deepseek_api_key');
+        $changed = false;
+        foreach ($map as $provider => $settings_key) {
+            $main_key = trim((string)($settings[$settings_key] ?? ''));
+            $provider_key = trim((string)($provider_settings['providers'][$provider]['api_key'] ?? ''));
+            if ($main_key === '' && $provider_key !== '') {
+                $settings[$settings_key] = $provider_key;
+                $changed = true;
+            }
+        }
+        if ($changed) {
+            update_option('cbia_settings', $settings, false);
+        }
     }
 }
 
@@ -3005,7 +3161,7 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
             <p class="description"><?php echo esc_html__('Generate content with AI and then insert it directly into this post.', 'cbiastudio-blogflow-ai'); ?></p>
             <p>
                 <label for="cbia-ai-title"><strong><?php echo esc_html__('Title', 'cbiastudio-blogflow-ai'); ?></strong></label><br />
-                <input type="text" id="cbia-ai-title" class="widefat" value="<?php echo esc_attr(function_exists('cbia_ai_composer_normalize_title_value') ? cbia_ai_composer_normalize_title_value((string)get_the_title($post), $post) : (string)get_the_title($post)); ?>" />
+                <input type="text" id="cbia-ai-title" class="widefat" value="<?php echo esc_attr(function_exists('cbia_ai_composer_normalize_title_value') ? cbia_ai_composer_normalize_title_value((string)get_the_title($post), $post) : (string)get_the_title($post)); ?>" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" />
             </p>
             <div class="cbia-ai-controls">
                 <p class="cbia-ai-col-length">
@@ -3165,7 +3321,7 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
                 </p>
                 <p>
                     <label for="cbia-ai-key-input"><strong>API key</strong></label><br />
-                    <input type="password" id="cbia-ai-key-input" class="widefat" value="" autocomplete="new-password" autocapitalize="off" spellcheck="false" />
+                    <input type="text" id="cbia-ai-key-input" class="widefat cbia-secret-input" value="" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" data-form-type="other" />
                 </p>
                 <div class="cbia-modal-actions">
                     <button type="button" class="button" id="cbia-ai-key-test"><?php echo esc_html__('Test connection', 'cbiastudio-blogflow-ai'); ?></button>
@@ -4794,6 +4950,12 @@ if (!function_exists('cbia_ajax_get_checkpoint_status')) {
             wp_send_json_success(array(
                 'status' => __('idle', 'cbiastudio-blogflow-ai'),
                 'last' => __('(no records)', 'cbiastudio-blogflow-ai'),
+                'running' => false,
+                'pending' => false,
+                'idx' => 0,
+                'total' => 0,
+                'lock_age' => 0,
+                'next_event' => 0,
             ));
         }
 
@@ -4809,18 +4971,47 @@ if (!function_exists('cbia_ajax_get_checkpoint_status')) {
         }
 
         $cp = cbia_checkpoint_get();
-        $status = (!empty($cp) && !empty($cp['running']))
+        $queue = (array)($cp['queue'] ?? array());
+        $idx = max(0, intval($cp['idx'] ?? 0));
+        $total = count($queue);
+        $running = !empty($cp) && !empty($cp['running']);
+        $paused_error = !empty($cp['paused_error']) ? (string)$cp['paused_error'] : '';
+        $pending = $running && $total > 0 && $idx < $total;
+        if ($paused_error !== '') {
+            $status = sprintf(
+                /* translators: 1: current checkpoint index, 2: total queued posts, 3: error message */
+                __('PAUSED | idx %1$d of %2$d | %3$s', 'cbiastudio-blogflow-ai'),
+                $idx,
+                $total,
+                $paused_error
+            );
+        } else {
+            $status = (!empty($cp) && !empty($cp['running']))
             ? sprintf(
                 /* translators: 1: current checkpoint index, 2: total queued posts */
                 __('RUNNING | idx %1$d of %2$d', 'cbiastudio-blogflow-ai'),
-                intval($cp['idx'] ?? 0),
-                count((array)($cp['queue'] ?? array()))
+                $idx,
+                $total
             )
             : __('idle', 'cbiastudio-blogflow-ai');
+        }
         $last_dt = function_exists('cbia_get_last_scheduled_at')
             ? (cbia_get_last_scheduled_at() ?: __('(no records)', 'cbiastudio-blogflow-ai'))
             : __('(no records)', 'cbiastudio-blogflow-ai');
-        wp_send_json_success(array('status' => $status, 'last' => $last_dt));
+        $lock = function_exists('cbia_blog_generation_get_lock') ? cbia_blog_generation_get_lock() : array();
+        $lock_age = (!empty($lock['locked_at'])) ? max(0, time() - (int)$lock['locked_at']) : 0;
+        $next_event = function_exists('wp_next_scheduled') ? (int)wp_next_scheduled('cbia_generation_event') : 0;
+        wp_send_json_success(array(
+            'status' => $status,
+            'last' => $last_dt,
+            'running' => $running,
+            'pending' => $pending,
+            'idx' => $idx,
+            'total' => $total,
+            'paused_error' => $paused_error,
+            'lock_age' => $lock_age,
+            'next_event' => $next_event,
+        ));
     }
 }
 
@@ -4928,7 +5119,28 @@ if (!function_exists('cbia_ajax_start_generation')) {
             $settings['blog_prompt_legacy_enabled'] = ($settings['blog_prompt_mode'] === 'legacy') ? 1 : 0;
         }
         if ($settings_updated) {
-            update_option('cbia_settings', $settings, false);
+            $stored_settings = get_option('cbia_settings', array());
+            $stored_settings = is_array($stored_settings) ? $stored_settings : array();
+            foreach (array('openai_api_key', 'google_api_key', 'deepseek_api_key', 'google_service_account_json') as $secret_key) {
+                if (trim((string)($settings[$secret_key] ?? '')) === '' && !empty($stored_settings[$secret_key])) {
+                    $settings[$secret_key] = (string)$stored_settings[$secret_key];
+                }
+            }
+            if (function_exists('cbia_providers_get_settings')) {
+                $provider_settings = cbia_providers_get_settings();
+                $provider_map = array('openai' => 'openai_api_key', 'google' => 'google_api_key', 'deepseek' => 'deepseek_api_key');
+                foreach ($provider_map as $provider_key => $settings_key) {
+                    $provider_api_key = trim((string)($provider_settings['providers'][$provider_key]['api_key'] ?? ''));
+                    if (trim((string)($settings[$settings_key] ?? '')) === '' && $provider_api_key !== '') {
+                        $settings[$settings_key] = $provider_api_key;
+                    }
+                }
+            }
+            if (function_exists('cbia_update_settings_merge')) {
+                cbia_update_settings_merge($settings);
+            } else {
+                update_option('cbia_settings', $settings, false);
+            }
             if (function_exists('cbia_log_message')) {
                 cbia_log_message('[INFO] START AJAX: runtime settings synced from current Blog form values.');
             }

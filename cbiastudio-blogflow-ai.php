@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CBIAStudio BlogFlow with AI
  * Description: Base edition of CBIAStudio BlogFlow with AI for WordPress.
- * Version: 2.0.6
+ * Version: 2.0.7
  * Text Domain: cbiastudio-blogflow-ai
  * Domain Path: /languages
  *
@@ -15,7 +15,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.0.6');
+if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.0.7');
 if (!defined('CBIA_BASE_PLUGIN_FILE')) define('CBIA_BASE_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_BASE_PLUGIN_DIR')) define('CBIA_BASE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_BASE_PLUGIN_URL')) define('CBIA_BASE_PLUGIN_URL', plugin_dir_url(__FILE__));
@@ -262,6 +262,11 @@ if (!function_exists('cbia_update_settings_merge')) {
 	function cbia_update_settings_merge(array $partial): array {
 		$current = get_option(CBIA_OPTION_SETTINGS, []);
 		if (!is_array($current)) $current = [];
+		foreach (array('openai_api_key', 'google_api_key', 'deepseek_api_key', 'google_service_account_json') as $secret_key) {
+			if (array_key_exists($secret_key, $partial) && trim((string)$partial[$secret_key]) === '' && !empty($current[$secret_key])) {
+				unset($partial[$secret_key]);
+			}
+		}
 		$merged = array_replace_recursive($current, $partial);
 		update_option(CBIA_OPTION_SETTINGS, $merged, false);
 		return $merged;
