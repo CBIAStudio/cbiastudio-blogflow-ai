@@ -1,8 +1,8 @@
 === CBIAStudio BlogFlow with AI ===
 Contributors: webgoh
 Requires at least: 6.9.2
-Tested up to: 6.9
-Stable tag: 2.0.7
+Tested up to: 7.0
+Stable tag: 2.0.8
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -156,6 +156,14 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Changelog ==
 
+= 2.0.8 =
+* Usage now records billable API calls even when generation stops or fails before a WordPress post is created, including text, expansion, failed attempts, and image calls.
+* Usage totals include no-post calls without inflating the created-post counter, improving real cost visibility for interrupted batches.
+* Internal image markers are rebalanced proportionally by selected image count so one image lands near the middle and multiple images distribute through the article body.
+* Text, expansion, and image cost rows now keep their own prompt context, avoiding inaccurate failed-attempt estimation.
+* Spanish translation files regenerated for the new Usage labels.
+* Release metadata updated with WordPress `Tested up to: 7.0`.
+* Comparison vs 2.0.7: keeps API-key persistence, checkpoint error pausing, Gutenberg fallback, API modal recovery, and Oldposts checkbox reliability while adding no-post usage accounting and proportional internal-image placement.
 = 2.0.7 =
 * Hardened API key persistence so partial Blog/runtime saves no longer overwrite saved provider secrets with empty values.
 * Added a dedicated "Save API keys" action and rehydrated provider keys from both settings stores so model/configuration saves cannot clear existing keys.
@@ -228,6 +236,8 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Upgrade Notice ==
 
+= 2.0.8 =
+Recommended cost-tracking update. Adds accounting for failed/stopped API calls before post creation, improves real Usage totals, and rebalances internal image placement.
 = 2.0.7 =
 Recommended reliability update. Fixes API key persistence during runtime saves, Gutenberg Create with AI insert authorization fallback, API key modal actions, stored Usage recalculation, and Oldposts checkbox selection.
 

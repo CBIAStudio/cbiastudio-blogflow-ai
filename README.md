@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.0.7
+# CBIAStudio BlogFlow with AI (WordPress) v2.0.8
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -9,6 +9,19 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - live logs and STOP controls
 - optional Yoast SEO sync
 
+## What's New in 2.0.8
+- Usage now records API calls even when a generation stops or fails before a WordPress post exists.
+- No-post Usage rows are counted for calls, tokens, and cost without increasing the created-post counter.
+- Expansion calls and failed attempts are tracked in the same real-cost pipeline as successful post creation.
+- Internal image markers are distributed proportionally by selected count for cleaner article structure.
+- Text, expansion, and image rows keep separate prompt context for more accurate failed-attempt cost estimation.
+- Spanish translation catalogs were updated and compiled.
+- Release metadata updated to WordPress `Tested up to: 7.0`.
+
+## Comparative: 2.0.8 vs 2.0.7
+- Keeps the 2.0.7 API-key persistence, checkpoint error pausing, Gutenberg insert fallback, API modal recovery, and Oldposts checkbox reliability.
+- Adds no-post usage accounting, expansion/failure cost visibility, and proportional internal-image placement.
+
 ## What's New in 2.0.7
 - API key persistence hardened so partial Blog/runtime saves do not overwrite saved provider secrets with empty values.
 - A dedicated "Save API keys" action stores provider keys without touching prompts, length, categories, or other generation settings.
@@ -17,11 +30,9 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - Gutenberg Create with AI insert now retries safely through draft creation when WordPress rejects a provisional new-post ID.
 - Configure text/image API buttons and Save/Test key actions work again even when Gutenberg moves the composer markup.
 - Update Older Posts card selection now works when clicking directly on the checkbox square.
-
 ## Comparative: 2.0.7 vs 2.0.6
 - Keeps the 2.0.6 controlled insert, FAQ-off, configurable batch chunk and GPT-5 temperature fixes.
 - Adds API-key persistence hardening, isolated API-key saving, checkpoint error pausing, stored usage recalculation, Gutenberg insert fallback, API modal recovery, and Oldposts checkbox reliability.
-
 ## What's New in 2.0.6
 - Create with AI insert applies content, featured image, categories, tags, and Yoast metadata through a server-side save and controlled editor refresh.
 - The controlled editor refresh suppresses the browser leave-page prompt after a successful plugin-driven insert.

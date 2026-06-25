@@ -313,6 +313,173 @@ foreach ($post_ids as $post_id) {
     }
 }
 
+if (function_exists('cbia_costes_get_orphan_usage_rows')) {
+    $orphan_rows = cbia_costes_get_orphan_usage_rows();
+    $orphan_multiplier = 1.0;
+    $real_adjust_multiplier = isset($cost_settings['real_adjust_multiplier']) ? (float) $cost_settings['real_adjust_multiplier'] : 1.0;
+    if ($real_adjust_multiplier > 0 && $real_adjust_multiplier !== 1.0) {
+        $orphan_multiplier = $real_adjust_multiplier;
+    }
+
+    foreach ($orphan_rows as $row) {
+        if (!is_array($row)) {
+            continue;
+        }
+
+        $ts_raw = isset($row['ts']) ? (string) $row['ts'] : '';
+        $ts = $ts_raw !== '' ? strtotime($ts_raw) : 0;
+        $type = isset($row['type']) ? strtolower(trim((string) $row['type'])) : 'text';
+        if (!in_array($type, array('text', 'image', 'seo'), true)) {
+            $type = 'text';
+        }
+        $model = (string) ($row['model'] ?? '');
+        if ($model === '') {
+            $model = 'unknown';
+        }
+        $section = sanitize_key((string) ($row['section'] ?? ''));
+        $section_label = '';
+        $section_detail = '';
+        if ($type === 'image') {
+            if ($section === 'featured' || $section === 'intro') {
+                $section_label = 'featured';
+                $section_detail = __('Featured', 'cbiastudio-blogflow-ai');
+            } elseif ($section !== '') {
+                $section_label = 'internal';
+                $section_detail = 'Internal Ã‚Â· ' . ucfirst(str_replace(array('_', '-'), ' ', $section));
+            }
+        }
+
+        $available_models[$model] = true;
+        $tokens_in = (int) ($row['in'] ?? 0);
+        $tokens_out = (int) ($row['out'] ?? 0);
+        $tokens_total = $tokens_in + $tokens_out;
+        $row_cost_eur = null;
+        if (function_exists('cbia_costes_calc_row_eur')) {
+            $row_cost_eur = cbia_costes_calc_row_eur($row, $cost_settings, $cost_table);
+            if ($row_cost_eur !== null && $orphan_multiplier !== 1.0) {
+                $row_cost_eur = (float) $row_cost_eur * $orphan_multiplier;
+            }
+            if ($row_cost_eur !== null) {
+                $row_cost_eur = round((float) $row_cost_eur, 6);
+            }
+        }
+
+        $day_value = '';
+        if ($ts) {
+            $day_value = gmdate('Y-m-d', $ts);
+        } elseif (preg_match('/\d{4}-\d{2}-\d{2}/', $ts_raw, $m_day)) {
+            $day_value = (string) $m_day[0];
+        }
+        $month_value = '';
+        if ($ts) {
+            $month_value = gmdate('Y-m', $ts);
+        } elseif (preg_match('/\d{4}-\d{2}/', $ts_raw, $m_month)) {
+            $month_value = (string) $m_month[0];
+        }
+
+        if ($month_value !== '') {
+            if (!isset($monthly_buckets[$month_value])) {
+                $monthly_buckets[$month_value] = array(
+                    'month' => $month_value,
+                    'calls' => 0,
+                    'text_calls' => 0,
+                    'image_calls' => 0,
+                    'seo_calls' => 0,
+                    'text_cost_eur' => 0.0,
+                    'image_cost_eur' => 0.0,
+                    'seo_cost_eur' => 0.0,
+                    'cost_eur' => 0.0,
+                );
+            }
+            $monthly_buckets[$month_value]['calls'] += 1;
+            if ($type === 'image') {
+                $monthly_buckets[$month_value]['image_calls'] += 1;
+            } elseif ($type === 'seo') {
+                $monthly_buckets[$month_value]['seo_calls'] += 1;
+            } else {
+                $monthly_buckets[$month_value]['text_calls'] += 1;
+            }
+            if ($row_cost_eur !== null) {
+                $monthly_buckets[$month_value]['cost_eur'] += (float) $row_cost_eur;
+                if ($type === 'image') {
+                    $monthly_buckets[$month_value]['image_cost_eur'] += (float) $row_cost_eur;
+                } elseif ($type === 'seo') {
+                    $monthly_buckets[$month_value]['seo_cost_eur'] += (float) $row_cost_eur;
+                } else {
+                    $monthly_buckets[$month_value]['text_cost_eur'] += (float) $row_cost_eur;
+                }
+            }
+        }
+
+        if ($ts && $ts < $since_ts) {
+            continue;
+        }
+
+        $source_title = trim((string)($row['title'] ?? ''));
+        if ($source_title === '') {
+            $source_title = __('Unpublished / failed call', 'cbiastudio-blogflow-ai');
+        }
+        $status_reason = trim((string)($row['status_reason'] ?? ''));
+        $is_ok = !empty($row['ok']);
+        $log_rows[] = array(
+            'post_id' => 0,
+            'post_title' => $source_title,
+            'post_edit_url' => '',
+            'ts' => $ts_raw,
+            'day' => $day_value,
+            'month' => $month_value,
+            'type' => $type,
+            'type_label' => $type === 'image'
+                ? __('Image', 'cbiastudio-blogflow-ai')
+                : ($type === 'seo' ? __('SEO', 'cbiastudio-blogflow-ai') : __('Text', 'cbiastudio-blogflow-ai')),
+            'section' => $section,
+            'section_label' => $section_label,
+            'section_detail' => $section_detail,
+            'attach_id' => (int) ($row['attach_id'] ?? 0),
+            'model' => $model,
+            'tokens_in' => $tokens_in,
+            'tokens_out' => $tokens_out,
+            'tokens_total' => $tokens_total,
+            'token_metrics_applicable' => $type !== 'image',
+            'cached_in' => (int) ($row['cin'] ?? 0),
+            'cost_eur' => $row_cost_eur,
+            'ok' => $is_ok ? 1 : 0,
+            'status_label' => $is_ok ? 'OK' : ($status_reason !== '' ? $status_reason : 'Error'),
+            'user_id' => 0,
+            'user_name' => __('No post', 'cbiastudio-blogflow-ai'),
+            'source_label' => $source_title,
+            'message_preview' => $type === 'image'
+                ? __('Image generation', 'cbiastudio-blogflow-ai') . ($section_detail !== '' ? ' (' . $section_detail . ')' : '')
+                : ($type === 'seo' ? __('SEO / metadata process', 'cbiastudio-blogflow-ai') : __('Text generation', 'cbiastudio-blogflow-ai')),
+        );
+
+        if ($day_value !== '') {
+            if (!isset($daily_buckets[$day_value])) {
+                $daily_buckets[$day_value] = array(
+                    'calls' => 0,
+                    'text' => 0,
+                    'image' => 0,
+                    'seo' => 0,
+                    'textCalls' => 0,
+                    'imageCalls' => 0,
+                    'seoCalls' => 0,
+                    'day' => $day_value,
+                );
+            }
+            $daily_buckets[$day_value]['calls'] += 1;
+            if (isset($daily_buckets[$day_value][$type])) {
+                $daily_buckets[$day_value][$type] += ($type === 'image')
+                    ? 1
+                    : $tokens_total;
+            }
+            $count_key = $type . 'Calls';
+            if (isset($daily_buckets[$day_value][$count_key])) {
+                $daily_buckets[$day_value][$count_key] += 1;
+            }
+        }
+    }
+}
+
 usort($log_rows, function ($a, $b) {
     $ats = strtotime((string) ($a['ts'] ?? '')) ?: 0;
     $bts = strtotime((string) ($b['ts'] ?? '')) ?: 0;

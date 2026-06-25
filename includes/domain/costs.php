@@ -27,6 +27,17 @@ if (!function_exists('cbia_costes_settings_key')) {
     function cbia_costes_settings_key() { return 'cbia_costes_settings'; }
 }
 
+if (!function_exists('cbia_costes_orphan_usage_key')) {
+    function cbia_costes_orphan_usage_key() { return 'cbia_usage_orphan_rows'; }
+}
+
+if (!function_exists('cbia_costes_get_orphan_usage_rows')) {
+    function cbia_costes_get_orphan_usage_rows() {
+        $rows = get_option(cbia_costes_orphan_usage_key(), array());
+        return is_array($rows) ? $rows : array();
+    }
+}
+
 if (!function_exists('cbia_costes_get_settings')) {
     function cbia_costes_get_settings() {
         $s = get_option(cbia_costes_settings_key(), array());
@@ -386,7 +397,6 @@ if (!function_exists('cbia_costes_record_usage')) {
      */
     function cbia_costes_record_usage($post_id, $usage) {
         $post_id = (int)$post_id;
-        if ($post_id <= 0) return false;
         if (!is_array($usage)) return false;
 
         $type  = isset($usage['type']) ? (string)$usage['type'] : 'text';
@@ -430,6 +440,30 @@ if (!function_exists('cbia_costes_record_usage')) {
         }
         if (isset($usage['billing_mode'])) {
             $row['billing_mode'] = sanitize_key((string)$usage['billing_mode']);
+        }
+        if (isset($usage['title'])) {
+            $row['title'] = sanitize_text_field((string)$usage['title']);
+        }
+        if (isset($usage['context'])) {
+            $row['context'] = sanitize_key((string)$usage['context']);
+        }
+        if (isset($usage['run_id'])) {
+            $row['run_id'] = sanitize_text_field((string)$usage['run_id']);
+        }
+        if (isset($usage['status_reason'])) {
+            $row['status_reason'] = sanitize_text_field((string)$usage['status_reason']);
+        }
+
+        if ($post_id <= 0) {
+            $row['post_id'] = 0;
+            $key = cbia_costes_orphan_usage_key();
+            $rows = get_option($key, array());
+            if (!is_array($rows)) $rows = array();
+            $rows[] = $row;
+            if (count($rows) > 1000) $rows = array_slice($rows, -1000);
+            update_option($key, $rows, false);
+            do_action('cbia_usage_row_recorded', 0, $row);
+            return true;
         }
 
         $key = '_cbia_usage_rows';
@@ -673,13 +707,16 @@ if (!function_exists('cbia_costes_should_bill_failed_attempt')) {
 if (!function_exists('cbia_costes_record_failed_attempts')) {
     function cbia_costes_record_failed_attempts($post_id, $attempts, $args = array()) {
         $post_id = (int)$post_id;
-        if ($post_id <= 0 || !is_array($attempts) || empty($attempts)) return 0;
+        if (!is_array($attempts) || empty($attempts)) return 0;
 
         $args = is_array($args) ? $args : array();
         $type_default = isset($args['type']) ? strtolower(trim((string)$args['type'])) : 'text';
         if ($type_default !== 'image' && $type_default !== 'seo') $type_default = 'text';
         $prompt = isset($args['prompt']) ? (string)$args['prompt'] : '';
         $section_default = isset($args['section']) ? sanitize_key((string)$args['section']) : '';
+        $title_default = isset($args['title']) ? sanitize_text_field((string)$args['title']) : '';
+        $context_default = isset($args['context']) ? sanitize_key((string)$args['context']) : '';
+        $status_reason_default = isset($args['status_reason']) ? sanitize_text_field((string)$args['status_reason']) : '';
 
         $cost_settings = cbia_costes_get_settings();
         $cbia_settings = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
@@ -746,6 +783,10 @@ if (!function_exists('cbia_costes_record_failed_attempts')) {
                 $row['bill_in'] = max(0, (int)ceil($est_in * $failed_text_input_ratio));
                 $row['bill_out'] = max(0, (int)ceil($est_out * $failed_text_output_ratio));
             }
+
+            if ($title_default !== '') $row['title'] = $title_default;
+            if ($context_default !== '') $row['context'] = $context_default;
+            if ($status_reason_default !== '') $row['status_reason'] = $status_reason_default;
 
             cbia_costes_record_usage($post_id, $row);
             $recorded++;
