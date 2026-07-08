@@ -391,6 +391,9 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 		}
 
 		$post_id = (int)$post_id;
+		if (function_exists('cbia_record_post_prompt_profile')) {
+			cbia_record_post_prompt_profile($post_id, $title, (array)$s);
+		}
 
 		// Categorías
 		$cats = cbia_determine_categories_by_mapping($title, $final_html);

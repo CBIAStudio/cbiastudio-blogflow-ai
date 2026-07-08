@@ -373,9 +373,100 @@ if (!function_exists('cbia_prompt_should_use_profile_mode')) {
     }
 }
 
+if (!function_exists('cbia_is_auto_prompt_profile_enabled')) {
+    function cbia_is_auto_prompt_profile_enabled(): bool {
+        return function_exists('cbia_cap_enabled') && cbia_cap_enabled('auto_prompt_profile');
+    }
+}
+
+if (!function_exists('cbia_normalize_prompt_profile_title')) {
+    function cbia_normalize_prompt_profile_title($title): string {
+        $title = strtolower(trim((string)$title));
+        if ($title === '') return '';
+
+        if (function_exists('remove_accents')) {
+            $title = remove_accents($title);
+        } else {
+            $title = strtr($title, array(
+                'á' => 'a', 'à' => 'a', 'ä' => 'a', 'â' => 'a', 'ã' => 'a',
+                'é' => 'e', 'è' => 'e', 'ë' => 'e', 'ê' => 'e',
+                'í' => 'i', 'ì' => 'i', 'ï' => 'i', 'î' => 'i',
+                'ó' => 'o', 'ò' => 'o', 'ö' => 'o', 'ô' => 'o', 'õ' => 'o',
+                'ú' => 'u', 'ù' => 'u', 'ü' => 'u', 'û' => 'u',
+                'ñ' => 'n', 'ç' => 'c',
+            ));
+        }
+
+        $title = preg_replace('/[^\p{L}\p{N}\s]+/u', ' ', (string)$title);
+        $title = preg_replace('/\s+/u', ' ', (string)$title);
+        return trim((string)$title);
+    }
+}
+
+if (!function_exists('cbia_get_auto_prompt_profile_patterns')) {
+    function cbia_get_auto_prompt_profile_patterns(): array {
+        $patterns = array(
+            'how_to' => array(
+                'how to', 'guide', 'step by step', 'steps', 'mistakes', 'checklist', 'tips for', 'common mistakes',
+                'como', 'guia', 'paso a paso', 'pasos', 'errores', 'consejos para', 'errores comunes',
+            ),
+            'seo_balanced' => array(
+                'what is', 'what are', 'difference between', 'comparison', 'compare', 'vs', 'types of', 'price', 'cost', 'how much does', 'how much is', 'best',
+                'que es', 'que son', 'que hace', 'que buscan', 'que elementos', 'que factores', 'que convierte', 'que diferencia', 'diferencia entre', 'comparativa', 'comparar', 'tipos de', 'precio', 'coste', 'cuanto cuesta', 'mejor',
+            ),
+            'discover_editorial' => array(
+                'why', 'the science of', 'the real reason', 'trends', 'future', 'history', 'evolution', 'what nobody tells you',
+                'por que', 'la ciencia de', 'la ciencia detras', 'el verdadero motivo', 'el valor de', 'la nueva generacion', 'tendencias', 'futuro', 'historia', 'evolucion', 'lo que nadie te cuenta',
+            ),
+        );
+
+        $filtered = apply_filters('cbia_auto_prompt_profile_patterns', $patterns);
+        return is_array($filtered) ? $filtered : $patterns;
+    }
+}
+
+if (!function_exists('cbia_detect_prompt_profile_from_title')) {
+    function cbia_detect_prompt_profile_from_title($title): string {
+        $normalized = cbia_normalize_prompt_profile_title($title);
+        if ($normalized === '') return 'discover_editorial';
+
+        foreach (cbia_get_auto_prompt_profile_patterns() as $profile => $patterns) {
+            if (!in_array((string)$profile, array('how_to', 'seo_balanced', 'discover_editorial'), true) || !is_array($patterns)) {
+                continue;
+            }
+            foreach ($patterns as $pattern) {
+                $needle = cbia_normalize_prompt_profile_title((string)$pattern);
+                if ($needle === '') continue;
+                if ($needle === 'vs') {
+                    if (preg_match('/(?:^|\s)vs(?:\s|$)/', $normalized)) return (string)$profile;
+                    continue;
+                }
+                if (preg_match('/(?:^|\s)' . preg_quote($needle, '/') . '(?:\s|$)/', $normalized)) {
+                    return (string)$profile;
+                }
+            }
+        }
+
+        return 'discover_editorial';
+    }
+}
+
+if (!function_exists('cbia_resolve_prompt_profile_for_title')) {
+    function cbia_resolve_prompt_profile_for_title($configured_profile, $title): string {
+        $configured_profile = sanitize_key((string)$configured_profile);
+        if (in_array($configured_profile, array('discover_editorial', 'seo_balanced', 'how_to'), true)) {
+            return $configured_profile;
+        }
+        if ($configured_profile === 'auto_by_title' && cbia_is_auto_prompt_profile_enabled()) {
+            return cbia_detect_prompt_profile_from_title($title);
+        }
+        return 'discover_editorial';
+    }
+}
+
 if (!function_exists('cbia_prompt_get_profile_options')) {
     function cbia_prompt_get_profile_options(): array {
-        return array(
+        $options = array(
             'discover_editorial' => array(
                 'label' => 'Editorial / Discover',
                 'description' => 'Natural, human and editorial. Best for Discover-style reading.',
@@ -389,13 +480,60 @@ if (!function_exists('cbia_prompt_get_profile_options')) {
                 'description' => 'Practical, actionable and structured around steps, mistakes and recommendations.',
             ),
         );
+        if (cbia_is_auto_prompt_profile_enabled()) {
+            $options = array('auto_by_title' => array(
+                'label' => 'Auto by title',
+                'description' => 'Automatically chooses Editorial, SEO Balanced or How-to from each title.',
+            )) + $options;
+        }
+        return $options;
     }
 }
 
 if (!function_exists('cbia_get_prompt_profile')) {
-    function cbia_get_prompt_profile(array $settings): string {
+    function cbia_get_prompt_profile(array $settings, $title = ''): string {
         $profile = sanitize_key((string)($settings['blog_prompt_profile'] ?? 'discover_editorial'));
+        if ($profile === 'auto_by_title' && cbia_is_auto_prompt_profile_enabled()) {
+            return trim((string)$title) === '' ? 'auto_by_title' : cbia_detect_prompt_profile_from_title($title);
+        }
         return array_key_exists($profile, cbia_prompt_get_profile_options()) ? $profile : 'discover_editorial';
+    }
+}
+
+if (!function_exists('cbia_prompt_profile_label')) {
+    function cbia_prompt_profile_label($profile): string {
+        $profile = sanitize_key((string)$profile);
+        if ($profile === 'discover_editorial') return 'Discover / Editorial';
+        if ($profile === 'seo_balanced') return 'SEO Balanced';
+        if ($profile === 'how_to') return 'How-to / Practical';
+        if ($profile === 'auto_by_title') return 'Auto by title';
+        return '';
+    }
+}
+
+if (!function_exists('cbia_record_post_prompt_profile')) {
+    function cbia_record_post_prompt_profile($post_id, $title, array $settings = array()): void {
+        $post_id = (int)$post_id;
+        if ($post_id <= 0) return;
+
+        if (empty($settings) && function_exists('cbia_get_settings')) {
+            $settings = (array)cbia_get_settings();
+        }
+
+        $configured = sanitize_key((string)($settings['blog_prompt_profile'] ?? 'discover_editorial'));
+        $resolved = function_exists('cbia_resolve_prompt_profile_for_title')
+            ? cbia_resolve_prompt_profile_for_title($configured, $title)
+            : $configured;
+
+        if (!in_array($resolved, array('discover_editorial', 'seo_balanced', 'how_to'), true)) {
+            $resolved = 'discover_editorial';
+        }
+        if (!in_array($configured, array('auto_by_title', 'discover_editorial', 'seo_balanced', 'how_to'), true)) {
+            $configured = 'discover_editorial';
+        }
+
+        update_post_meta($post_id, '_cbia_prompt_profile_configured', $configured);
+        update_post_meta($post_id, '_cbia_prompt_profile_resolved', $resolved);
     }
 }
 
@@ -410,7 +548,7 @@ if (!function_exists('cbia_prompt_sanitize_custom_instructions')) {
 }
 
 if (!function_exists('cbia_prompt_get_profile_settings')) {
-    function cbia_prompt_get_profile_settings(array $settings): array {
+    function cbia_prompt_get_profile_settings(array $settings, $title = ''): array {
         $strength = sanitize_key((string)($settings['search_intent_strength'] ?? 'balanced'));
         if (!in_array($strength, array('soft', 'balanced', 'strong'), true)) {
             $strength = 'balanced';
@@ -421,7 +559,8 @@ if (!function_exists('cbia_prompt_get_profile_settings')) {
         }
 
         return array(
-            'profile' => cbia_get_prompt_profile($settings),
+            'profile' => cbia_resolve_prompt_profile_for_title((string)($settings['blog_prompt_profile'] ?? 'discover_editorial'), $title),
+            'configured_profile' => sanitize_key((string)($settings['blog_prompt_profile'] ?? 'discover_editorial')),
             'include_faq' => !empty($settings['include_faq']),
             'include_practical_examples' => !empty($settings['include_practical_examples']),
             'post_length_variant' => $length_variant,
@@ -730,14 +869,14 @@ if (!function_exists('cbia_build_prompt_profile_block')) {
 }
 
 if (!function_exists('cbia_prompt_get_recommended_generated_block')) {
-    function cbia_prompt_get_recommended_generated_block(array $settings, $language = ''): string {
-        $opts = cbia_prompt_get_profile_settings($settings);
+    function cbia_prompt_get_recommended_generated_block(array $settings, $language = '', $title = ''): string {
+        $opts = cbia_prompt_get_profile_settings($settings, $title);
         return cbia_build_prompt_profile_block((string)$opts['profile'], $opts, $language);
     }
 }
 
 if (!function_exists('cbia_prompt_get_recommended_editable_block')) {
-    function cbia_prompt_get_recommended_editable_block(array $settings, $language = ''): string {
+    function cbia_prompt_get_recommended_editable_block(array $settings, $language = '', $title = ''): string {
         $default_editable = function_exists('cbia_prompt_recommended_editable_default_for_language')
             ? cbia_prompt_recommended_editable_default_for_language($language)
             : (function_exists('cbia_prompt_recommended_editable_default') ? cbia_prompt_recommended_editable_default() : '');
@@ -752,7 +891,7 @@ if (!function_exists('cbia_prompt_get_recommended_editable_block')) {
                 : $editable;
         }
 
-        $generated = cbia_prompt_get_recommended_generated_block($settings, $language);
+        $generated = cbia_prompt_get_recommended_generated_block($settings, $language, $title);
         $editable = (string)($settings['blog_prompt_editable'] ?? '');
         if (function_exists('cbia_prompt_sanitize_editable_block')) {
             $editable = cbia_prompt_sanitize_editable_block($editable);
@@ -765,9 +904,9 @@ if (!function_exists('cbia_prompt_get_recommended_editable_block')) {
 }
 
 if (!function_exists('cbia_prompt_build_recommended_template_from_settings')) {
-    function cbia_prompt_build_recommended_template_from_settings(array $settings, $language = ''): string {
+    function cbia_prompt_build_recommended_template_from_settings(array $settings, $language = '', $title = ''): string {
         $language = $language !== '' ? (string)$language : (string)($settings['post_language'] ?? 'English');
-        $editable = cbia_prompt_get_recommended_editable_block($settings, $language);
+        $editable = cbia_prompt_get_recommended_editable_block($settings, $language, $title);
         return cbia_prompt_build_recommended_template($editable, $language);
     }
 }
@@ -845,8 +984,11 @@ if (!function_exists('cbia_build_prompt_for_title')) {
                 $prompt_unico = cbia_prompt_build_recommended_template($editable, $idioma_post);
             }
         } else {
+            if ((string)($s['blog_prompt_profile'] ?? '') === 'auto_by_title' && cbia_is_auto_prompt_profile_enabled() && function_exists('cbia_log')) {
+                cbia_log(sprintf('Auto prompt profile for "%s": %s', (string)$title, cbia_detect_prompt_profile_from_title($title)), 'INFO');
+            }
             $prompt_unico = function_exists('cbia_prompt_build_recommended_template_from_settings')
-                ? cbia_prompt_build_recommended_template_from_settings($s, $idioma_post)
+                ? cbia_prompt_build_recommended_template_from_settings($s, $idioma_post, $title)
                 : cbia_prompt_build_recommended_template((string)($s['blog_prompt_editable'] ?? ''), $idioma_post);
         }
 

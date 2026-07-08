@@ -46,6 +46,10 @@ $recommended_prompt_block = function_exists('cbia_prompt_get_recommended_editabl
     ? cbia_prompt_get_recommended_editable_block((array)$settings, (string)($settings['post_language'] ?? 'English'))
     : '';
 $prompt_profile_cards = array(
+    'auto_by_title' => array(
+        'icon' => 'dashicons-randomize',
+        'preset' => array('faq' => 1, 'examples' => 0, 'intent' => 'balanced'),
+    ),
     'discover_editorial' => array(
         'icon' => 'dashicons-welcome-write-blog',
         'preset' => array('faq' => 1, 'examples' => 0, 'intent' => 'soft'),

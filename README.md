@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.0.8
+# CBIAStudio BlogFlow with AI (WordPress) v2.0.9
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,16 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.0.9
+- Added Pro-compatible Auto by title prompt profile support with protected base fallback and Pro-only activation through `auto_prompt_profile`.
+- Auto by title resolves each title to Editorial / Discover, SEO Balanced, or How-to / Practical using a compact English + Spanish pattern map.
+- Blog batch logs the resolved profile for each title.
+- The WordPress posts list now includes a Blog profile column for newly generated posts, showing manual profiles or `Auto -> resolved profile`.
+
+## Comparative: 2.0.9 vs 2.0.8
+- Keeps the 2.0.8 usage/cost accounting and proportional image placement.
+- Adds automated prompt profile selection, validation logs, and post-list profile traceability.
 
 ## What's New in 2.0.8
 - Usage now records API calls even when a generation stops or fails before a WordPress post exists.

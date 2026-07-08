@@ -2745,7 +2745,7 @@
 
         function getPromptProfileValue() {
             var profile = promptProfileSelect ? String(promptProfileSelect.value || '') : '';
-            if (profile !== 'seo_balanced' && profile !== 'how_to' && profile !== 'discover_editorial') {
+            if (profile !== 'auto_by_title' && profile !== 'seo_balanced' && profile !== 'how_to' && profile !== 'discover_editorial') {
                 profile = 'discover_editorial';
             }
             return profile;
@@ -2753,6 +2753,7 @@
 
         function getPromptProfileLabel() {
             var profile = getPromptProfileValue();
+            if (profile === 'auto_by_title') return 'Auto';
             if (profile === 'seo_balanced') return 'SEO Standard';
             if (profile === 'how_to') return 'How-to';
             return 'Discover';

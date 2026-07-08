@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.0
-Stable tag: 2.0.8
+Stable tag: 2.0.9
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -156,6 +156,13 @@ This plugin can connect to third-party AI services only when the site administra
 
 == Changelog ==
 
+= 2.0.9 =
+* Added Pro-compatible Auto by title prompt profile support with protected base fallback and Pro-only activation through `auto_prompt_profile`.
+* Auto by title now resolves each title to Editorial / Discover, SEO Balanced, or How-to / Practical using a small English + Spanish pattern map with an extension filter.
+* Blog batch logs the resolved prompt profile for each title, improving validation and editorial traceability.
+* Added a Blog profile column in the WordPress posts list and stores configured/resolved profile metadata on newly generated posts.
+* Comparison vs 2.0.8: keeps usage/cost accounting and proportional image placement while adding profile automation, traceability, and posts-list visibility for generated content.
+
 = 2.0.8 =
 * Usage now records billable API calls even when generation stops or fails before a WordPress post is created, including text, expansion, failed attempts, and image calls.
 * Usage totals include no-post calls without inflating the created-post counter, improving real cost visibility for interrupted batches.
@@ -235,6 +242,9 @@ This plugin can connect to third-party AI services only when the site administra
 * Improved preview/create flows by returning real preview URLs for scheduled drafts and stabilizing admin-side usage rendering.
 
 == Upgrade Notice ==
+
+= 2.0.9 =
+Recommended editorial automation update. Adds Pro-compatible Auto by title profile detection, per-title profile logs, and Blog profile visibility in the posts list.
 
 = 2.0.8 =
 Recommended cost-tracking update. Adds accounting for failed/stopped API calls before post creation, improves real Usage totals, and rebalances internal image placement.

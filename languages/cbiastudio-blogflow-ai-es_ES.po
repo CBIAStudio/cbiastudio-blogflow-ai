@@ -1,12 +1,12 @@
-# Spanish translations for CBIAStudio BlogFlow with AI package
-# Traducciones al espaÃƒÆ’Ã‚Â¯Ãƒâ€šÃ‚Â¿Ãƒâ€šÃ‚Â½ol para el paquete CBIAStudio BlogFlow Pro.
+﻿# Spanish translations for CBIAStudio BlogFlow with AI package
+# Traducciones al espaÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¯ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¿ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â½ol para el paquete CBIAStudio BlogFlow Pro.
 # Copyright (C) 2026 THE CBIAStudio BlogFlow with AI'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the CBIAStudio BlogFlow with AI package.
 # Automatically generated, 2026.
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: CBIAStudio BlogFlow with AI 2.0.8\n"
+"Project-Id-Version: CBIAStudio BlogFlow with AI 2.0.9\n"
 "Report-Msgid-Bugs-To: https://github.com/CBIAStudio/cbiastudio-blogflow-ai/issues\n"
 "POT-Creation-Date: 2026-04-01 12:10+0200\n"
 "PO-Revision-Date: 2026-02-18 08:28+0100\n"
@@ -2430,7 +2430,7 @@ msgstr ""
 #, php-format
 msgid ""
 "Last %1$d calculation: posts=%2$d real=%3$d est=%4$d real_calls=%5$d "
-"real_fails=%6$d tokens_in=%7$d tokens_out=%8$d totalÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬=%9$s"
+"real_fails=%6$d tokens_in=%7$d tokens_out=%8$d totalÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬=%9$s"
 msgstr ""
 
 #: includes/domain/costs.php:1250
@@ -2442,7 +2442,7 @@ msgstr ""
 #, php-format
 msgid ""
 "REAL-only last %1$d calculation: posts=%2$d real=%3$d real_calls=%4$d "
-"real_fails=%5$d tokens_in=%6$d tokens_out=%7$d totalÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬=%8$s"
+"real_fails=%5$d tokens_in=%6$d tokens_out=%7$d totalÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬=%8$s"
 msgstr ""
 
 #: includes/domain/costs.php:1275
@@ -2452,7 +2452,7 @@ msgstr ""
 
 #: includes/domain/costs.php:1305
 #, php-format
-msgid "REAL calibration applied: billing=%1$sÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ real_calc=%2$sÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â€šÂ¬Ã…Â¡Ãƒâ€šÃ‚Â¬ mult=%3$s"
+msgid "REAL calibration applied: billing=%1$sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ real_calc=%2$sÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â¢ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬Ãƒâ€¦Ã‚Â¡ÃƒÆ’Ã¢â‚¬Å¡Ãƒâ€šÃ‚Â¬ mult=%3$s"
 msgstr ""
 
 #: includes/domain/costs.php:1313
@@ -3005,3 +3005,4 @@ msgstr "Guarda las claves de proveedores sin cambiar prompts, longitudes, catego
 
 msgid "PAUSED | idx %1$d of %2$d | %3$s"
 msgstr "PAUSADO | idx %1$d de %2$d | %3$s"
+

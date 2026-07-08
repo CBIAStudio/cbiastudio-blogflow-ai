@@ -345,7 +345,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     ));
                 }
             } else {
-                $draft_id = $this->upsert_preview_draft($title, $final_html, (int)$featured_attach_id, $seo);
+                $draft_id = $this->upsert_preview_draft($title, $final_html, (int)$featured_attach_id, $seo, $settings);
                 if (is_wp_error($draft_id) || !$draft_id) {
                     $err_msg = is_wp_error($draft_id) ? $draft_id->get_error_message() : 'Could not create preview draft.';
                     return new WP_Error('preview_draft_failed', $err_msg);
@@ -608,7 +608,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             return (int)$found;
         }
 
-        private function upsert_preview_draft($title, $final_html, $featured_attach_id, array $seo) {
+        private function upsert_preview_draft($title, $final_html, $featured_attach_id, array $seo, array $settings = array()) {
             $title = trim((string)$title);
             if ($title === '') {
                 return new WP_Error('missing_title', 'Empty title to create draft.');
@@ -644,6 +644,9 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
             $post_id = (int)$post_id;
             update_post_meta($post_id, '_cbia_preview_draft', '1');
+            if (function_exists('cbia_record_post_prompt_profile')) {
+                cbia_record_post_prompt_profile($post_id, $title, $settings);
+            }
             $this->apply_post_meta_tax($post_id, $title, $final_html, (int)$featured_attach_id, $seo);
             return $post_id;
         }
@@ -927,7 +930,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     : (string)($settings['legacy_full_prompt'] ?? ($settings['prompt_single_all'] ?? ''));
             } else {
                 $template = function_exists('cbia_prompt_build_recommended_template_from_settings')
-                    ? cbia_prompt_build_recommended_template_from_settings($settings, $idioma_post)
+                    ? cbia_prompt_build_recommended_template_from_settings($settings, $idioma_post, $title)
                     : (string)($settings['prompt_single_all'] ?? '');
             }
 

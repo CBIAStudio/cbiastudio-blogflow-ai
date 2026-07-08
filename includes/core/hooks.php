@@ -62,6 +62,7 @@ if (!function_exists('cbia_get_capabilities')) {
             'usage_advanced' => $is_pro,
             'costs_advanced' => $is_pro,
             'runtime_advanced' => $is_pro,
+            'auto_prompt_profile' => $is_pro,
         );
 
         $caps = apply_filters('cbia_capabilities', $defaults);
@@ -74,6 +75,47 @@ if (!function_exists('cbia_cap_enabled')) {
     function cbia_cap_enabled(string $cap): bool {
         $caps = cbia_get_capabilities();
         return !empty($caps[$cap]);
+    }
+}
+
+if (!function_exists('cbia_add_prompt_profile_posts_column')) {
+    function cbia_add_prompt_profile_posts_column(array $columns): array {
+        $new = array();
+        foreach ($columns as $key => $label) {
+            $new[$key] = $label;
+            if ($key === 'author') {
+                $new['cbia_prompt_profile'] = __('Blog profile', 'cbiastudio-blogflow-ai');
+            }
+        }
+        if (!isset($new['cbia_prompt_profile'])) {
+            $new['cbia_prompt_profile'] = __('Blog profile', 'cbiastudio-blogflow-ai');
+        }
+        return $new;
+    }
+}
+
+if (!function_exists('cbia_render_prompt_profile_posts_column')) {
+    function cbia_render_prompt_profile_posts_column($column, $post_id): void {
+        if ($column !== 'cbia_prompt_profile') return;
+
+        $configured = sanitize_key((string)get_post_meta((int)$post_id, '_cbia_prompt_profile_configured', true));
+        $resolved = sanitize_key((string)get_post_meta((int)$post_id, '_cbia_prompt_profile_resolved', true));
+
+        if ($configured === '' && $resolved === '') {
+            echo '&mdash;';
+            return;
+        }
+
+        $label_fn = function_exists('cbia_prompt_profile_label') ? 'cbia_prompt_profile_label' : null;
+        $resolved_label = $label_fn ? (string)call_user_func($label_fn, $resolved) : $resolved;
+        $configured_label = $label_fn ? (string)call_user_func($label_fn, $configured) : $configured;
+
+        if ($configured === 'auto_by_title') {
+            echo '<span class="cbia-post-profile cbia-post-profile-auto">' . esc_html__('Auto', 'cbiastudio-blogflow-ai') . ' &rarr; ' . esc_html($resolved_label !== '' ? $resolved_label : $resolved) . '</span>';
+            return;
+        }
+
+        echo '<span class="cbia-post-profile">' . esc_html($resolved_label !== '' ? $resolved_label : ($configured_label !== '' ? $configured_label : $resolved)) . '</span>';
     }
 }
 
@@ -102,6 +144,12 @@ if (!function_exists('cbia_register_core_hooks')) {
         }
         if (!has_filter('admin_body_class', 'cbia_admin_body_class')) {
             add_filter('admin_body_class', 'cbia_admin_body_class');
+        }
+        if (!has_filter('manage_post_posts_columns', 'cbia_add_prompt_profile_posts_column')) {
+            add_filter('manage_post_posts_columns', 'cbia_add_prompt_profile_posts_column');
+        }
+        if (!has_action('manage_post_posts_custom_column', 'cbia_render_prompt_profile_posts_column')) {
+            add_action('manage_post_posts_custom_column', 'cbia_render_prompt_profile_posts_column', 10, 2);
         }
         if (!has_action('in_admin_header', 'cbia_suppress_external_admin_notices')) {
             add_action('in_admin_header', 'cbia_suppress_external_admin_notices', 1);
@@ -3066,7 +3114,8 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
         $default_length = isset($settings['post_length_variant']) ? sanitize_key((string)$settings['post_length_variant']) : 'medium';
         if (!in_array($default_length, array('short', 'medium', 'long'), true)) $default_length = 'medium';
         $default_prompt_profile = sanitize_key((string)($settings['blog_prompt_profile'] ?? 'discover_editorial'));
-        if (!in_array($default_prompt_profile, array('discover_editorial', 'seo_balanced', 'how_to'), true)) {
+        $prompt_profile_options = function_exists('cbia_prompt_get_profile_options') ? cbia_prompt_get_profile_options() : array();
+        if (!array_key_exists($default_prompt_profile, $prompt_profile_options)) {
             $default_prompt_profile = 'discover_editorial';
         }
         $default_include_faq = array_key_exists('include_faq', (array)$settings) ? !empty($settings['include_faq']) : true;
@@ -3190,11 +3239,14 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
                         <strong><?php echo esc_html__('Article goal', 'cbiastudio-blogflow-ai'); ?></strong>
                     </label><br />
                     <select id="cbia-ai-prompt-profile">
+                        <?php if (function_exists('cbia_is_auto_prompt_profile_enabled') && cbia_is_auto_prompt_profile_enabled()) : ?>
+                            <option value="auto_by_title" <?php selected($default_prompt_profile, 'auto_by_title'); ?>><?php echo esc_html__('Auto by title', 'cbiastudio-blogflow-ai'); ?></option>
+                        <?php endif; ?>
                         <option value="discover_editorial" <?php selected($default_prompt_profile, 'discover_editorial'); ?>><?php echo esc_html__('Discover / Editorial', 'cbiastudio-blogflow-ai'); ?></option>
                         <option value="seo_balanced" <?php selected($default_prompt_profile, 'seo_balanced'); ?>><?php echo esc_html__('SEO Standard', 'cbiastudio-blogflow-ai'); ?></option>
                         <option value="how_to" <?php selected($default_prompt_profile, 'how_to'); ?>><?php echo esc_html__('How-to / Practical Guide', 'cbiastudio-blogflow-ai'); ?></option>
                     </select>
-                    <span class="description cbia-ai-control-help"><?php echo esc_html__('Defines the writing objective. Recommended for most posts: SEO Standard.', 'cbiastudio-blogflow-ai'); ?></span>
+                    <span class="description cbia-ai-control-help"><?php echo esc_html((function_exists('cbia_is_auto_prompt_profile_enabled') && cbia_is_auto_prompt_profile_enabled()) ? __('Automatically chooses Editorial, SEO Balanced or How-to from each title.', 'cbiastudio-blogflow-ai') : __('Defines the writing objective. Recommended for most posts: SEO Standard.', 'cbiastudio-blogflow-ai')); ?></span>
                 </p>
                 <p class="cbia-ai-control cbia-ai-control-toggle cbia-ai-col-faq">
                     <label for="cbia-ai-include-faq" class="cbia-ai-toggle-label">
@@ -3914,7 +3966,8 @@ if (!function_exists('cbia_ai_composer_sanitize_snapshot')) {
             $internal_style = 'banner';
         }
         $prompt_profile = isset($controls['prompt_profile']) ? sanitize_key((string)$controls['prompt_profile']) : 'discover_editorial';
-        if (!in_array($prompt_profile, array('discover_editorial', 'seo_balanced', 'how_to'), true)) {
+        $prompt_profile_options = function_exists('cbia_prompt_get_profile_options') ? cbia_prompt_get_profile_options() : array();
+        if (!array_key_exists($prompt_profile, $prompt_profile_options)) {
             $prompt_profile = 'discover_editorial';
         }
         $include_faq = isset($controls['include_faq']) ? absint($controls['include_faq']) : 1;
