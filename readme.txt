@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.0
-Stable tag: 2.0.9
+Stable tag: 2.1.3
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -155,6 +155,38 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://platform.deepseek.com/privacy
 
 == Changelog ==
+
+= 2.1.3 =
+* OpenAI Image responses now keep requested and effective quality/size separately.
+* Automatic quality uses a returned effective quality for local output estimates when token usage is unavailable.
+* Usage detail includes effective image response fields and image output token details.
+* Historical events without evidence remain unknown and are not inferred.
+* Blog/cron, preview, pending-image, Oldposts, and manual regeneration routes retain the same image response evidence.
+
+= 2.1.2 =
+* Usage costs now distinguish exact, estimated, unknown, and officially reconciled evidence.
+* OpenAI image usage tokens, retries, timeouts, orphan attempts, request IDs, HTTP status, and elapsed time are tracked without treating unknown cost as zero.
+* Added explicit historical recalculation simulation, confirmation, backup, coverage reporting, and extended Usage filters.
+* Per-event detail explains unknown costs, and the historical recalculation endpoint uses its dedicated nonce.
+
+
+
+= 2.1.1 =
+Fixes persistence of the default, featured, and content OpenAI image quality selectors after saving Settings.
+
+= 2.1.0 =
+* Added default, featured and content OpenAI image quality settings with safe inheritance.
+* Live image cost estimates now resolve each effective quality and Usage stores the final quality, size and image type.
+* Automatic quality omits the OpenAI quality parameter; GPT Image 2 transparent backgrounds are reported and changed to opaque.
+
+= 2.0.10 =
+* Added an OpenAI image quality selector with Automatic, Low, Medium, and High values and backward-compatible Automatic default.
+* Image requests now use one validated PHP service for model, quality, size, payload preparation, and output-price estimates.
+* Added live per-image and per-article estimates using model, quality, real slot sizes, and selected image count; Automatic quality remains explicitly variable.
+* Usage and operational logs now retain image quality/size context, estimated output cost, HTTP status, and OpenAI request ID when available.
+* Added strict base64 validation and safe opaque fallback if GPT Image 2 receives a transparent-background request.
+* Updated historical image-cost compatibility while preserving previously stored settings and API keys.
+* Comparison vs 2.0.9: keeps Auto by title compatibility, scheduling, Usage visibility, and image placement while adding configurable OpenAI image quality and centralized size-aware pricing.
 
 = 2.0.9 =
 * Added Pro-compatible Auto by title prompt profile support with protected base fallback and Pro-only activation through `auto_prompt_profile`.

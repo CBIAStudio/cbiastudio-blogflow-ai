@@ -264,6 +264,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'attach_id' => (int)$featured_attach_id,
                         'error' => '',
                         'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($featured_meta) : array(),
+                        'meta' => is_array($featured_meta) ? $featured_meta : array(),
                     );
                     $this->emit($emit, 'featured_image_status', array(
                         'status' => 'done',
@@ -280,6 +281,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'attach_id' => 0,
                         'error' => (string)($featured_err ?: ''),
                         'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($featured_meta) : array(),
+                        'meta' => is_array($featured_meta) ? $featured_meta : array(),
                     );
                     $this->emit($emit, 'featured_image_status', array(
                         'status' => 'error',
@@ -741,6 +743,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     'attach_id' => (int)($item['attach_id'] ?? 0),
                     'error' => sanitize_text_field((string)($item['error'] ?? '')),
                     'attempts' => is_array($item['attempts'] ?? null) ? (array)$item['attempts'] : array(),
+                    'meta' => is_array($item['meta'] ?? null) ? (array)$item['meta'] : array(),
                 );
             }
             return $rows;
@@ -787,23 +790,24 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 $attach_id = (int)($item['attach_id'] ?? 0);
                 $error = sanitize_text_field((string)($item['error'] ?? ''));
                 $attempts = is_array($item['attempts'] ?? null) ? $item['attempts'] : array();
+                $meta = is_array($item['meta'] ?? null) ? $item['meta'] : array();
 
                 $recorded_attempts = 0;
                 if (!empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
                     $recorded_attempts = cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'image', 'section' => $section));
                 }
                 if (function_exists('cbia_costes_record_usage') && ($ok || !$recorded_attempts)) {
-                    cbia_costes_record_usage($post_id, array(
+                    cbia_costes_record_usage($post_id, array_merge($meta, array(
                         'type' => 'image',
                         'model' => $model,
-                        'input_tokens' => 0,
-                        'output_tokens' => 0,
-                        'cached_input_tokens' => 0,
+                        'input_tokens' => (int)($meta['input_tokens'] ?? 0),
+                        'output_tokens' => (int)($meta['output_tokens'] ?? 0),
+                        'cached_input_tokens' => (int)($meta['cached_input_tokens'] ?? 0),
                         'ok' => $ok,
                         'error' => $error,
                         'section' => $section,
                         'attach_id' => $attach_id,
-                    ));
+                    )));
                 }
                 if (function_exists('cbia_image_append_call')) {
                     cbia_image_append_call($post_id, $section, $model, $ok, $attach_id, $error);
@@ -1252,6 +1256,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                             'url' => (string)$url,
                             'attach_id' => (int)$attach_id,
                             'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($img_meta) : array(),
+                            'meta' => is_array($img_meta) ? $img_meta : array(),
                         );
                         $temp_attachment_ids[] = (int)$attach_id;
                         $this->emit($emit, 'cbia_content', array('html' => $html));
@@ -1274,6 +1279,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'model' => (string)$img_model,
                         'error' => (string)($img_err ?: ''),
                         'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($img_meta) : array(),
+                        'meta' => is_array($img_meta) ? $img_meta : array(),
                     );
                     $this->emit($emit, 'cbia_image', array(
                         'idx' => $i,

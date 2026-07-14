@@ -276,9 +276,7 @@ if (!function_exists('cbia_register_core_hooks')) {
         if (!has_action('cbia_usage_row_recorded', 'cbia_usage_store_append_row')) {
             add_action('cbia_usage_row_recorded', 'cbia_usage_store_append_row', 10, 2);
         }
-        if (!has_action('admin_init', 'cbia_usage_migrate_openai_image_high_costs')) {
-            add_action('admin_init', 'cbia_usage_migrate_openai_image_high_costs');
-        }
+// Historical usage is never rewritten automatically. Recalculation is an explicit dry-run workflow.
         if (!has_action('admin_init', 'cbia_repair_provider_api_keys_into_main_settings')) {
             add_action('admin_init', 'cbia_repair_provider_api_keys_into_main_settings', 2);
         }
@@ -302,7 +300,7 @@ if (!function_exists('cbia_admin_post_usage_export')) {
         check_admin_referer('cbia_usage_export');
 
         $days = isset($_GET['usage_days']) ? absint(wp_unslash((string) $_GET['usage_days'])) : 7;
-        if (!in_array($days, array(7, 30, 90), true)) $days = 7;
+        if (!in_array($days, array(7, 30, 90, 730), true)) $days = 7;
         $model_filter = isset($_GET['usage_model']) ? sanitize_text_field(wp_unslash((string) $_GET['usage_model'])) : '';
         $since_ts = time() - ($days * DAY_IN_SECONDS);
 
@@ -359,7 +357,7 @@ if (!function_exists('cbia_admin_post_usage_export')) {
 
 if (!function_exists('cbia_get_usage_dashboard_payload')) {
     function cbia_get_usage_dashboard_payload($days = 30, $requested_model = '') {
-        $allowed_days = array(7, 30, 90);
+        $allowed_days = array(7, 30, 90, 730);
         $days = (int) $days;
         if (!in_array($days, $allowed_days, true)) {
             $days = 30;
@@ -374,7 +372,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
         if ($cache_ttl < 0) {
             $cache_ttl = 0;
         }
-        $recent_rows_limit = (int) apply_filters('cbia_pro_usage_recent_rows_limit', 120);
+        $recent_rows_limit = (int) apply_filters('cbia_pro_usage_recent_rows_limit', 5000);
         if ($recent_rows_limit < 20) {
             $recent_rows_limit = 20;
         }
@@ -670,6 +668,9 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
                 'user_ids' => array(),
                 'total_tokens' => 0,
                 'total_cost' => 0.0,
+                'known_cost_events' => 0,
+                'unknown_cost_events' => 0,
+                'cost_status_counts' => array('exact' => 0, 'estimated' => 0, 'unknown' => 0, 'official_reconciled' => 0),
                 'daily' => array(),
                 'monthly' => array(),
                 'type_counts' => array('text' => 0, 'image' => 0, 'seo' => 0),
@@ -866,7 +867,7 @@ if (!function_exists('cbia_usage_overview_cache_key')) {
 
 if (!function_exists('cbia_usage_event_store_option_key')) {
     function cbia_usage_event_store_option_key() {
-        return 'cbia_pro_usage_event_store_v1';
+        return 'cbia_pro_usage_event_store_v2';
     }
 }
 
@@ -889,7 +890,7 @@ if (!function_exists('cbia_usage_event_store_limits')) {
 
 if (!function_exists('cbia_usage_invalidate_dashboard_cache')) {
     function cbia_usage_invalidate_dashboard_cache() {
-        foreach (array(7, 30, 90) as $days) {
+        foreach (array(7, 30, 90, 730) as $days) {
             delete_transient(cbia_usage_overview_cache_key($days));
             delete_transient('cbia_pro_usage_overview_v8_' . get_current_blog_id() . '_' . (int) $days);
         }
@@ -992,20 +993,13 @@ if (!function_exists('cbia_usage_dashboard_format_row')) {
             $real_adjust_multiplier = 1.0;
         }
 
-        $row_cost_eur = null;
-        if (function_exists('cbia_costes_calc_row_eur')) {
-            $row_cost_eur = cbia_costes_calc_row_eur($row, $cost_settings, $cost_table);
-            if ($row_cost_eur !== null && $real_adjust_multiplier !== 1.0) {
-                $row_cost_eur = (float) $row_cost_eur * $real_adjust_multiplier;
-            }
-            if ($row_cost_eur !== null) {
-                $row_cost_eur = round((float) $row_cost_eur, 6);
-            }
-        }
+        $cost = function_exists('cbia_costes_calculate_row') ? cbia_costes_calculate_row($row, $cost_settings) : array();
+        $cost_micro_usd = isset($cost['cost_micro_usd']) && is_numeric($cost['cost_micro_usd']) ? (int)$cost['cost_micro_usd'] : null;
+        $row_cost_usd = $cost_micro_usd === null ? null : round($cost_micro_usd / 1000000, 6);
 
         return array(
             'post_id' => $post_id,
-            'post_title' => $post_title !== '' ? $post_title : ('Post #' . $post_id),
+            'post_title' => $post_title !== '' ? $post_title : sanitize_text_field((string)($row['title'] ?? __('Unassigned API attempt', 'cbiastudio-blogflow-ai'))),
             'post_edit_url' => $post_id > 0 ? (string) get_edit_post_link($post_id, '') : '',
             'ts' => $ts_raw,
             'sort_ts' => $ts > 0 ? $ts : 0,
@@ -1018,14 +1012,47 @@ if (!function_exists('cbia_usage_dashboard_format_row')) {
             'section_detail' => $section_detail,
             'attach_id' => (int) ($row['attach_id'] ?? 0),
             'model' => $model,
+            'provider' => sanitize_key((string)($row['provider'] ?? 'openai')),
+            'model_requested' => sanitize_text_field((string)($row['model_requested'] ?? $model)),
+            'model_effective' => sanitize_text_field((string)($row['model_effective'] ?? $model)),
+            'quality' => $type === 'image' ? sanitize_key((string) ($row['effective_quality'] ?? ($row['quality_effective'] ?? ($row['quality'] ?? 'auto')))) : '',
+            'quality_label' => $type === 'image' && class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_quality_label($row['effective_quality'] ?? ($row['quality_effective'] ?? ($row['quality'] ?? 'auto'))) : '',
+            'requested_quality' => $type === 'image' ? sanitize_key((string)($row['requested_quality'] ?? ($row['quality_requested'] ?? ($row['quality'] ?? 'auto')))) : '',
+            'effective_quality' => $type === 'image' ? sanitize_key((string)($row['effective_quality'] ?? ($row['quality_effective'] ?? ''))) : '',
+            'requested_quality_label' => $type === 'image' && class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_quality_label($row['requested_quality'] ?? ($row['quality_requested'] ?? ($row['quality'] ?? 'auto'))) : '',
+            'effective_quality_label' => $type === 'image' && !empty($row['effective_quality'] ?? ($row['quality_effective'] ?? '')) && class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_quality_label($row['effective_quality'] ?? $row['quality_effective']) : '',
+            'size' => $type === 'image' ? sanitize_text_field((string) ($row['effective_size'] ?? ($row['size'] ?? ''))) : '',
+            'requested_size' => $type === 'image' ? sanitize_text_field((string)($row['requested_size'] ?? ($row['size'] ?? ''))) : '',
+            'effective_size' => $type === 'image' ? sanitize_text_field((string)($row['effective_size'] ?? '')) : '',
+            'output_format' => $type === 'image' ? sanitize_key((string)($row['output_format'] ?? '')) : '',
+            'background' => $type === 'image' ? sanitize_key((string)($row['background'] ?? '')) : '',
+            'image_type' => $type === 'image' ? sanitize_key((string) ($row['image_type'] ?? '')) : '',
             'tokens_in' => $tokens_in,
             'tokens_out' => $tokens_out,
             'tokens_total' => $tokens_total,
-            'token_metrics_applicable' => $type !== 'image',
+            'token_metrics_applicable' => $type !== 'image' || ($tokens_total > 0),
             'cached_in' => (int) ($row['cin'] ?? 0),
-            'cost_eur' => $row_cost_eur,
+            'reasoning_tokens' => (int)($row['reasoning_tokens'] ?? 0),
+            'cost_micro_usd' => $cost_micro_usd,
+            'cost_usd' => $row_cost_usd,
+            'cost_eur' => $row_cost_usd,
+            'cost_status' => sanitize_key((string)($cost['cost_status'] ?? 'unknown')),
+            'cost_source' => sanitize_key((string)($cost['cost_source'] ?? 'unavailable')),
+            'cost_reason' => sanitize_key((string)($cost['cost_reason'] ?? 'insufficient_usage_data')),
+            'cost_currency' => 'USD',
+            'pricing_version' => sanitize_text_field((string)($cost['pricing_version'] ?? '')),
+            'pricing_verified_at' => sanitize_text_field((string)($cost['pricing_verified_at'] ?? '')),
+            'http_code' => (int)($row['http_code'] ?? 0),
+            'request_id' => sanitize_text_field((string)($row['request_id'] ?? '')),
+            'attempt_id' => sanitize_text_field((string)($row['attempt_id'] ?? '')),
+            'attempt' => max(1, (int)($row['attempt'] ?? 1)),
+            'parent_attempt' => max(0, (int)($row['parent_attempt'] ?? 0)),
+            'elapsed_ms' => max(0, (int)($row['elapsed_ms'] ?? 0)),
+            'batch_id' => sanitize_text_field((string)($row['batch_id'] ?? ($row['run_id'] ?? ''))),
+            'fallback_from' => sanitize_text_field((string)($row['fallback_from'] ?? '')),
             'ok' => !empty($row['ok']) ? 1 : 0,
-            'status_label' => !empty($row['ok']) ? 'OK' : 'Error',
+            'status' => sanitize_key((string)($row['status'] ?? (!empty($row['ok']) ? 'success' : 'error'))),
+            'status_label' => !empty($row['ok']) ? 'OK' : (sanitize_key((string)($row['status'] ?? 'error')) === 'timeout' ? 'Timeout' : 'Error'),
             'user_id' => $author_id,
             'user_name' => $author_name,
             'source_label' => $post_title !== '' ? $post_title : ('Post #' . $post_id),
@@ -1124,6 +1151,11 @@ if (!function_exists('cbia_usage_rebuild_event_store_rows')) {
             wp_reset_postdata();
         } while ($has_more);
 
+        $orphan_rows = function_exists('cbia_costes_get_orphan_usage_rows') ? cbia_costes_get_orphan_usage_rows() : array();
+        foreach ((array)$orphan_rows as $usage_row) {
+            $formatted = cbia_usage_dashboard_format_row(0, $usage_row, $cost_settings, $cost_table, $real_adjust_multiplier);
+            if ($formatted) $rebuilt_rows[] = $formatted;
+        }
         return cbia_usage_save_event_store_rows($rebuilt_rows);
     }
 }
@@ -1218,7 +1250,7 @@ if (!function_exists('cbia_usage_migrate_openai_image_high_costs')) {
                     }
 
                     $flat_usd = function_exists('cbia_costes_image_flat_price_usd')
-                        ? (float) cbia_costes_image_flat_price_usd($model, $cost_settings)
+                        ? (float) cbia_costes_image_flat_price_usd($model, $cost_settings, 'high', '1536x1024')
                         : 0.0;
                     if ($flat_usd <= 0) {
                         continue;
@@ -1258,7 +1290,7 @@ if (!function_exists('cbia_usage_migrate_openai_image_high_costs')) {
         if (function_exists('cbia_usage_invalidate_dashboard_cache')) {
             cbia_usage_invalidate_dashboard_cache();
         }
-        foreach (array(7, 30, 90) as $days) {
+        foreach (array(7, 30, 90, 730) as $days) {
             foreach (array('v5', 'v7', 'v8', 'v9') as $ver) {
                 delete_transient('cbia_pro_usage_overview_' . $ver . '_' . get_current_blog_id() . '_' . (int) $days);
             }
@@ -1363,6 +1395,14 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
                 'user_ids' => array(),
                 'total_tokens' => 0,
                 'total_cost' => 0.0,
+                'known_cost_events' => 0,
+                'unknown_cost_events' => 0,
+                'cost_status_counts' => array(
+                    'exact' => 0,
+                    'estimated' => 0,
+                    'unknown' => 0,
+                    'official_reconciled' => 0,
+                ),
                 'daily' => array(),
                 'monthly' => array(),
                 'type_counts' => array(
@@ -1453,7 +1493,13 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
                 $summary_rows[$summary_key]['total_tokens'] += $tokens_total;
                 if ($cost_value !== null && $cost_value !== '' && is_numeric($cost_value)) {
                     $summary_rows[$summary_key]['total_cost'] += (float) $cost_value;
+                    $summary_rows[$summary_key]['known_cost_events'] += 1;
+                } else {
+                    $summary_rows[$summary_key]['unknown_cost_events'] += 1;
                 }
+                $cost_status = sanitize_key((string)($row['cost_status'] ?? 'unknown'));
+                if (!isset($summary_rows[$summary_key]['cost_status_counts'][$cost_status])) $cost_status = 'unknown';
+                $summary_rows[$summary_key]['cost_status_counts'][$cost_status] += 1;
                 if (!isset($summary_rows[$summary_key]['type_counts'][$type])) {
                     $summary_rows[$summary_key]['type_counts'][$type] = 0;
                 }
@@ -1515,6 +1561,10 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
                 'avgTokens' => $calls > 0 ? (int) round(((int) ($summary['total_tokens'] ?? 0)) / $calls) : 0,
                 'totalCost' => round((float) ($summary['total_cost'] ?? 0), 6),
                 'avgCostPerPost' => $post_count > 0 ? round(((float) ($summary['total_cost'] ?? 0)) / $post_count, 6) : 0.0,
+                'knownCostEvents' => (int)($summary['known_cost_events'] ?? 0),
+                'unknownCostEvents' => (int)($summary['unknown_cost_events'] ?? 0),
+                'costCoveragePercent' => $calls > 0 ? round(100 * ((int)($summary['known_cost_events'] ?? 0)) / $calls, 1) : 0,
+                'costStatusCounts' => (array)($summary['cost_status_counts'] ?? array()),
                 'typeCounts' => array(
                     'text' => (int) ($summary['type_counts']['text'] ?? 0),
                     'image' => (int) ($summary['type_counts']['image'] ?? 0),
@@ -1549,7 +1599,7 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
 
 if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
     function cbia_get_usage_dashboard_payload_fast($days = 30, $requested_model = '') {
-        $allowed_days = array(7, 30, 90);
+        $allowed_days = array(7, 30, 90, 730);
         $days = (int) $days;
         if (!in_array($days, $allowed_days, true)) {
             $days = 30;
@@ -1571,7 +1621,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
         if ($cache_ttl < 0) {
             $cache_ttl = 0;
         }
-        $recent_rows_limit = (int) apply_filters('cbia_pro_usage_recent_rows_limit', 120);
+        $recent_rows_limit = (int) apply_filters('cbia_pro_usage_recent_rows_limit', 5000);
         if ($recent_rows_limit < 20) {
             $recent_rows_limit = 20;
         }
@@ -2112,7 +2162,7 @@ if (!function_exists('cbia_ajax_usage_overview_data')) {
     if (!function_exists('cbia_get_usage_dashboard_payload_basic')) {
         function cbia_get_usage_dashboard_payload_basic($days = 30, $requested_model = '') {
             $days = (int) $days;
-            if (!in_array($days, array(7, 30, 90), true)) {
+            if (!in_array($days, array(7, 30, 90, 730), true)) {
                 $days = 30;
             }
             $period_start = gmdate('Y-m-d', time() - ($days * DAY_IN_SECONDS));
@@ -2298,8 +2348,8 @@ if (!function_exists('cbia_admin_enqueue_inline')) {
         wp_enqueue_style('dashicons');
         $css_path = CBIA_PRO_PLUGIN_DIR . 'assets/css/admin.css';
         $js_path  = CBIA_PRO_PLUGIN_DIR . 'assets/js/admin.js';
-        $css_ver  = file_exists($css_path) ? filemtime($css_path) : CBIA_VERSION;
-        $js_ver   = file_exists($js_path) ? filemtime($js_path) : CBIA_VERSION;
+        $css_ver  = CBIA_VERSION . (file_exists($css_path) ? '.' . filemtime($css_path) : '');
+        $js_ver   = CBIA_VERSION . (file_exists($js_path) ? '.' . filemtime($js_path) : '');
 
         wp_enqueue_style(
             'abb-admin',
@@ -3704,6 +3754,9 @@ if (!function_exists('cbia_ajax_ai_composer_save_api_key')) {
         if ($scope === 'image' && !in_array($provider, array('openai', 'google'), true)) {
             wp_send_json_error(array('message' => __('The image provider does not support image generation.', 'cbiastudio-blogflow-ai')), 400);
         }
+        if ($scope === 'image' && $provider === 'openai' && $model !== '' && class_exists('CBIA_Image_Pricing_Service')) {
+            $model = CBIA_Image_Pricing_Service::validate_model($model);
+        }
         if ($key === '' && !$use_existing_key) {
             wp_send_json_error(array('message' => __('API key cannot be empty.', 'cbiastudio-blogflow-ai')), 400);
         }
@@ -4155,21 +4208,41 @@ if (!function_exists('cbia_ajax_ai_composer_regenerate_image_slot')) {
             ? $title
             : sprintf('Internal image %d: %s', (int)$slot_idx, $title);
 
-        list($ok, $attach_id, $model_used, $err) = cbia_generate_image_openai_with_prompt(
+        list($ok, $attach_id, $model_used, $err, $meta) = cbia_generate_image_openai_with_prompt(
             $prompt,
             $section,
             $title,
             $alt,
             $slot_idx
         );
+        $attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($meta) : array();
 
         if (!$ok || (int)$attach_id <= 0) {
+            $recorded_attempts = 0;
+            if (!empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+                $recorded_attempts = cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'image', 'section' => $section, 'context' => 'composer_image'));
+            }
+            if (!$recorded_attempts && function_exists('cbia_costes_record_usage')) {
+                cbia_costes_record_usage($post_id, array_merge(is_array($meta) ? $meta : array(), array(
+                    'type' => 'image', 'model' => (string)$model_used, 'ok' => 0, 'error' => (string)$err,
+                    'section' => (string)$section, 'idx' => (int)$slot_idx, 'context' => 'composer_image',
+                )));
+            }
             wp_send_json_error(array(
                 'message' => $err !== '' ? $err : 'Could not regenerate image.',
             ), 500);
         }
 
         $attach_id = (int)$attach_id;
+        if (!empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
+            cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'image', 'section' => $section, 'context' => 'composer_image'));
+        }
+        if (function_exists('cbia_costes_record_usage')) {
+            cbia_costes_record_usage($post_id, array_merge(is_array($meta) ? $meta : array(), array(
+                'type' => 'image', 'model' => (string)$model_used, 'ok' => 1, 'error' => '',
+                'section' => (string)$section, 'idx' => (int)$slot_idx, 'attach_id' => $attach_id, 'context' => 'composer_image',
+            )));
+        }
         $url = wp_get_attachment_url($attach_id);
         if (!$url) {
             wp_send_json_error(array('message' => 'Generated image has no valid URL.'), 500);
@@ -6305,17 +6378,17 @@ if (!function_exists('cbia_ajax_regen_image')) {
 
         // Registrar usage imagen (costes + agregados)
         if (function_exists('cbia_costes_record_usage')) {
-            cbia_costes_record_usage($post_id, array(
+            cbia_costes_record_usage($post_id, array_merge(is_array($meta) ? $meta : array(), array(
                 'type' => 'image',
                 'model' => (string)$model,
-                'input_tokens' => 0,
-                'output_tokens' => 0,
-                'cached_input_tokens' => 0,
+                'input_tokens' => (int)($meta['input_tokens'] ?? 0),
+                'output_tokens' => (int)($meta['output_tokens'] ?? 0),
+                'cached_input_tokens' => (int)($meta['cached_input_tokens'] ?? 0),
                 'ok' => 1,
                 'error' => '',
                 'section' => (string)$section,
                 'attach_id' => (int)$attach_id,
-            ));
+            )));
         }
         if (function_exists('cbia_image_append_call')) {
             cbia_image_append_call($post_id, $section, (string)$model, true, (int)$attach_id, '');
@@ -6444,4 +6517,15 @@ if (!function_exists('cbia_ajax_sync_models')) {
         }
         wp_send_json_error(['message' => 'Could not sync models', 'result' => $result], 500);
     }
+}
+if (!function_exists('cbia_ajax_usage_recalculate_history')) {
+    function cbia_ajax_usage_recalculate_history() {
+        check_ajax_referer('cbia_usage_overview');
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => __('Unauthorized', 'cbiastudio-blogflow-ai')), 403);
+        if (!function_exists('cbia_costes_recalculate_history')) wp_send_json_error(array('message' => __('Recalculation unavailable.', 'cbiastudio-blogflow-ai')), 500);
+        $apply = !empty($_POST['apply']);
+        if ($apply && sanitize_text_field((string)($_POST['confirm'] ?? '')) !== 'RECALCULATE') wp_send_json_error(array('message' => __('Explicit confirmation is required.', 'cbiastudio-blogflow-ai')), 400);
+        wp_send_json_success(cbia_costes_recalculate_history($apply));
+    }
+    add_action('wp_ajax_cbia_usage_recalculate_history', 'cbia_ajax_usage_recalculate_history');
 }

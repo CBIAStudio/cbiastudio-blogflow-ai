@@ -10,7 +10,15 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-$allowed_days = array(7, 30, 90);
+if (!function_exists('cbia_usage_image_quality_label')) {
+    function cbia_usage_image_quality_label($quality) {
+        $labels = array('auto' => __('Automatic', 'cbiastudio-blogflow-ai'), 'low' => __('Low', 'cbiastudio-blogflow-ai'), 'medium' => __('Medium', 'cbiastudio-blogflow-ai'), 'high' => __('High', 'cbiastudio-blogflow-ai'));
+        $quality = sanitize_key((string)$quality);
+        return (string)($labels[$quality] ?? $quality);
+    }
+}
+
+$allowed_days = array(7, 30, 90, 730);
 $days = isset($_GET['usage_days']) ? absint(wp_unslash((string) $_GET['usage_days'])) : 30;
 if (!in_array($days, $allowed_days, true)) {
     $days = 30;
@@ -43,7 +51,7 @@ $cache_ttl = (int) apply_filters('cbia_pro_usage_cache_ttl', 15 * MINUTE_IN_SECO
 if ($cache_ttl < 0) {
     $cache_ttl = 0;
 }
-$recent_rows_limit = (int) apply_filters('cbia_pro_usage_recent_rows_limit', 120);
+$recent_rows_limit = (int) apply_filters('cbia_pro_usage_recent_rows_limit', 5000);
 if ($recent_rows_limit < 20) {
     $recent_rows_limit = 20;
 }
@@ -270,6 +278,10 @@ foreach ($post_ids as $post_id) {
             'section_detail' => $section_detail,
             'attach_id' => $attach_id,
             'model' => $model,
+            'quality' => sanitize_key((string)($row['quality'] ?? ($row['image_quality'] ?? ''))),
+            'quality_label' => cbia_usage_image_quality_label($row['quality'] ?? ($row['image_quality'] ?? '')),
+            'size' => sanitize_text_field((string)($row['size'] ?? ($row['image_size_estimate'] ?? ''))),
+            'image_type' => sanitize_key((string)($row['image_type'] ?? '')),
             'tokens_in' => $tokens_in,
             'tokens_out' => $tokens_out,
             'tokens_total' => $tokens_total,
@@ -437,6 +449,10 @@ if (function_exists('cbia_costes_get_orphan_usage_rows')) {
             'section_detail' => $section_detail,
             'attach_id' => (int) ($row['attach_id'] ?? 0),
             'model' => $model,
+            'quality' => sanitize_key((string)($row['quality'] ?? ($row['image_quality'] ?? ''))),
+            'quality_label' => cbia_usage_image_quality_label($row['quality'] ?? ($row['image_quality'] ?? '')),
+            'size' => sanitize_text_field((string)($row['size'] ?? ($row['image_size_estimate'] ?? ''))),
+            'image_type' => sanitize_key((string)($row['image_type'] ?? '')),
             'tokens_in' => $tokens_in,
             'tokens_out' => $tokens_out,
             'tokens_total' => $tokens_total,
@@ -680,7 +696,7 @@ if (!isset($summaries_by_model) || !is_array($summaries_by_model)) {
 }
 }
 
-$recent_rows_limit = (int) apply_filters('cbia_pro_usage_recent_rows_limit', 120);
+$recent_rows_limit = (int) apply_filters('cbia_pro_usage_recent_rows_limit', 5000);
 if ($recent_rows_limit < 20) {
     $recent_rows_limit = 20;
 }
@@ -770,6 +786,30 @@ $dashboard_payload['i18n'] = array(
     'loadErrorMeta' => __('Could not load usage data right now.', 'cbiastudio-blogflow-ai'),
     'loadErrorRow' => __('Could not load usage data.', 'cbiastudio-blogflow-ai'),
     'loadErrorDetail' => __('Could not load usage data.', 'cbiastudio-blogflow-ai'),
+    'costCoverage' => __('Local cost coverage', 'cbiastudio-blogflow-ai'),
+    'unknownEvents' => __('Unknown cost events', 'cbiastudio-blogflow-ai'),
+    'unknownCost' => __('Cost not determined', 'cbiastudio-blogflow-ai'),
+    'provider' => __('Provider', 'cbiastudio-blogflow-ai'),
+    'requestedModel' => __('Requested model', 'cbiastudio-blogflow-ai'),
+    'effectiveModel' => __('Effective model', 'cbiastudio-blogflow-ai'),
+    'requestedQuality' => __('Requested quality', 'cbiastudio-blogflow-ai'),
+    'effectiveQuality' => __('Effective quality', 'cbiastudio-blogflow-ai'),
+    'requestedSize' => __('Requested size', 'cbiastudio-blogflow-ai'),
+    'effectiveSize' => __('Effective size', 'cbiastudio-blogflow-ai'),
+    'outputFormat' => __('Output format', 'cbiastudio-blogflow-ai'),
+    'background' => __('Background', 'cbiastudio-blogflow-ai'),
+    'notReturned' => __('Not returned', 'cbiastudio-blogflow-ai'),
+    'costStatus' => __('Cost status', 'cbiastudio-blogflow-ai'),
+    'costSource' => __('Cost source', 'cbiastudio-blogflow-ai'),
+    'costReason' => __('Cost reason', 'cbiastudio-blogflow-ai'),
+    'automaticQualityWithoutUsage' => __('Cost not determined: OpenAI did not return the effective quality or sufficient usage data.', 'cbiastudio-blogflow-ai'),
+    'timeoutWithoutResponseUsage' => __('Cost not determined: the local connection timed out before usage data was received.', 'cbiastudio-blogflow-ai'),
+    'outputEstimateOnly' => __('Output estimate only; this is not the total invoiced cost.', 'cbiastudio-blogflow-ai'),
+    'apiUsage' => __('Calculated from API usage and the local pricing catalog.', 'cbiastudio-blogflow-ai'),
+    'officialReconciliation' => __('Officially reconciled cost.', 'cbiastudio-blogflow-ai'),
+    'insufficientUsageData' => __('Insufficient usage data.', 'cbiastudio-blogflow-ai'),
+    'modelWithoutPricing' => __('The effective model has no local price.', 'cbiastudio-blogflow-ai'),
+    'missingTokenUsage' => __('The response did not include sufficient token usage.', 'cbiastudio-blogflow-ai'),
 );
 ?>
 <div class="cbia-usage-page">
@@ -886,14 +926,14 @@ $dashboard_payload['i18n'] = array(
                 <div class="cbia-usage-kpi cbia-usage-kpi-cost-total">
                     <div class="cbia-usage-kpi-icon"><span class="dashicons dashicons-money-alt"></span></div>
                     <div class="cbia-usage-kpi-copy">
-                        <span class="cbia-usage-kpi-label"><?php echo esc_html__('Total cost', 'cbiastudio-blogflow-ai'); ?></span>
+                        <span class="cbia-usage-kpi-label"><?php echo esc_html__('Local calculated / estimated cost', 'cbiastudio-blogflow-ai'); ?></span>
                         <strong id="cbia-usage-kpi-cost-total">$0.00</strong>
                     </div>
                 </div>
                 <div class="cbia-usage-kpi cbia-usage-kpi-cost-blog">
                     <div class="cbia-usage-kpi-icon"><span class="dashicons dashicons-chart-pie"></span></div>
                     <div class="cbia-usage-kpi-copy">
-                        <span class="cbia-usage-kpi-label"><?php echo esc_html__('Avg cost / blog', 'cbiastudio-blogflow-ai'); ?></span>
+                        <span class="cbia-usage-kpi-label"><?php echo esc_html__('Local average known cost / blog', 'cbiastudio-blogflow-ai'); ?></span>
                         <strong id="cbia-usage-kpi-cost-blog">$0.00</strong>
                     </div>
                 </div>
@@ -904,6 +944,7 @@ $dashboard_payload['i18n'] = array(
                 <?php echo esc_html($costs_advanced_enabled
                     ? __('Charts are built from usage events stored by the plugin on each post. Each panel measures a different thing: calls, split by type or cost.', 'cbiastudio-blogflow-ai')
                     : __('Charts are built from usage events stored by the plugin on each post. This view focuses on calls and event activity in base mode.', 'cbiastudio-blogflow-ai')); ?>
+                <strong id="cbia-usage-cost-coverage"></strong>
             </div>
 
             <div class="cbia-usage-chart-grid">
@@ -955,7 +996,7 @@ $dashboard_payload['i18n'] = array(
                 <section class="cbia-usage-panel -monthly">
                     <div class="cbia-usage-panel-head">
                         <div class="cbia-usage-panel-title">
-                            <h3><?php echo esc_html__('Real cost by month', 'cbiastudio-blogflow-ai'); ?></h3>
+                            <h3><?php echo esc_html__('Local calculated / estimated cost by month', 'cbiastudio-blogflow-ai'); ?></h3>
                             <p id="cbia-usage-monthly-hint"><?php echo esc_html__('Y axis: dollars (USD). Full Jan-Dec timeline of the current year, including months with zero data.', 'cbiastudio-blogflow-ai'); ?></p>
                         </div>
                         <div class="cbia-usage-legend">
@@ -1006,6 +1047,27 @@ $dashboard_payload['i18n'] = array(
                     <option value="seo">SEO</option>
                 </select>
 
+                <select id="cbia-usage-provider-filter" class="abb-select" aria-label="<?php echo esc_attr__('Provider', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All providers', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="openai">OpenAI</option><option value="google">Google</option><option value="deepseek">DeepSeek</option>
+                </select>
+                <select id="cbia-usage-status-filter" class="abb-select" aria-label="<?php echo esc_attr__('Cost status', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All cost statuses', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="exact"><?php echo esc_html__('Exact', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="estimated"><?php echo esc_html__('Estimated', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="unknown"><?php echo esc_html__('Unknown', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="official_reconciled"><?php echo esc_html__('Officially reconciled', 'cbiastudio-blogflow-ai'); ?></option>
+                </select>
+                <select id="cbia-usage-request-status-filter" class="abb-select" aria-label="<?php echo esc_attr__('Request status', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All request statuses', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="success"><?php echo esc_html__('Success', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="error"><?php echo esc_html__('Error', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="timeout"><?php echo esc_html__('Timeout', 'cbiastudio-blogflow-ai'); ?></option>
+                </select>
+                <label><?php echo esc_html__('From', 'cbiastudio-blogflow-ai'); ?> <input type="datetime-local" id="cbia-usage-from" /></label>
+                <label><?php echo esc_html__('To', 'cbiastudio-blogflow-ai'); ?> <input type="datetime-local" id="cbia-usage-to" /></label>
+                <span class="description"><?php echo esc_html(wp_timezone_string()); ?></span>
+
                 <input
                     type="search"
                     id="cbia-usage-search"
@@ -1015,6 +1077,9 @@ $dashboard_payload['i18n'] = array(
                 />
 
                 <a class="button button-secondary" id="cbia-usage-export" href="<?php echo esc_url($export_url); ?>"><?php echo esc_html__('Export CSV', 'cbiastudio-blogflow-ai'); ?></a>
+                <button type="button" class="button" id="cbia-usage-recalc-dry-run"><?php echo esc_html__('Simulate historical cost recalculation', 'cbiastudio-blogflow-ai'); ?></button>
+                <button type="button" class="button" id="cbia-usage-recalc-apply"><?php echo esc_html__('Apply recalculation', 'cbiastudio-blogflow-ai'); ?></button>
+                <span id="cbia-usage-recalc-result" class="description"></span>
             </div>
 
             <div class="cbia-usage-main-grid">

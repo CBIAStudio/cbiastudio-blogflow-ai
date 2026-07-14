@@ -125,7 +125,7 @@ if (!empty($warnings) && is_array($warnings)) {
     delete_transient('cbia_config_warnings');
 }
 
-echo '<form method="post">';
+echo '<form method="post" id="cbia-config-form">';
 wp_nonce_field('cbia_config_save_action', 'cbia_config_nonce');
 echo '<input type="hidden" name="cbia_config_save" value="1" />';
 
@@ -256,12 +256,15 @@ foreach ($image_providers_list as $pkey => $pdef) {
     if ($saved_img === '' && function_exists('cbia_providers_get_recommended_image_model')) $saved_img = cbia_providers_get_recommended_image_model($pkey);
     echo '<div class="abb-field abb-provider-model" data-scope="image" data-provider="' . esc_attr($pkey) . '"' . ($image_provider === $pkey ? '' : ' style="display:none;"') . '>';
     echo '<label>' . esc_html__('Model (image)', 'cbiastudio-blogflow-ai') . '</label>';
-    echo '<select name="image_model_by_provider[' . esc_attr($pkey) . ']" class="abb-select">';
+    echo '<select name="image_model_by_provider[' . esc_attr($pkey) . ']" class="abb-select cbia-image-model-select">';
     if (empty($img_list)) {
         echo '<option value="">' . esc_html__('Not available', 'cbiastudio-blogflow-ai') . '</option>';
     } else {
         foreach ($img_list as $mdl) {
             $label = $mdl;
+            if ($pkey === 'openai' && $mdl === 'gpt-image-2') $label = __('GPT Image 2 — Recommended', 'cbiastudio-blogflow-ai');
+            if ($pkey === 'openai' && $mdl === 'gpt-image-1') $label = __('GPT Image 1', 'cbiastudio-blogflow-ai');
+            if ($pkey === 'openai' && $mdl === 'gpt-image-1-mini') $label = __('GPT Image 1 Mini', 'cbiastudio-blogflow-ai');
             if ($mdl === 'imagen-3.0-generate-002') $label .= ' (Recomendado)';
             echo '<option value="' . esc_attr($mdl) . '" ' . selected($saved_img, $mdl, false) . '>' . esc_html($label) . '</option>';
         }
@@ -270,6 +273,18 @@ foreach ($image_providers_list as $pkey => $pdef) {
     echo '</div>';
 }
 
+$image_quality = class_exists('CBIA_Image_Pricing_Service')
+    ? CBIA_Image_Pricing_Service::validate_quality($s['image_quality'] ?? 'auto')
+    : 'auto';
+$image_qualities = class_exists('CBIA_Image_Pricing_Service')
+    ? CBIA_Image_Pricing_Service::get_qualities()
+    : array('auto' => __('Automatic', 'cbiastudio-blogflow-ai'), 'low' => __('Low', 'cbiastudio-blogflow-ai'), 'medium' => __('Medium', 'cbiastudio-blogflow-ai'), 'high' => __('High', 'cbiastudio-blogflow-ai'));
+$specific_image_qualities = class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_specific_qualities() : array_merge(array('inherit' => __('Use default quality', 'cbiastudio-blogflow-ai')), $image_qualities);
+$quality_fields = array(
+    'image_quality' => array('id' => 'cbia-image-quality', 'label' => __('Default image quality', 'cbiastudio-blogflow-ai'), 'value' => $image_quality, 'options' => $image_qualities, 'help' => __('This quality is used by default for images without a specific setting.', 'cbiastudio-blogflow-ai')),
+    'featured_image_quality' => array('id' => 'cbia-featured-image-quality', 'label' => __('Featured image quality', 'cbiastudio-blogflow-ai'), 'value' => CBIA_Image_Pricing_Service::validate_specific_quality($s['featured_image_quality'] ?? 'inherit'), 'options' => $specific_image_qualities, 'help' => __('Allows a different quality for the article featured image.', 'cbiastudio-blogflow-ai')),
+    'content_image_quality' => array('id' => 'cbia-content-image-quality', 'label' => __('Content image quality', 'cbiastudio-blogflow-ai'), 'value' => CBIA_Image_Pricing_Service::validate_specific_quality($s['content_image_quality'] ?? 'inherit'), 'options' => $specific_image_qualities, 'help' => __('Applied to images inserted inside the article content.', 'cbiastudio-blogflow-ai')),
+);
 echo '</div>'; // grid
 
 // API keys: texto
@@ -389,6 +404,18 @@ echo '</div>';
 
 echo '</td></tr>';
 
+echo '<tr class="abb-provider-model" data-scope="image" data-provider="openai"' . ($image_provider === 'openai' ? '' : ' style="display:none;"') . '>';
+echo '<th scope="row"><label>' . esc_html__('Image quality', 'cbiastudio-blogflow-ai') . '</label></th><td>';
+echo '<div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;">';
+foreach ($quality_fields as $field_name => $field) {
+    echo '<div class="abb-field" style="flex:1 1 240px;max-width:320px;">';
+    echo '<label for="' . esc_attr($field['id']) . '">' . esc_html($field['label']) . '</label>';
+    echo '<select id="' . esc_attr($field['id']) . '" name="' . esc_attr($field_name) . '" form="cbia-config-form" class="abb-select cbia-image-quality-select">';
+    foreach ($field['options'] as $quality_key => $quality_label) echo '<option value="' . esc_attr($quality_key) . '" ' . selected($field['value'], $quality_key, false) . '>' . esc_html($quality_label) . '</option>';
+    echo '</select><p class="description">' . esc_html($field['help']) . '</p></div>';
+}
+echo '</div></td></tr>';
+
 echo '<tr><th scope="row"><label>' . esc_html__('Internal images (Pro)', 'cbiastudio-blogflow-ai') . '</label></th><td>';
 $images_limit_options = [
     1 => __('0 internal images (featured only)', 'cbiastudio-blogflow-ai'),
@@ -404,6 +431,13 @@ foreach ($images_limit_options as $val => $label) {
 }
 echo '</select>';
 echo '<p class="description">' . esc_html__('The featured image is always generated. This selector controls only internal images.', 'cbiastudio-blogflow-ai') . '</p>';
+echo '<div class="abb-provider-model" data-scope="image" data-provider="openai"' . ($image_provider === 'openai' ? '' : ' style="display:none;"') . '>';
+echo '<div id="cbia-image-cost-estimate" class="notice notice-info inline" style="margin:14px 0 0;padding:10px 12px;">';
+echo '<p><strong>' . esc_html__('Estimated image output cost:', 'cbiastudio-blogflow-ai') . '</strong> <span data-cbia-image-total></span></p>';
+echo '<p data-cbia-image-breakdown class="description"></p>';
+echo '<p class="description">' . esc_html__('Indicative estimate based on OpenAI output prices verified on July 10, 2026. Actual cost may also include prompt tokens and, for edits, input images. OpenAI may change its prices.', 'cbiastudio-blogflow-ai') . '</p>';
+echo '</div>';
+echo '</div>';
 if (!$internal_images_enabled) {
     echo '<p class="description"><strong>' . esc_html__('Pro feature:', 'cbiastudio-blogflow-ai') . '</strong> ' . esc_html__('internal images are available in Pro only.', 'cbiastudio-blogflow-ai') . '</p>';
     echo '<p class="description">' . esc_html__('This module generates and styles internal article images (up to 3 slots) with independent prompts and formats.', 'cbiastudio-blogflow-ai') . '</p>';
@@ -423,10 +457,10 @@ if ($internal_images_enabled) {
         // translators: %d is the internal image slot number (1-3).
         echo '<tr><th scope="row"><label>' . esc_html(sprintf(__('Internal image %d format', 'cbiastudio-blogflow-ai'), $i_int)) . '</label></th><td>';
         echo '<div class="abb-inline-row">';
-        echo '<select name="' . esc_attr($key) . '" class="abb-select" style="width:260px;">';
+        echo '<select name="' . esc_attr($key) . '" class="abb-select cbia-image-format-select" data-slot="' . esc_attr((string)$i_int) . '" style="width:260px;">';
         foreach ($formats as $fmt_key => $meta) {
             $label = (string)($meta['label'] ?? $fmt_key);
-            echo '<option value="' . esc_attr($fmt_key) . '" ' . selected($current_internal_format, $fmt_key, false) . '>' . esc_html($label) . '</option>';
+            echo '<option value="' . esc_attr($fmt_key) . '" data-size="' . esc_attr((string)($meta['size'] ?? '')) . '" ' . selected($current_internal_format, $fmt_key, false) . '>' . esc_html($label) . '</option>';
         }
         echo '</select>';
         // translators: %d is the internal image slot number (1-3).
@@ -482,6 +516,53 @@ ob_start();
     var ui = document.getElementById('cbia_images_limit_ui');
     var hidden = document.getElementById('cbia_images_limit_hidden');
     var lengthPills = document.getElementById('cbia-config-length-pills');
+    var quality = document.getElementById('cbia-image-quality');
+    var featuredQuality = document.getElementById('cbia-featured-image-quality');
+    var contentQuality = document.getElementById('cbia-content-image-quality');
+    var estimateBox = document.getElementById('cbia-image-cost-estimate');
+    var pricing = <?php echo wp_json_encode(class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_pricing_catalog() : array()); ?>;
+    var strings = <?php echo wp_json_encode(array(
+        'variable' => __('Price varies: OpenAI will select the quality automatically.', 'cbiastudio-blogflow-ai'),
+        'unavailable' => __('Price is not available for this custom size.', 'cbiastudio-blogflow-ai'),
+        'total' => __('%s per article', 'cbiastudio-blogflow-ai'),
+        'breakdown' => __('Featured: %1$s (%2$s). Content: %3$d × %4$s (%5$s).', 'cbiastudio-blogflow-ai'),
+    )); ?>;
+    function money(micro){ return '$' + (micro / 1000000).toFixed(3); }
+    function selectedImageModel(){
+        var provider = document.querySelector('select[name="image_provider"]');
+        var key = provider ? provider.value : 'openai';
+        var select = document.querySelector('.cbia-image-model-select[name="image_model_by_provider[' + key + ']"]');
+        return select ? select.value : '';
+    }
+    function updateImageEstimate(){
+        if(!quality || !featuredQuality || !contentQuality || !estimateBox) return;
+        var model = selectedImageModel();
+        var globalQ = quality.value || 'auto';
+        var featuredQ = featuredQuality.value === 'inherit' ? globalQ : featuredQuality.value;
+        var contentQ = contentQuality.value === 'inherit' ? globalQ : contentQuality.value;
+        var totalImages = Math.max(1, parseInt(ui ? ui.value : '1', 10) || 1);
+        var internalCount = Math.max(0, totalImages - 1);
+        var totalNode = estimateBox.querySelector('[data-cbia-image-total]');
+        var detailNode = estimateBox.querySelector('[data-cbia-image-breakdown]');
+        if(featuredQ === 'auto' || (internalCount > 0 && contentQ === 'auto')){
+            if(totalNode) totalNode.textContent = strings.variable;
+            if(detailNode) detailNode.textContent = strings.breakdown.replace('%1$s', strings.variable).replace('%2$s', featuredQ).replace('%3$d', String(internalCount)).replace('%4$s', strings.variable).replace('%5$s', contentQ);
+            return;
+        }
+        var featuredPrice = pricing[model] && pricing[model][featuredQ] ? pricing[model][featuredQ]['1536x1024'] : null;
+        var total = featuredPrice;
+        var available = Number.isFinite(featuredPrice);
+        for(var i=1; i<totalImages; i++){
+            var format = document.querySelector('.cbia-image-format-select[data-slot="' + i + '"]');
+            var option = format && format.options ? format.options[format.selectedIndex] : null;
+            var size = option ? option.getAttribute('data-size') : '1536x1024';
+            var price = pricing[model] && pricing[model][contentQ] ? pricing[model][contentQ][size] : null;
+            if(!Number.isFinite(price)){ available = false; break; }
+            total += price;
+        }
+        if(totalNode) totalNode.textContent = available ? strings.total.replace('%s', money(total)) : strings.unavailable;
+        if(detailNode) detailNode.textContent = strings.breakdown.replace('%1$s', Number.isFinite(featuredPrice) ? money(featuredPrice) : strings.unavailable).replace('%2$s', featuredQ).replace('%3$d', String(internalCount)).replace('%4$s', available && internalCount > 0 ? money((total-featuredPrice)/internalCount) : money(0)).replace('%5$s', contentQ);
+    }
     function syncChoicePills(wrap){
         if(!wrap) return;
         wrap.querySelectorAll('label').forEach(function(label){
@@ -495,6 +576,12 @@ ob_start();
         });
         syncChoicePills(lengthPills);
     }
+    document.addEventListener('change', function(event){
+        if(event.target && (event.target.matches('.cbia-image-quality-select') || event.target === ui || event.target.matches('.cbia-image-model-select, .cbia-image-format-select, select[name="image_provider"]'))){
+            updateImageEstimate();
+        }
+    });
+    updateImageEstimate();
     if(!form || !ui || !hidden) return;
     hidden.value = ui.value;
     form.addEventListener('submit', function(){

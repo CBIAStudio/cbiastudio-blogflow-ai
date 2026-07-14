@@ -29,6 +29,13 @@ yarn-error.log*
 # Build / cobertura / caches
 dist/
 build/
+_archive/
+_build/
+.wordpress-playground/
+wordpress-playground/
+playground/
+lab-output/
+lab-outputs/
 .cache/
 coverage/
 .phpunit.result.cache
@@ -49,5 +56,10 @@ gpt3-ai-content-generator.2.3.67/
 
 # Archivos temporales
 *.tmp
+*.bak
+*.backup
+*.sql
+*.sqlite
+*.sqlite3
 
 tmp-write-test.txt

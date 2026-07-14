@@ -135,14 +135,14 @@ if ($mode === 'csv' && trim((string)$csv_url) !== '') {
 
 $first_dt = $settings['first_publication_datetime'] ?? '';
 $first_dt_default_local = function_exists('wp_date')
+    ? wp_date('Y-m-d\T09:00', current_time('timestamp'))
+    : date_i18n('Y-m-d\T09:00', current_time('timestamp'));
+$first_dt_now_local = function_exists('wp_date')
     ? wp_date('Y-m-d\TH:i', current_time('timestamp'))
     : date_i18n('Y-m-d\TH:i', current_time('timestamp'));
 $first_dt_local = $first_dt_default_local;
 if ($first_dt !== '') {
     $first_dt_local = substr(str_replace(' ', 'T', $first_dt), 0, 16);
-    if (strtotime(str_replace('T', ' ', $first_dt_local)) !== false && strtotime(str_replace('T', ' ', $first_dt_local)) < current_time('timestamp')) {
-        $first_dt_local = $first_dt_default_local;
-    }
 }
 
 $interval = max(1, intval($settings['publication_interval'] ?? 5));
@@ -580,8 +580,9 @@ echo '</select>';
 <tr>
 <th><?php echo esc_html__('First date/time', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
-<input type="datetime-local" name="first_publication_datetime_local" value="<?php echo esc_attr($first_dt_local); ?>" min="<?php echo esc_attr($first_dt_default_local); ?>" step="60" />
+<input type="datetime-local" name="first_publication_datetime_local" value="<?php echo esc_attr($first_dt_local); ?>" step="60" data-current-local="<?php echo esc_attr($first_dt_now_local); ?>" />
 <p class="description"><?php echo esc_html__('If left empty, generation starts immediately. If you set a date/time, the first post is scheduled and the next ones follow the interval.', 'cbiastudio-blogflow-ai'); ?></p>
+<p class="description"><?php echo esc_html__('Past dates are allowed: WordPress will publish immediately using the selected historical date.', 'cbiastudio-blogflow-ai'); ?></p>
 </td>
 </tr>
 <tr>
@@ -984,6 +985,14 @@ echo '</select>';
 
     if(btn){
         btn.addEventListener('click', function(){
+            if (firstPublicationInput && firstPublicationInput.value) {
+                const selectedLocal = String(firstPublicationInput.value || '').slice(0, 16);
+                const currentLocal = String(firstPublicationInput.getAttribute('data-current-local') || '').slice(0, 16);
+                if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(selectedLocal) && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(currentLocal) && selectedLocal < currentLocal) {
+                    const ok = window.confirm(<?php echo wp_json_encode(__('The selected first publication date is in the past. The post will be published immediately but keep that historical date. Continue?', 'cbiastudio-blogflow-ai')); ?>);
+                    if (!ok) return;
+                }
+            }
             btn.disabled = true;
             const old = btn.textContent;
             btn.textContent = <?php echo wp_json_encode(__('Starting...', 'cbiastudio-blogflow-ai')); ?>;

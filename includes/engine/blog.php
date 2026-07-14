@@ -418,8 +418,7 @@ if (!function_exists('cbia_compute_next_datetime')) {
                 $dt = new DateTime($candidate, $tz);
                 $now = new DateTime(current_time('mysql'), $tz);
                 if ($dt < $now) {
-                    cbia_log_message("[WARN] Ignoring past publication date from {$source_label}: {$candidate}. Publishing now instead.");
-                    return '';
+                    cbia_log_message("[WARN] Past publication date from {$source_label}: {$candidate}. WordPress will publish immediately using that historical date.");
                 }
                 return $dt->format('Y-m-d H:i:s');
             } catch (Exception $e) {
@@ -659,8 +658,10 @@ if (!function_exists('cbia_run_generate_blogs')) {
         }
 
         try {
+            $GLOBALS['cbia_usage_batch_id'] = $run_id;
             $result = cbia_create_all_posts_checkpointed(null, $max_per_run);
         } finally {
+            unset($GLOBALS['cbia_usage_batch_id']);
             cbia_blog_generation_release_lock($run_id);
         }
 

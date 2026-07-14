@@ -324,6 +324,7 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 					'ok' => $ok_expand ? 1 : 0,
 					'error' => (string)($err_expand ?: ''),
 					'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($raw_expand) : array(),
+					'meta' => is_array($raw_expand['_cbia_request_meta'] ?? null) ? $raw_expand['_cbia_request_meta'] : array(),
 					'prompt' => $prompt,
 				);
 			}
@@ -364,6 +365,17 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 			'post_content' => $final_html,
 			'post_author'  => cbia_pick_post_author_id(),
 		];
+		$post_date_is_past = false;
+		if ($post_date_mysql) {
+			try {
+				$tz = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone(wp_timezone_string());
+				$post_dt = new DateTime((string)$post_date_mysql, $tz);
+				$now_dt = new DateTime(current_time('mysql'), $tz);
+				$post_date_is_past = $post_dt < $now_dt;
+			} catch (Exception $e) {
+				$post_date_is_past = false;
+			}
+		}
 
 		if ($force_status === 'draft') {
 			$postarr['post_status'] = 'draft';
@@ -377,7 +389,7 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 			$postarr['post_date']     = $post_date_mysql;
 			$postarr['post_date_gmt'] = get_gmt_from_date($post_date_mysql);
 		} elseif ($post_date_mysql) {
-			$postarr['post_status']   = 'future';
+			$postarr['post_status']   = $post_date_is_past ? 'publish' : 'future';
 			$postarr['post_date']     = $post_date_mysql;
 			$postarr['post_date_gmt'] = get_gmt_from_date($post_date_mysql);
 		} else {
@@ -475,6 +487,7 @@ if (!function_exists('cbia_record_blog_generation_cost_rows')) {
 		$base_meta = array(
 			'title' => $title,
 			'status_reason' => $status_reason,
+			'batch_id' => sanitize_text_field((string)($GLOBALS['cbia_usage_batch_id'] ?? '')),
 		);
 
 		$recorded_text_attempts = 0;
@@ -490,8 +503,9 @@ if (!function_exists('cbia_record_blog_generation_cost_rows')) {
 
 		$text_usage = isset($text_call['usage']) && is_array($text_call['usage']) ? $text_call['usage'] : cbia_usage_empty();
 		$text_model = (string)($text_call['model'] ?? '');
+		$text_meta = isset($text_call['meta']) && is_array($text_call['meta']) ? $text_call['meta'] : array();
 		if (!empty($text_call['ok']) || !$recorded_text_attempts) {
-			cbia_costes_record_usage($post_id, array_merge($base_meta, array(
+			cbia_costes_record_usage($post_id, array_merge($base_meta, $text_meta, array(
 				'type' => 'text',
 				'model' => $text_model,
 				'input_tokens' => (int)($text_usage['input_tokens'] ?? 0),
@@ -516,8 +530,9 @@ if (!function_exists('cbia_record_blog_generation_cost_rows')) {
 				));
 			}
 			$usage = isset($ec['usage']) && is_array($ec['usage']) ? $ec['usage'] : cbia_usage_empty();
+			$call_meta = isset($ec['meta']) && is_array($ec['meta']) ? $ec['meta'] : array();
 			if (!empty($ec['ok']) || !$recorded_expand_attempts) {
-				cbia_costes_record_usage($post_id, array_merge($base_meta, array(
+				cbia_costes_record_usage($post_id, array_merge($base_meta, $call_meta, array(
 					'type' => 'text',
 					'model' => (string)($ec['model'] ?? ''),
 					'input_tokens' => (int)($usage['input_tokens'] ?? 0),
@@ -544,12 +559,13 @@ if (!function_exists('cbia_record_blog_generation_cost_rows')) {
 				));
 			}
 			if (!empty($ic['ok']) || !$recorded_attempts) {
-				cbia_costes_record_usage($post_id, array_merge($base_meta, array(
+				$image_meta = isset($ic['meta']) && is_array($ic['meta']) ? $ic['meta'] : array();
+				cbia_costes_record_usage($post_id, array_merge($base_meta, $image_meta, array(
 					'type' => 'image',
 					'model' => (string)($ic['model'] ?? ''),
-					'input_tokens' => 0,
-					'output_tokens' => 0,
-					'cached_input_tokens' => 0,
+					'input_tokens' => (int)($image_meta['input_tokens'] ?? 0),
+					'output_tokens' => (int)($image_meta['output_tokens'] ?? 0),
+					'cached_input_tokens' => (int)($image_meta['cached_input_tokens'] ?? 0),
 					'ok' => !empty($ic['ok']) ? 1 : 0,
 					'error' => (string)($ic['error'] ?? ''),
 					'section' => (string)($ic['section'] ?? ''),
@@ -701,6 +717,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			'usage'   => is_array($usage) ? $usage : cbia_usage_empty(),
 			'ok'      => $ok ? 1 : 0,
 			'error'   => (string)($err ?: ''),
+			'meta'    => is_array($raw['_cbia_request_meta'] ?? null) ? $raw['_cbia_request_meta'] : array(),
 		);
 		if (!$ok) {
 				cbia_log(sprintf("Text generation failed for '%s': %s", (string)$title, (string)($err ?: 'unknown')), 'ERROR');
@@ -878,6 +895,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
                 'error'   => (string)($img_err ?: ''),
                 'attach_id' => (int)$attach_id,
                 'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($img_meta) : array(),
+				'meta' => is_array($img_meta) ? $img_meta : array(),
                 'prompt' => $prompt,
             ];
 
@@ -935,6 +953,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
             'error'   => (string)($e ?: ''),
             'attach_id' => (int)$attach_id,
             'attempts' => function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($featured_meta) : array(),
+			'meta' => is_array($featured_meta) ? $featured_meta : array(),
             'prompt' => $prompt_featured,
         ];
         if ($ok && $attach_id) {

@@ -55,17 +55,17 @@ if (!function_exists('cbia_fill_pending_images_for_post')) {
 					cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'image', 'prompt' => $prompt, 'section' => 'intro'));
 				}
 				if (function_exists('cbia_costes_record_usage')) {
-					cbia_costes_record_usage($post_id, array(
+					cbia_costes_record_usage($post_id, array_merge(is_array($meta) ? $meta : array(), array(
 						'type' => 'image',
 						'model' => (string)$m,
-						'input_tokens' => 0,
-						'output_tokens' => 0,
-						'cached_input_tokens' => 0,
+						'input_tokens' => (int)($meta['input_tokens'] ?? 0),
+						'output_tokens' => (int)($meta['output_tokens'] ?? 0),
+						'cached_input_tokens' => (int)($meta['cached_input_tokens'] ?? 0),
 						'ok' => 1,
 						'error' => '',
 						'section' => 'intro',
 						'attach_id' => (int)$attach_id,
-					));
+					)));
 				}
 				set_post_thumbnail($post_id, (int)$attach_id);
 				wp_update_post(array(
@@ -82,7 +82,7 @@ if (!function_exists('cbia_fill_pending_images_for_post')) {
 					cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'image', 'prompt' => $prompt, 'section' => 'intro'));
 				}
 				if (function_exists('cbia_costes_record_usage') && empty($attempts)) {
-					cbia_costes_record_usage($post_id, array(
+					cbia_costes_record_usage($post_id, array_merge(is_array($meta) ? $meta : array(), array(
 						'type' => 'image',
 						'model' => (string)$m,
 						'input_tokens' => 0,
@@ -91,7 +91,7 @@ if (!function_exists('cbia_fill_pending_images_for_post')) {
 						'ok' => 0,
 						'error' => (string)($e ?: ''),
 						'section' => 'intro',
-					));
+					)));
 				}
 					cbia_log(sprintf("Pending images: featured image failed on post %d: %s", (int)$post_id, (string)($e ?: '')), 'ERROR');
 				cbia_image_append_call($post_id, 'intro', $m, false, 0, (string)($e ?: ''));
@@ -133,17 +133,17 @@ if (!function_exists('cbia_fill_pending_images_for_post')) {
 				}
 				// Registrar usage de imagen en costes
 				if (function_exists('cbia_costes_record_usage')) {
-					cbia_costes_record_usage($post_id, array(
+					cbia_costes_record_usage($post_id, array_merge(is_array($meta) ? $meta : array(), array(
 						'type' => 'image',
 						'model' => (string)$m,
-						'input_tokens' => 0,
-						'output_tokens' => 0,
-						'cached_input_tokens' => 0,
+						'input_tokens' => (int)($meta['input_tokens'] ?? 0),
+						'output_tokens' => (int)($meta['output_tokens'] ?? 0),
+						'cached_input_tokens' => (int)($meta['cached_input_tokens'] ?? 0),
 						'ok' => 1,
 						'error' => '',
 						'section' => (string)$section,
 						'attach_id' => (int)$attach_id,
-					));
+					)));
 				}
 
 				$url = wp_get_attachment_url((int)$attach_id);
@@ -277,4 +277,3 @@ if (!function_exists('cbia_run_fill_pending_images')) {
 		return $total_filled;
 	}
 }
-

@@ -1065,17 +1065,17 @@ if (!function_exists('cbia_oldposts_regenerate_featured_image')) {
             cbia_oldposts_log_message(sprintf(__('[OK] Featured image regenerated on post %1$d (attach_id=%2$d).', 'cbiastudio-blogflow-ai'), $post_id, (int)$attach_id));
 
         if (function_exists('cbia_costes_record_usage')) {
-            cbia_costes_record_usage($post_id, array(
+            cbia_costes_record_usage($post_id, array_merge(is_array($meta) ? $meta : array(), array(
                 'type' => 'image',
                 'model' => (string)$model,
-                'input_tokens' => 0,
-                'output_tokens' => 0,
-                'cached_input_tokens' => 0,
+                'input_tokens' => (int)($meta['input_tokens'] ?? 0),
+                'output_tokens' => (int)($meta['output_tokens'] ?? 0),
+                'cached_input_tokens' => (int)($meta['cached_input_tokens'] ?? 0),
                 'ok' => 1,
                 'error' => '',
                 'section' => 'intro',
                 'attach_id' => (int)$attach_id,
-            ));
+            )));
         }
 
             if (function_exists('cbia_image_append_call')) {
@@ -2053,4 +2053,3 @@ if (!function_exists('cbia_oldposts_handle_post')) {
 
 
 /* ------------------------- FIN includes/engine/oldposts.php ------------------------- */
-

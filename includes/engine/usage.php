@@ -140,7 +140,7 @@ if (!function_exists('cbia_extract_text_from_responses_payload')) {
 
 if (!function_exists('cbia_usage_from_responses_payload')) {
     function cbia_usage_from_responses_payload($data) {
-        $u = ['input_tokens' => 0, 'output_tokens' => 0, 'total_tokens' => 0];
+        $u = ['input_tokens' => 0, 'cached_input_tokens' => 0, 'output_tokens' => 0, 'reasoning_tokens' => 0, 'total_tokens' => 0];
 
         if (!is_array($data)) return $u;
 
@@ -149,6 +149,8 @@ if (!function_exists('cbia_usage_from_responses_payload')) {
             $u['input_tokens']  = (int)($data['usage']['input_tokens'] ?? 0);
             $u['output_tokens'] = (int)($data['usage']['output_tokens'] ?? 0);
             $u['total_tokens']  = (int)($data['usage']['total_tokens'] ?? 0);
+            $u['cached_input_tokens'] = (int)($data['usage']['input_tokens_details']['cached_tokens'] ?? 0);
+            $u['reasoning_tokens'] = (int)($data['usage']['output_tokens_details']['reasoning_tokens'] ?? 0);
 
             // algunos payloads usan "total_tokens" solo
             if ($u['total_tokens'] <= 0) {
@@ -156,6 +158,70 @@ if (!function_exists('cbia_usage_from_responses_payload')) {
             }
         }
 
+        return $u;
+    }
+}
+
+if (!function_exists('cbia_usage_normalize_image_effective_quality')) {
+    function cbia_usage_normalize_image_effective_quality($quality) {
+        $quality = strtolower(trim((string)$quality));
+        return in_array($quality, array('low', 'medium', 'high'), true) ? $quality : null;
+    }
+}
+
+if (!function_exists('cbia_usage_normalize_image_size')) {
+    function cbia_usage_normalize_image_size($size, $allow_auto = false) {
+        $size = strtolower(trim((string)$size));
+        if ($allow_auto && $size === 'auto') return 'auto';
+        return preg_match('/^\d{2,5}x\d{2,5}$/', $size) ? $size : null;
+    }
+}
+
+if (!function_exists('cbia_usage_from_images_payload')) {
+    function cbia_usage_from_images_payload($data, $requested_quality = 'auto', $requested_size = '') {
+        $requested_quality = strtolower(trim((string)$requested_quality));
+        if (!in_array($requested_quality, array('auto', 'low', 'medium', 'high'), true)) $requested_quality = 'auto';
+        $requested_size = cbia_usage_normalize_image_size($requested_size, true);
+        $effective_quality = is_array($data) ? cbia_usage_normalize_image_effective_quality($data['quality'] ?? null) : null;
+        if ($effective_quality === null && $requested_quality !== 'auto') $effective_quality = $requested_quality;
+        $effective_size = is_array($data) ? cbia_usage_normalize_image_size($data['size'] ?? null) : null;
+        if ($effective_size === null && $requested_size !== null && $requested_size !== 'auto') $effective_size = $requested_size;
+        $output_format = is_array($data) ? strtolower(trim((string)($data['output_format'] ?? ''))) : '';
+        $background = is_array($data) ? strtolower(trim((string)($data['background'] ?? ''))) : '';
+        if (!preg_match('/^[a-z0-9_-]{1,32}$/', $output_format)) $output_format = '';
+        if (!preg_match('/^[a-z0-9_-]{1,32}$/', $background)) $background = '';
+
+        $u = array(
+            'input_tokens' => 0, 'cached_input_tokens' => 0, 'output_tokens' => 0,
+            'image_input_tokens' => 0, 'text_input_tokens' => 0, 'image_output_tokens' => 0,
+            'input_image_tokens' => 0, 'input_text_tokens' => 0, 'output_image_tokens' => 0,
+            'cached_image_input_tokens' => 0, 'cached_text_input_tokens' => 0,
+            'requested_quality' => $requested_quality,
+            'effective_quality' => $effective_quality,
+            'quality_requested' => $requested_quality,
+            'quality_effective' => $effective_quality,
+            'quality' => $effective_quality !== null ? $effective_quality : $requested_quality,
+            'requested_size' => $requested_size,
+            'effective_size' => $effective_size,
+            'size' => $effective_size !== null ? $effective_size : (string)$requested_size,
+            'output_format' => $output_format,
+            'background' => $background,
+        );
+        if (!is_array($data) || empty($data['usage']) || !is_array($data['usage'])) return $u;
+        $usage = $data['usage'];
+        $details = is_array($usage['input_tokens_details'] ?? null) ? $usage['input_tokens_details'] : array();
+        $output_details = is_array($usage['output_tokens_details'] ?? null) ? $usage['output_tokens_details'] : array();
+        $u['input_tokens'] = max(0, (int)($usage['input_tokens'] ?? 0));
+        $u['cached_input_tokens'] = max(0, (int)($details['cached_tokens'] ?? 0));
+        $u['output_tokens'] = max(0, (int)($usage['output_tokens'] ?? 0));
+        $u['image_input_tokens'] = max(0, (int)($details['image_tokens'] ?? 0));
+        $u['text_input_tokens'] = max(0, (int)($details['text_tokens'] ?? 0));
+        $u['image_output_tokens'] = max(0, (int)($output_details['image_tokens'] ?? $u['output_tokens']));
+        $u['input_image_tokens'] = $u['image_input_tokens'];
+        $u['input_text_tokens'] = $u['text_input_tokens'];
+        $u['output_image_tokens'] = $u['image_output_tokens'];
+        $u['cached_image_input_tokens'] = max(0, (int)($details['cached_image_tokens'] ?? 0));
+        $u['cached_text_input_tokens'] = max(0, (int)($details['cached_text_tokens'] ?? 0));
         return $u;
     }
 }

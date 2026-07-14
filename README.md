@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.0.9
+# CBIAStudio BlogFlow with AI (WordPress) v2.1.3
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -9,7 +9,55 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - live logs and STOP controls
 - optional Yoast SEO sync
 
-## What's New in 2.0.9
+## What's New in 2.1.3
+
+- OpenAI Image responses now preserve requested and effective quality/size independently.
+- `quality=auto` uses the returned effective quality for output estimates when usage tokens are absent.
+- Usage detail shows requested/effective quality, requested/effective size, output format, and background.
+- Image output token details are parsed when OpenAI returns them; historical events remain untouched when evidence is absent.
+- Blog/cron, previews, pending images, Oldposts, and manual regeneration preserve the same response metadata in Usage.
+
+## Comparative: 2.1.3 vs 2.1.2
+
+2.1.3 completes future `quality=auto` telemetry without changing models, prices, prompts, or historical unknown events.
+
+## Previous: 2.1.2
+
+## What's New in 2.1.2
+
+- Usage separates exact, estimated, unknown, and officially reconciled cost evidence; unknown is never displayed as zero.
+- OpenAI image response usage, retries, timeouts, orphan attempts, request IDs, HTTP status, and elapsed time are retained.
+- Historical recalculation is simulation-first and requires confirmation; applying it stores a rollback option.
+- Usage shows local cost coverage and supports provider, status, date/time, model, type, and search filters.
+- Per-event detail explains why a cost is unknown, and the historical dry-run uses a dedicated validated nonce.
+
+## Comparative: 2.1.2 vs 2.1.1
+
+2.1.2 replaces heuristic/zero image accounting with evidence-aware USD micro-costs while preserving generation behavior and existing provider settings.
+
+## Previous: 2.1.1
+
+## What's New in 2.1.1
+
+- Fixed persistence of the three OpenAI image-quality selectors after saving Settings.
+- Explicit form association keeps the values in the settings request even after the custom select UI wraps the native controls.
+
+## Comparative: 2.1.1 vs 2.1.0
+
+Version 2.1.1 keeps the image-quality and pricing behavior from 2.1.0 and fixes settings persistence in the WordPress admin UI.
+
+## Previous: 2.1.0
+
+- OpenAI image quality is independently configurable for featured and content images, with inheritance from a default quality.
+- One PHP service now owns supported image models, qualities, sizes, payload normalization, and price calculations.
+- Settings show a live size-aware estimate per image and per article without inventing a price for Automatic quality.
+- Usage and logs retain quality, size, estimated output cost, HTTP status, and request ID context when available.
+
+## Comparative: 2.1.0 vs 2.0.10
+
+Version 2.1.0 keeps the centralized pricing introduced in 2.0.10 and adds separate featured/content quality, effective-quality Usage data, and live inherited-cost estimates.
+
+## Previous: 2.0.9
 - Added Pro-compatible Auto by title prompt profile support with protected base fallback and Pro-only activation through `auto_prompt_profile`.
 - Auto by title resolves each title to Editorial / Discover, SEO Balanced, or How-to / Practical using a compact English + Spanish pattern map.
 - Blog batch logs the resolved profile for each title.

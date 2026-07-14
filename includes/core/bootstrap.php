@@ -39,6 +39,7 @@ $cbia_new_files = array(
     CBIA_INCLUDES_DIR . 'support/runtime.php',
     CBIA_INCLUDES_DIR . 'support/logger.php',
     CBIA_INCLUDES_DIR . 'support/sanitize.php',
+    CBIA_INCLUDES_DIR . 'support/image-pricing.php',
     CBIA_INCLUDES_DIR . 'support/config-catalog.php',
     CBIA_INCLUDES_DIR . 'engine/engine.php',
     CBIA_INCLUDES_DIR . 'engine/blog.php',

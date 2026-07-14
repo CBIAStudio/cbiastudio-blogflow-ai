@@ -190,12 +190,130 @@ if (!function_exists('cbia_costes_price_table_usd_per_million')) {
     }
 }
 
+if (!function_exists('cbia_costes_pricing_version')) {
+    function cbia_costes_pricing_version() { return 'openai-2026-07-13-v1'; }
+}
+
+if (!function_exists('cbia_costes_pricing_verified_at')) {
+    function cbia_costes_pricing_verified_at() { return '2026-07-13'; }
+}
+
+if (!function_exists('cbia_costes_image_token_prices_usd_per_million')) {
+    function cbia_costes_image_token_prices_usd_per_million() {
+        $catalog = array(
+            'gpt-image-2' => array('text_in' => 5.00, 'text_cin' => 1.25, 'image_in' => 8.00, 'image_cin' => 2.00, 'image_out' => 30.00),
+            'gpt-image-1' => array('text_in' => 5.00, 'text_cin' => 1.25, 'image_in' => 10.00, 'image_cin' => 2.50, 'image_out' => 40.00),
+            'gpt-image-1-mini' => array('text_in' => 2.50, 'text_cin' => 0.25, 'image_in' => 2.50, 'image_cin' => 0.25, 'image_out' => 8.00),
+        );
+        return apply_filters('cbia_openai_image_token_pricing_catalog', $catalog);
+    }
+}
+
+if (!function_exists('cbia_costes_calculate_row')) {
+    /**
+     * Returns the locally demonstrable cost. Unknown is represented by null, never zero.
+     */
+    function cbia_costes_calculate_row($row, $cost_settings = array()) {
+        $result = array(
+            'cost_micro_usd' => null,
+            'cost_status' => 'unknown',
+            'cost_source' => 'unavailable',
+            'cost_reason' => 'insufficient_usage_data',
+            'cost_currency' => 'USD',
+            'pricing_version' => cbia_costes_pricing_version(),
+            'pricing_verified_at' => cbia_costes_pricing_verified_at(),
+        );
+        if (!is_array($row)) return $result;
+
+        if (($row['cost_status'] ?? '') === 'official_reconciled' && isset($row['cost_micro_usd']) && is_numeric($row['cost_micro_usd'])) {
+            $result['cost_micro_usd'] = max(0, (int)$row['cost_micro_usd']);
+            $result['cost_status'] = 'official_reconciled';
+            $result['cost_source'] = sanitize_key((string)($row['cost_source'] ?? 'openai_costs_api'));
+            $result['cost_reason'] = 'official_reconciliation';
+            return $result;
+        }
+
+        $type = sanitize_key((string)($row['type'] ?? 'text'));
+        $model = sanitize_text_field((string)($row['model_effective'] ?? ($row['model'] ?? '')));
+        $ok = !empty($row['ok']);
+        $in = max(0, (int)($row['in'] ?? ($row['input_tokens'] ?? 0)));
+        $cin = max(0, min($in, (int)($row['cin'] ?? ($row['cached_input_tokens'] ?? 0))));
+        $out = max(0, (int)($row['out'] ?? ($row['output_tokens'] ?? 0)));
+
+        if ($type !== 'image') {
+            $table = apply_filters('cbia_openai_text_pricing_catalog', cbia_costes_price_table_usd_per_million());
+            if ($model === '' || !isset($table[$model]) || ($in + $out) <= 0) {
+                $result['cost_reason'] = $model === '' || !isset($table[$model]) ? 'model_without_pricing' : 'missing_token_usage';
+                return $result;
+            }
+            $p = $table[$model];
+            $micro = (($in - $cin) * (float)$p['in']) + ($cin * (float)$p['cin']) + ($out * (float)$p['out']);
+            $result['cost_micro_usd'] = max(0, (int)round($micro));
+            $result['cost_status'] = 'exact';
+            $result['cost_source'] = 'api_usage_local_catalog';
+            $result['cost_reason'] = 'api_usage';
+            return $result;
+        }
+
+        $image_in = max(0, (int)($row['image_input_tokens'] ?? ($row['input_image_tokens'] ?? 0)));
+        $text_in = max(0, (int)($row['text_input_tokens'] ?? ($row['input_text_tokens'] ?? 0)));
+        $image_out = max(0, (int)($row['image_output_tokens'] ?? ($row['output_image_tokens'] ?? $out)));
+        $image_cin = max(0, min($image_in, (int)($row['cached_image_input_tokens'] ?? 0)));
+        $text_cin = max(0, min($text_in, (int)($row['cached_text_input_tokens'] ?? 0)));
+        $image_prices = cbia_costes_image_token_prices_usd_per_million();
+        if (isset($image_prices[$model]) && ($image_in + $text_in + $image_out) > 0) {
+            $p = $image_prices[$model];
+            $micro = (($image_in - $image_cin) * $p['image_in']) + ($image_cin * $p['image_cin'])
+                + (($text_in - $text_cin) * $p['text_in']) + ($text_cin * $p['text_cin'])
+                + ($image_out * $p['image_out']);
+            $result['cost_micro_usd'] = max(0, (int)round($micro));
+            $result['cost_status'] = 'exact';
+            $result['cost_source'] = 'api_usage_local_catalog';
+            $result['cost_reason'] = 'api_usage';
+            return $result;
+        }
+
+        $requested_quality = sanitize_key((string)($row['requested_quality'] ?? ($row['quality_requested'] ?? ($row['quality'] ?? 'auto'))));
+        if (!in_array($requested_quality, array('auto', 'low', 'medium', 'high'), true)) $requested_quality = 'auto';
+        $effective_quality = $row['effective_quality'] ?? ($row['quality_effective'] ?? null);
+        $effective_quality = function_exists('cbia_usage_normalize_image_effective_quality') ? cbia_usage_normalize_image_effective_quality($effective_quality) : (in_array($effective_quality, array('low', 'medium', 'high'), true) ? $effective_quality : null);
+        if ($effective_quality === null && $requested_quality !== 'auto') $effective_quality = $requested_quality;
+        $requested_size = sanitize_text_field((string)($row['requested_size'] ?? ($row['size'] ?? '')));
+        $effective_size = sanitize_text_field((string)($row['effective_size'] ?? ($row['size'] ?? '')));
+        if ($ok && $effective_quality !== null && class_exists('CBIA_Image_Pricing_Service')) {
+            $micro = CBIA_Image_Pricing_Service::get_price_micro_usd($model, $effective_quality, $effective_size);
+            if ($micro !== null) {
+                $result['cost_micro_usd'] = max(0, (int)$micro);
+                $result['cost_status'] = 'estimated';
+                $result['cost_source'] = 'local_catalog';
+                $result['cost_reason'] = 'output_estimate_only';
+            }
+        }
+        if ($result['cost_status'] === 'unknown') {
+            $status = sanitize_key((string)($row['status'] ?? ''));
+            $error = strtolower((string)($row['error'] ?? ''));
+            if ($status === 'timeout' || strpos($error, 'curl error 28') !== false || strpos($error, 'timed out') !== false || strpos($error, 'timeout') !== false) {
+                $result['cost_reason'] = 'timeout_without_response_usage';
+            } elseif ($requested_quality === 'auto' && $effective_quality === null) {
+                $result['cost_reason'] = 'automatic_quality_without_usage';
+            }
+        }
+        return $result;
+    }
+}
+
 /* =========================================================
    ======= PRECIOS FIJOS POR IMAGEN (USD por generaciÃƒÂ³n) ===
    ========================================================= */
 if (!function_exists('cbia_costes_image_flat_price_usd')) {
-    function cbia_costes_image_flat_price_usd($model, $cost_settings) {
+    function cbia_costes_image_flat_price_usd($model, $cost_settings, $quality = null, $size = null) {
         $model = (string)$model;
+        if (class_exists('CBIA_Image_Pricing_Service') && in_array($model, CBIA_Image_Pricing_Service::get_models(), true)) {
+            $quality = null === $quality ? (function_exists('cbia_get_image_quality') ? cbia_get_image_quality() : 'auto') : $quality;
+            $size = null === $size ? '1536x1024' : $size;
+            $micro = CBIA_Image_Pricing_Service::get_price_micro_usd($model, $quality, $size);
+            return null === $micro ? null : ((int)$micro / 1000000);
+        }
         $openai_mini = isset($cost_settings['image_flat_usd_openai_mini'])
             ? (float)$cost_settings['image_flat_usd_openai_mini']
             : (isset($cost_settings['image_flat_usd_mini']) ? (float)$cost_settings['image_flat_usd_mini'] : 0.052);
@@ -415,19 +533,76 @@ if (!function_exists('cbia_costes_record_usage')) {
         $row = array(
             'ts' => current_time('mysql'),
             'type' => $type,
+            'provider' => sanitize_key((string)($usage['provider'] ?? 'openai')),
             'model' => $model,
+            'model_requested' => sanitize_text_field((string)($usage['model_requested'] ?? $model)),
+            'model_effective' => sanitize_text_field((string)($usage['model_effective'] ?? $model)),
             'in' => max(0, $in_t),
             'cin' => max(0, $cin_t),
             'out' => max(0, $out_t),
+            'reasoning_tokens' => max(0, (int)($usage['reasoning_tokens'] ?? 0)),
             'ok' => $ok,
             'attempt' => max(1, $attempt),
             'error' => $err,
         );
+        $row['status'] = sanitize_key((string)($usage['status'] ?? ($ok ? 'success' : (stripos($err, 'timeout') !== false || stripos($err, 'timed out') !== false || stripos($err, 'cURL error 28') !== false ? 'timeout' : 'error'))));
+        foreach (array('http_code', 'parent_attempt', 'elapsed_ms') as $int_key) {
+            if (isset($usage[$int_key])) $row[$int_key] = max(0, (int)$usage[$int_key]);
+        }
+        foreach (array('request_id', 'batch_id', 'fallback_from', 'attempt_id') as $text_key) {
+            if (isset($usage[$text_key]) && (string)$usage[$text_key] !== '') $row[$text_key] = sanitize_text_field((string)$usage[$text_key]);
+        }
+        if (empty($row['attempt_id'])) {
+            $row['attempt_id'] = 'local-' . substr(hash('sha256', implode('|', array($row['ts'], $type, $model, $attempt, (string)($row['request_id'] ?? ''), wp_generate_uuid4()))), 0, 24);
+        }
         if (isset($usage['section'])) {
             $row['section'] = sanitize_key((string)$usage['section']);
         }
         if (isset($usage['attach_id'])) {
             $row['attach_id'] = max(0, (int)$usage['attach_id']);
+        }
+        if ($type === 'image') {
+            $section = (string)($usage['section'] ?? '');
+            $idx = (int)($usage['idx'] ?? 0);
+            $attach_id = max(0, (int)($usage['attach_id'] ?? 0));
+            $stored_quality = $attach_id ? (string)get_post_meta($attach_id, '_cbia_image_quality', true) : '';
+            $stored_requested_quality = $attach_id ? (string)get_post_meta($attach_id, '_cbia_image_requested_quality', true) : '';
+            $stored_effective_quality = $attach_id ? (string)get_post_meta($attach_id, '_cbia_image_effective_quality', true) : '';
+            $stored_size = $attach_id ? (string)get_post_meta($attach_id, '_cbia_image_size', true) : '';
+            $stored_requested_size = $attach_id ? (string)get_post_meta($attach_id, '_cbia_image_requested_size', true) : '';
+            $stored_effective_size = $attach_id ? (string)get_post_meta($attach_id, '_cbia_image_effective_size', true) : '';
+            $stored_type = $attach_id ? (string)get_post_meta($attach_id, '_cbia_image_type', true) : '';
+            $image_type = isset($usage['image_type']) ? sanitize_key((string)$usage['image_type']) : ($stored_type !== '' ? sanitize_key($stored_type) : (class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_image_type($section, $idx) : 'default'));
+            $requested_quality = (string)($usage['requested_quality'] ?? ($usage['quality_requested'] ?? ($stored_requested_quality !== '' ? $stored_requested_quality : ($usage['quality'] ?? ($stored_quality !== '' ? $stored_quality : (function_exists('cbia_get_image_quality') ? cbia_get_image_quality($section, $idx) : 'auto'))))));
+            $requested_quality = class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::validate_quality($requested_quality) : sanitize_key($requested_quality);
+            $effective_quality = $usage['effective_quality'] ?? ($usage['quality_effective'] ?? ($stored_effective_quality !== '' ? $stored_effective_quality : null));
+            $effective_quality = function_exists('cbia_usage_normalize_image_effective_quality') ? cbia_usage_normalize_image_effective_quality($effective_quality) : (in_array($effective_quality, array('low', 'medium', 'high'), true) ? $effective_quality : null);
+            if ($effective_quality === null && $requested_quality !== 'auto') $effective_quality = $requested_quality;
+            $requested_size = (string)($usage['requested_size'] ?? ($stored_requested_size !== '' ? $stored_requested_size : ($usage['size'] ?? ($stored_size !== '' ? $stored_size : (function_exists('cbia_image_size_for_section') ? cbia_image_size_for_section($section ?: 'body', $idx) : '1536x1024')))));
+            $requested_size = function_exists('cbia_usage_normalize_image_size') ? (cbia_usage_normalize_image_size($requested_size, true) ?? 'auto') : sanitize_text_field($requested_size);
+            $effective_size_candidate = $usage['effective_size'] ?? ($stored_effective_size !== '' ? $stored_effective_size : null);
+            $effective_size = function_exists('cbia_usage_normalize_image_size') ? cbia_usage_normalize_image_size($effective_size_candidate, false) : sanitize_text_field((string)$effective_size_candidate);
+            if ($effective_size === null && $requested_size !== 'auto') $effective_size = $requested_size;
+            $row['requested_quality'] = $requested_quality;
+            $row['effective_quality'] = $effective_quality;
+            $row['quality_requested'] = $requested_quality;
+            $row['quality_effective'] = $effective_quality;
+            $row['quality'] = $effective_quality !== null ? $effective_quality : $requested_quality;
+            $row['requested_size'] = sanitize_text_field($requested_size);
+            $row['effective_size'] = $effective_size === null ? null : sanitize_text_field($effective_size);
+            $row['size'] = $row['effective_size'] !== null && $row['effective_size'] !== '' ? $row['effective_size'] : $row['requested_size'];
+            $row['output_format'] = sanitize_key((string)($usage['output_format'] ?? ($attach_id ? get_post_meta($attach_id, '_cbia_image_output_format', true) : '')));
+            $row['background'] = sanitize_key((string)($usage['background'] ?? ($attach_id ? get_post_meta($attach_id, '_cbia_image_background', true) : '')));
+            $row['image_type'] = in_array($image_type, array('featured', 'content', 'default'), true) ? $image_type : 'default';
+            if (isset($usage['estimated_micro_usd'])) $row['estimated_micro_usd'] = max(0, (int)$usage['estimated_micro_usd']);
+            if (isset($usage['http_code'])) $row['http_code'] = max(0, (int)$usage['http_code']);
+            if (isset($usage['request_id'])) $row['request_id'] = sanitize_text_field((string)$usage['request_id']);
+            foreach (array('image_input_tokens', 'text_input_tokens', 'image_output_tokens', 'cached_image_input_tokens', 'cached_text_input_tokens') as $token_key) {
+                if (isset($usage[$token_key])) $row[$token_key] = max(0, (int)$usage[$token_key]);
+            }
+            $row['input_image_tokens'] = max(0, (int)($usage['input_image_tokens'] ?? ($row['image_input_tokens'] ?? 0)));
+            $row['input_text_tokens'] = max(0, (int)($usage['input_text_tokens'] ?? ($row['text_input_tokens'] ?? 0)));
+            $row['output_image_tokens'] = max(0, (int)($usage['output_image_tokens'] ?? ($row['image_output_tokens'] ?? 0)));
         }
         if (isset($usage['bill_in'])) {
             $row['bill_in'] = max(0, (int)$usage['bill_in']);
@@ -453,6 +628,9 @@ if (!function_exists('cbia_costes_record_usage')) {
         if (isset($usage['status_reason'])) {
             $row['status_reason'] = sanitize_text_field((string)$usage['status_reason']);
         }
+
+        $cost = cbia_costes_calculate_row($row, cbia_costes_get_settings());
+        foreach ($cost as $key => $value) $row[$key] = $value;
 
         if ($post_id <= 0) {
             $row['post_id'] = 0;
@@ -706,96 +884,71 @@ if (!function_exists('cbia_costes_should_bill_failed_attempt')) {
 
 if (!function_exists('cbia_costes_record_failed_attempts')) {
     function cbia_costes_record_failed_attempts($post_id, $attempts, $args = array()) {
-        $post_id = (int)$post_id;
         if (!is_array($attempts) || empty($attempts)) return 0;
-
         $args = is_array($args) ? $args : array();
-        $type_default = isset($args['type']) ? strtolower(trim((string)$args['type'])) : 'text';
-        if ($type_default !== 'image' && $type_default !== 'seo') $type_default = 'text';
-        $prompt = isset($args['prompt']) ? (string)$args['prompt'] : '';
-        $section_default = isset($args['section']) ? sanitize_key((string)$args['section']) : '';
-        $title_default = isset($args['title']) ? sanitize_text_field((string)$args['title']) : '';
-        $context_default = isset($args['context']) ? sanitize_key((string)$args['context']) : '';
-        $status_reason_default = isset($args['status_reason']) ? sanitize_text_field((string)$args['status_reason']) : '';
-
-        $cost_settings = cbia_costes_get_settings();
-        $cbia_settings = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
-        $tokens_per_word = isset($cost_settings['tokens_per_word']) ? (float)$cost_settings['tokens_per_word'] : 1.30;
-        if ($tokens_per_word <= 0) $tokens_per_word = 1.30;
-        $input_overhead_tokens = isset($cost_settings['input_overhead_tokens']) ? (int)$cost_settings['input_overhead_tokens'] : 350;
-        if ($input_overhead_tokens < 0) $input_overhead_tokens = 0;
-
-        $failed_text_input_ratio = isset($cost_settings['failed_text_input_ratio']) ? (float)$cost_settings['failed_text_input_ratio'] : 1.0;
-        $failed_text_output_ratio = isset($cost_settings['failed_text_output_ratio']) ? (float)$cost_settings['failed_text_output_ratio'] : 0.0;
-        $failed_image_flat_ratio = isset($cost_settings['failed_image_flat_ratio']) ? (float)$cost_settings['failed_image_flat_ratio'] : 0.35;
-
-        if ($failed_text_input_ratio < 0) $failed_text_input_ratio = 0.0;
-        if ($failed_text_input_ratio > 1) $failed_text_input_ratio = 1.0;
-        if ($failed_text_output_ratio < 0) $failed_text_output_ratio = 0.0;
-        if ($failed_text_output_ratio > 1) $failed_text_output_ratio = 1.0;
-        if ($failed_image_flat_ratio < 0) $failed_image_flat_ratio = 0.0;
-        if ($failed_image_flat_ratio > 1) $failed_image_flat_ratio = 1.0;
-
         $recorded = 0;
         foreach ($attempts as $attempt) {
-            if (!is_array($attempt)) continue;
-            if (!empty($attempt['ok'])) continue;
-            if (!cbia_costes_should_bill_failed_attempt($attempt)) continue;
-
-            $type = isset($attempt['type']) ? strtolower(trim((string)$attempt['type'])) : $type_default;
-            if ($type !== 'image' && $type !== 'seo') $type = 'text';
-            $model = sanitize_text_field((string)($attempt['model'] ?? ''));
-            if ($model === '') continue;
-
+            if (!is_array($attempt) || !empty($attempt['ok'])) continue;
+            $type = sanitize_key((string)($attempt['type'] ?? ($args['type'] ?? 'text')));
+            if (!in_array($type, array('text', 'image', 'seo'), true)) $type = 'text';
+            $model = sanitize_text_field((string)($attempt['model_effective'] ?? ($attempt['model'] ?? '')));
+            if ($model === '') $model = sanitize_text_field((string)($attempt['model_requested'] ?? 'unknown'));
             $row = array(
                 'type' => $type,
+                'provider' => sanitize_key((string)($attempt['provider'] ?? 'openai')),
                 'model' => $model,
-                'input_tokens' => 0,
-                'output_tokens' => 0,
-                'cached_input_tokens' => 0,
+                'model_requested' => sanitize_text_field((string)($attempt['model_requested'] ?? $model)),
+                'model_effective' => $model,
+                'input_tokens' => max(0, (int)($attempt['input_tokens'] ?? 0)),
+                'cached_input_tokens' => max(0, (int)($attempt['cached_input_tokens'] ?? 0)),
+                'output_tokens' => max(0, (int)($attempt['output_tokens'] ?? 0)),
+                'reasoning_tokens' => max(0, (int)($attempt['reasoning_tokens'] ?? 0)),
                 'ok' => 0,
                 'attempt' => max(1, (int)($attempt['attempt'] ?? 1)),
-                'error' => sanitize_text_field((string)($attempt['error'] ?? '')),
-                'billing_mode' => 'failed_heuristic',
+                'error' => sanitize_text_field((string)($attempt['error'] ?? 'Unknown failed attempt')),
+                'billing_mode' => 'unknown_attempt',
+                'cost_status' => 'unknown',
+                'cost_source' => 'unavailable',
+                'status_reason' => sanitize_text_field((string)($args['status_reason'] ?? 'request_failed')),
             );
-
-            if ($type === 'image') {
-                $section = isset($attempt['section']) ? sanitize_key((string)$attempt['section']) : $section_default;
-                if ($section !== '') $row['section'] = $section;
-                if (!empty($cost_settings['use_image_flat_pricing'])) {
-                    $flat_usd = (float)cbia_costes_image_flat_price_usd($model, $cost_settings);
-                    $row['bill_flat_usd'] = round(max(0.0, $flat_usd * $failed_image_flat_ratio), 6);
-                } else {
-                    $est_in = $prompt !== ''
-                        ? cbia_costes_estimate_prompt_tokens($prompt, $cost_settings)
-                        : cbia_costes_estimate_image_prompt_input_tokens_per_call($cbia_settings, $tokens_per_word, (int)($cost_settings['per_image_overhead_words'] ?? 18));
-                    $row['bill_in'] = max(0, (int)$est_in);
-                    $row['bill_out'] = 0;
-                }
-            } else {
-                $est_in = $prompt !== ''
-                    ? cbia_costes_estimate_prompt_tokens($prompt, $cost_settings)
-                    : cbia_costes_estimate_input_tokens('{title}', $cbia_settings, $tokens_per_word, $input_overhead_tokens);
-                $est_out = ($type === 'seo')
-                    ? max(0, (int)($cost_settings['seo_output_tokens_per_call'] ?? 180))
-                    : cbia_costes_estimate_output_tokens($cbia_settings, $tokens_per_word);
-
-                $row['bill_in'] = max(0, (int)ceil($est_in * $failed_text_input_ratio));
-                $row['bill_out'] = max(0, (int)ceil($est_out * $failed_text_output_ratio));
+            foreach (array('section', 'context', 'title', 'batch_id', 'fallback_from', 'request_id', 'attempt_id') as $key) {
+                $value = $attempt[$key] ?? ($args[$key] ?? '');
+                if ((string)$value !== '') $row[$key] = (string)$value;
             }
-
-            if ($title_default !== '') $row['title'] = $title_default;
-            if ($context_default !== '') $row['context'] = $context_default;
-            if ($status_reason_default !== '') $row['status_reason'] = $status_reason_default;
-
-            cbia_costes_record_usage($post_id, $row);
+            foreach (array('http_code', 'parent_attempt', 'elapsed_ms') as $key) {
+                if (isset($attempt[$key])) $row[$key] = max(0, (int)$attempt[$key]);
+            }
+            if ($type === 'image') {
+                $section = sanitize_key((string)($row['section'] ?? ''));
+                $idx = max(0, (int)($attempt['idx'] ?? 0));
+                $row['idx'] = $idx;
+                $requested_quality = sanitize_key((string)($attempt['requested_quality'] ?? ($attempt['quality_requested'] ?? ($attempt['quality'] ?? 'auto'))));
+                if (!in_array($requested_quality, array('auto', 'low', 'medium', 'high'), true)) $requested_quality = 'auto';
+                $effective_quality = $attempt['effective_quality'] ?? ($attempt['quality_effective'] ?? null);
+                $effective_quality = function_exists('cbia_usage_normalize_image_effective_quality') ? cbia_usage_normalize_image_effective_quality($effective_quality) : (in_array($effective_quality, array('low', 'medium', 'high'), true) ? $effective_quality : null);
+                if ($effective_quality === null && $requested_quality !== 'auto') $effective_quality = $requested_quality;
+                $row['requested_quality'] = $requested_quality;
+                $row['effective_quality'] = $effective_quality;
+                $row['quality_requested'] = $requested_quality;
+                $row['quality_effective'] = $effective_quality;
+                $row['quality'] = $effective_quality !== null ? $effective_quality : $requested_quality;
+                $requested_size = (string)($attempt['requested_size'] ?? ($attempt['size'] ?? 'auto'));
+                $requested_size = function_exists('cbia_usage_normalize_image_size') ? (cbia_usage_normalize_image_size($requested_size, true) ?? 'auto') : sanitize_text_field($requested_size);
+                $effective_size = function_exists('cbia_usage_normalize_image_size') ? cbia_usage_normalize_image_size($attempt['effective_size'] ?? null, false) : sanitize_text_field((string)($attempt['effective_size'] ?? ''));
+                if ($effective_size === null && $requested_size !== 'auto') $effective_size = $requested_size;
+                $row['requested_size'] = $requested_size;
+                $row['effective_size'] = $effective_size;
+                $row['size'] = $row['effective_size'] !== null && $row['effective_size'] !== '' ? $row['effective_size'] : $row['requested_size'];
+                $row['output_format'] = sanitize_key((string)($attempt['output_format'] ?? ''));
+                $row['background'] = sanitize_key((string)($attempt['background'] ?? ''));
+                $row['image_type'] = sanitize_key((string)($attempt['image_type'] ?? (class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_image_type($section, $idx) : 'default')));
+            }
+            cbia_costes_record_usage((int)$post_id, $row);
             $recorded++;
         }
-
         return $recorded;
     }
 }
-
 if (!function_exists('cbia_costes_calc_row_eur')) {
     function cbia_costes_calc_row_eur($row, $cost_settings, $table = null) {
         if (!is_array($row)) return null;
@@ -827,7 +980,11 @@ if (!function_exists('cbia_costes_calc_row_eur')) {
 
         if ($type === 'image' && $use_image_flat) {
             if (!$ok && $bill_flat_usd <= 0) return null;
-            $flat_usd = $ok ? (float)cbia_costes_image_flat_price_usd($model, $cost_settings) : $bill_flat_usd;
+            $row_quality = $row['quality'] ?? ($row['image_quality'] ?? null);
+            $row_size = $row['size'] ?? ($row['image_size_estimate'] ?? null);
+            $flat_value = $ok ? cbia_costes_image_flat_price_usd($model, $cost_settings, $row_quality, $row_size) : $bill_flat_usd;
+            if ($flat_value === null) return null;
+            $flat_usd = (float)$flat_value;
             return (float)$flat_usd * $usd_to_eur;
         }
 
@@ -1423,3 +1580,63 @@ if (!function_exists('cbia_render_tab_costes')) {
 }
 
 /* ------------------------- FIN includes/domain/costs.php ------------------------- */
+/* Explicit historical cost recalculation. It never invents missing API usage. */
+if (!function_exists('cbia_costes_recalculate_history')) {
+    function cbia_costes_recalculate_history($apply = false) {
+        $apply = (bool)$apply;
+        $stats = array('rows_scanned' => 0, 'rows_changed' => 0, 'exact' => 0, 'estimated' => 0, 'unknown' => 0, 'official_reconciled' => 0, 'posts_changed' => 0, 'backup_option' => '');
+        $backup = array('created_at' => current_time('mysql'), 'posts' => array(), 'orphans' => null);
+        $process = static function ($rows) use (&$stats) {
+            $out = is_array($rows) ? $rows : array();
+            foreach ($out as $idx => $row) {
+                if (!is_array($row)) continue;
+                $stats['rows_scanned']++;
+                $cost = cbia_costes_calculate_row($row, cbia_costes_get_settings());
+                $status = sanitize_key((string)($cost['cost_status'] ?? 'unknown'));
+                if (!isset($stats[$status])) $status = 'unknown';
+                $stats[$status]++;
+                $new = $row;
+                foreach ($cost as $key => $value) $new[$key] = $value;
+                if ($new !== $row) {
+                    $out[$idx] = $new;
+                    $stats['rows_changed']++;
+                }
+            }
+            return $out;
+        };
+
+        $query = new WP_Query(array('post_type' => 'post', 'post_status' => 'any', 'posts_per_page' => -1, 'fields' => 'ids', 'no_found_rows' => true, 'meta_query' => array(array('key' => '_cbia_usage_rows', 'compare' => 'EXISTS'))));
+        foreach ((array)$query->posts as $post_id) {
+            $original = get_post_meta((int)$post_id, '_cbia_usage_rows', true);
+            if (!is_array($original)) continue;
+            $before_changed = $stats['rows_changed'];
+            $updated = $process($original);
+            if ($stats['rows_changed'] > $before_changed) {
+                $stats['posts_changed']++;
+                if ($apply) {
+                    $backup['posts'][(int)$post_id] = $original;
+                    update_post_meta((int)$post_id, '_cbia_usage_rows', $updated);
+                }
+            }
+        }
+        wp_reset_postdata();
+
+        $orphan_key = cbia_costes_orphan_usage_key();
+        $orphan_original = get_option($orphan_key, array());
+        $before_changed = $stats['rows_changed'];
+        $orphan_updated = $process($orphan_original);
+        if ($apply && $stats['rows_changed'] > $before_changed) {
+            $backup['orphans'] = $orphan_original;
+            update_option($orphan_key, $orphan_updated, false);
+        }
+
+        if ($apply) {
+            $backup_key = 'cbia_usage_recalc_backup_' . gmdate('Ymd_His');
+            update_option($backup_key, $backup, false);
+            $stats['backup_option'] = $backup_key;
+            if (function_exists('cbia_usage_rebuild_event_store_rows')) cbia_usage_rebuild_event_store_rows();
+            if (function_exists('cbia_usage_invalidate_dashboard_cache')) cbia_usage_invalidate_dashboard_cache();
+        }
+        return $stats;
+    }
+}

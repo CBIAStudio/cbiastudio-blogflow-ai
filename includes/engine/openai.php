@@ -383,22 +383,25 @@ if (!function_exists('cbia_openai_responses_call')) {
 					$payload['temperature'] = $temperature;
 				}
 
+				$request_started = microtime(true);
 				$resp = wp_remote_post('https://api.openai.com/v1/responses', [
 					'headers' => cbia_http_headers_openai($api_key),
 					'body'    => wp_json_encode($payload),
 					'timeout' => 60,
 				]);
+				$elapsed_ms = (int)round((microtime(true) - $request_started) * 1000);
 
 				if (is_wp_error($resp)) {
 					$err = $resp->get_error_message();
 					if (function_exists('cbia_mask_sensitive_log_text')) $err = cbia_mask_sensitive_log_text((string)$err);
 					cbia_log(("HTTP error: {$err}"), 'ERROR');
-					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
+					$attempts[] = array('type' => 'text', 'provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'model' => (string)$model, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => (string)$err);
 					$last_err = (string)$err;
 					continue;
 				}
 
 				$code = (int) wp_remote_retrieve_response_code($resp);
+				$request_id = sanitize_text_field((string)wp_remote_retrieve_header($resp, 'x-request-id'));
 				$body = (string) wp_remote_retrieve_body($resp);
 				$data = json_decode($body, true);
 
@@ -408,7 +411,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 					if (function_exists('cbia_mask_sensitive_log_text')) $msg = cbia_mask_sensitive_log_text((string)$msg);
 					$err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 					cbia_log(("OpenAI error: {$err}"), 'ERROR');
-					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
+					$attempts[] = array('type' => 'text', 'provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'model' => (string)$model, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => 0, 'error' => (string)$err);
 					$last_err = (string)$err;
 					if (in_array($code, array(401, 403, 404), true)) {
 						return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, $last_err, cbia_attach_attempts_meta(array(), $attempts)];
@@ -433,13 +436,14 @@ if (!function_exists('cbia_openai_responses_call')) {
 
 				if ($text === '') {
 					cbia_log(("Response without text (model={$model})"), 'ERROR');
-					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => 'Response without text');
+					$attempts[] = array_merge($usage, array('type' => 'text', 'provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'model' => (string)$model, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => 0, 'error' => 'Response without text'));
 					$last_err = 'Response without text';
 					continue;
 				}
 
 				cbia_log(("OpenAI Responses OK: model={$model} tokens_in=") . (int)($usage['input_tokens'] ?? 0) . " tokens_out=" . (int)($usage['output_tokens'] ?? 0), 'INFO');
 
+				$data['_cbia_request_meta'] = array('provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'fallback_from' => ((string)$model !== (string)$model_preferred ? (string)$model_preferred : ''), 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms);
 				return [true, $text, $usage, $model, '', cbia_attach_attempts_meta($data, $attempts)];
 			}
 		}
@@ -603,6 +607,66 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
    ================== OPENAI: IMÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂGENES ======================
    ========================================================= */
 
+if (!function_exists('cbia_openai_image_request_fields')) {
+	function cbia_openai_image_request_fields($quality, $size) {
+		$requested_quality = strtolower(trim((string)$quality));
+		if (!in_array($requested_quality, array('auto', 'low', 'medium', 'high'), true)) $requested_quality = 'auto';
+		$effective_quality = $requested_quality === 'auto' ? null : $requested_quality;
+		$requested_size = function_exists('cbia_usage_normalize_image_size') ? cbia_usage_normalize_image_size($size, true) : (string)$size;
+		$effective_size = $requested_size !== 'auto' ? $requested_size : null;
+		return array(
+			'requested_quality' => $requested_quality,
+			'effective_quality' => $effective_quality,
+			'quality_requested' => $requested_quality,
+			'quality_effective' => $effective_quality,
+			'quality' => $effective_quality !== null ? $effective_quality : $requested_quality,
+			'requested_size' => $requested_size,
+			'effective_size' => $effective_size,
+			'size' => $effective_size !== null ? $effective_size : (string)$requested_size,
+		);
+	}
+}
+
+if (!function_exists('cbia_openai_finalize_image_meta')) {
+	function cbia_openai_finalize_image_meta($model, $request_fields, $response_fields, $extra = array()) {
+		$meta = array_merge((array)$request_fields, (array)$response_fields, (array)$extra);
+		$effective_quality = $meta['effective_quality'] ?? ($meta['quality_effective'] ?? null);
+		$effective_size = $meta['effective_size'] ?? ($meta['size'] ?? null);
+		$estimated_micro = null;
+		if ($effective_quality !== null && class_exists('CBIA_Image_Pricing_Service')) {
+			$estimated_micro = CBIA_Image_Pricing_Service::get_price_micro_usd((string)$model, (string)$effective_quality, (string)$effective_size);
+		}
+		$meta['estimated_micro_usd'] = $estimated_micro;
+		if (function_exists('cbia_costes_calculate_row')) {
+			$cost = cbia_costes_calculate_row(array_merge($meta, array('type' => 'image', 'model' => (string)$model, 'model_effective' => (string)$model, 'ok' => 1)));
+			foreach ($cost as $key => $value) $meta[$key] = $value;
+		}
+		return $meta;
+	}
+}
+
+if (!function_exists('cbia_openai_store_image_response_meta')) {
+	function cbia_openai_store_image_response_meta($attach_id, $meta, $image_type) {
+		$attach_id = (int)$attach_id;
+		if ($attach_id <= 0) return;
+		$requested_quality = (string)($meta['requested_quality'] ?? 'auto');
+		$effective_quality = $meta['effective_quality'] ?? null;
+		$requested_size = (string)($meta['requested_size'] ?? '');
+		$effective_size = $meta['effective_size'] ?? null;
+		update_post_meta($attach_id, '_cbia_image_requested_quality', $requested_quality);
+		update_post_meta($attach_id, '_cbia_image_quality', $effective_quality !== null ? (string)$effective_quality : $requested_quality);
+		if ($effective_quality !== null) update_post_meta($attach_id, '_cbia_image_effective_quality', (string)$effective_quality);
+		else delete_post_meta($attach_id, '_cbia_image_effective_quality');
+		update_post_meta($attach_id, '_cbia_image_requested_size', $requested_size);
+		update_post_meta($attach_id, '_cbia_image_size', $effective_size !== null ? (string)$effective_size : $requested_size);
+		if ($effective_size !== null) update_post_meta($attach_id, '_cbia_image_effective_size', (string)$effective_size);
+		else delete_post_meta($attach_id, '_cbia_image_effective_size');
+		if (!empty($meta['output_format'])) update_post_meta($attach_id, '_cbia_image_output_format', (string)$meta['output_format']);
+		if (!empty($meta['background'])) update_post_meta($attach_id, '_cbia_image_background', (string)$meta['background']);
+		update_post_meta($attach_id, '_cbia_image_type', $image_type);
+	}
+}
+
 if (!function_exists('cbia_generate_image_openai')) {
 	/**
 	 * Retorna [ok(bool), attach_id(int), model_used(string), err(string)]
@@ -640,7 +704,19 @@ if (!function_exists('cbia_generate_image_openai')) {
 		$preferred_model = function_exists('cbia_get_image_model_for_provider')
 			? cbia_get_image_model_for_provider('openai', function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('openai') : 'gpt-image-2')
 			: 'gpt-image-2';
+		$image_type = class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_image_type($section, $idx) : ((int)$idx > 0 ? 'content' : 'featured');
 		foreach (cbia_image_model_chain('openai', $preferred_model) as $model) {
+			$quality = function_exists('cbia_get_image_quality') ? cbia_get_image_quality($section, $idx) : 'auto';
+			$request_config = class_exists('CBIA_Image_Pricing_Service')
+				? CBIA_Image_Pricing_Service::prepare_api_payload($model, $prompt, $size, $quality, array('n' => 1))
+				: array('payload' => array('model' => $model, 'prompt' => $prompt, 'n' => 1, 'size' => $size), 'model' => $model, 'quality' => $quality, 'size' => $size, 'warning' => '');
+			$model = (string)$request_config['model'];
+			$quality = (string)$request_config['quality'];
+			$size = (string)$request_config['size'];
+			$estimated_micro = class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_price_micro_usd($model, $quality, $size) : null;
+			$estimated_label = null === $estimated_micro ? 'variable' : CBIA_Image_Pricing_Service::format_usd($estimated_micro);
+			$request_fields = cbia_openai_image_request_fields($quality, $size);
+			if (!empty($request_config['warning'])) cbia_log((string)$request_config['warning'], 'WARN');
 			$tries = 2;
 			for ($t = 1; $t <= $tries; $t++) {
 				if (cbia_is_stop_requested()) return [false, 0, $model, __('Stop enabled', 'cbiastudio-blogflow-ai')];
@@ -649,21 +725,17 @@ if (!function_exists('cbia_generate_image_openai')) {
 				if ($delay > 0) sleep($delay);
 
 				/* translators: 1: image model, 2: section label, 3: current attempt, 4: total attempts. */
-				cbia_log((sprintf(__('AI image: model=%1$s section=%2$s attempt %3$d/%4$d', 'cbiastudio-blogflow-ai'), (string)$model, (string)$section_label, (int)$t, (int)$tries)), 'INFO');
+				cbia_log(sprintf('AI image: model=%1$s requested_quality=%2$s requested_size=%3$s type=%4$s section=%5$s estimated_output=%6$s attempt %7$d/%8$d', (string)$model, (string)$quality, (string)$size, (string)$image_type, (string)$section_label, (string)$estimated_label, (int)$t, (int)$tries), 'INFO');
 
-				$payload = [
-					'model'  => $model,
-					'prompt' => $prompt,
-					'n'      => 1,
-					'size'   => $size,
-					'quality'=> 'high',
-				];
+				$payload = (array)$request_config['payload'];
 
+				$request_started = microtime(true);
 				$resp = wp_remote_post('https://api.openai.com/v1/images/generations', [
 					'headers' => cbia_http_headers_openai($api_key),
 					'body'    => wp_json_encode($payload),
 					'timeout' => cbia_image_api_timeout_seconds(),
 				]);
+				$elapsed_ms = (int)round((microtime(true) - $request_started) * 1000);
 
 				if (is_wp_error($resp)) {
 					$http_err = (string)$resp->get_error_message();
@@ -671,21 +743,23 @@ if (!function_exists('cbia_generate_image_openai')) {
 						$http_err .= sprintf(' (timeout=%ss, download_timeout=%ss)', (string)cbia_image_api_timeout_seconds(), (string)cbia_image_download_timeout_seconds());
 					}
 					cbia_log((__('AI image HTTP error: ', 'cbiastudio-blogflow-ai')) . $http_err, 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $http_err);
+					$attempts[] = array_merge($request_fields, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => $http_err));
 					continue;
 				}
 
 				$code = (int) wp_remote_retrieve_response_code($resp);
+				$request_id = sanitize_text_field((string)wp_remote_retrieve_header($resp, 'x-request-id'));
 				$body = (string) wp_remote_retrieve_body($resp);
 				$data = json_decode($body, true);
+				$image_usage = function_exists('cbia_usage_from_images_payload') ? cbia_usage_from_images_payload($data, $quality, $size) : $request_fields;
 
 				if ($code < 200 || $code >= 300) {
 					$msg = '';
 					if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
 					$http_err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 					/* translators: %d is the HTTP status code returned by the image API. */
-					cbia_log((sprintf(__('AI image HTTP %d error', 'cbiastudio-blogflow-ai'), (int)$code)) . ($msg ? " | {$msg}" : ''), 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $http_err);
+					cbia_log((sprintf(__('AI image HTTP %d error', 'cbiastudio-blogflow-ai'), (int)$code)) . ($msg ? " | {$msg}" : '') . ($request_id ? " | request_id={$request_id}" : ''), 'ERROR');
+					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => $http_err));
 					if (in_array($code, array(401, 403, 404), true)) {
 						return [false, 0, $model, $http_err, cbia_attach_attempts_meta(array(), $attempts)];
 					}
@@ -695,7 +769,7 @@ if (!function_exists('cbia_generate_image_openai')) {
 				if (is_array($data) && !empty($data['error']['message'])) {
 					$payload_err = (string)$data['error']['message'];
 					cbia_log((__('AI image payload error: ', 'cbiastudio-blogflow-ai')) . $payload_err, 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $payload_err);
+					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => $payload_err));
 					if (stripos($payload_err, 'incorrect api key') !== false || stripos($payload_err, 'unauthorized') !== false || stripos($payload_err, 'forbidden') !== false) {
 						return [false, 0, $model, $payload_err, cbia_attach_attempts_meta(array(), $attempts)];
 					}
@@ -704,7 +778,7 @@ if (!function_exists('cbia_generate_image_openai')) {
 
 				$bytes = '';
 				if (!empty($data['data'][0]['b64_json'])) {
-					$bytes = base64_decode((string)$data['data'][0]['b64_json']);
+					$bytes = base64_decode((string)$data['data'][0]['b64_json'], true);
 				} elseif (!empty($data['data'][0]['url'])) {
 					$img = wp_remote_get((string)$data['data'][0]['url'], ['timeout' => cbia_image_download_timeout_seconds()]);
 					if (!is_wp_error($img) && (int)wp_remote_retrieve_response_code($img) === 200) {
@@ -712,10 +786,10 @@ if (!function_exists('cbia_generate_image_openai')) {
 					}
 				}
 
-				if ($bytes === '') {
+				if (!is_string($bytes) || $bytes === '') {
 					/* translators: %s is the image model name. */
 					cbia_log((sprintf(__('AI image: response without bytes (model=%s)', 'cbiastudio-blogflow-ai'), (string)$model)), 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => __('Response without bytes', 'cbiastudio-blogflow-ai'));
+					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => __('Response without bytes', 'cbiastudio-blogflow-ai')));
 					continue;
 				}
 
@@ -723,13 +797,17 @@ if (!function_exists('cbia_generate_image_openai')) {
 				if (!$attach_id) {
 					/* translators: %s is the upload error message from WordPress media handling. */
 					cbia_log((sprintf(__('AI image: upload to Media Library failed: %s', 'cbiastudio-blogflow-ai'), (string)$uerr)), 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$uerr, 'billable' => 1);
+					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => (string)$uerr, 'billable' => 1));
 					continue;
 				}
 
-				/* translators: 1: section label, 2: attachment ID. */
-				cbia_log((sprintf(__('AI image OK: section=%1$s attach_id=%2$d', 'cbiastudio-blogflow-ai'), (string)$section_label, (int)$attach_id)), 'INFO');
-				return [true, (int)$attach_id, $model, '', cbia_attach_attempts_meta(array(), $attempts)];
+				$image_meta = cbia_openai_finalize_image_meta($model, $request_fields, $image_usage, array('provider' => 'openai', 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'fallback_from' => ((string)$model !== (string)$preferred_model ? (string)$preferred_model : ''), 'image_type' => $image_type, 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms));
+				$effective_quality_label = $image_meta['effective_quality'] !== null ? (string)$image_meta['effective_quality'] : 'unknown';
+				$effective_size_label = $image_meta['effective_size'] !== null ? (string)$image_meta['effective_size'] : 'unknown';
+				$estimated_output_usd = $image_meta['estimated_micro_usd'] !== null ? rtrim(rtrim(number_format(((int)$image_meta['estimated_micro_usd']) / 1000000, 6, '.', ''), '0'), '.') : 'unknown';
+				cbia_log(sprintf('AI image OK: section=%1$s attach_id=%2$d model=%3$s requested_quality=%4$s effective_quality=%5$s requested_size=%6$s effective_size=%7$s cost_status=%8$s estimated_output_usd=%9$s HTTP=%10$d%11$s', (string)$section_label, (int)$attach_id, (string)$model, (string)$image_meta['requested_quality'], $effective_quality_label, (string)$image_meta['requested_size'], $effective_size_label, (string)($image_meta['cost_status'] ?? 'unknown'), (string)$estimated_output_usd, (int)$code, $request_id ? " request_id={$request_id}" : ''), 'INFO');
+				cbia_openai_store_image_response_meta((int)$attach_id, $image_meta, $image_type);
+				return [true, (int)$attach_id, $model, '', cbia_attach_attempts_meta($image_meta, $attempts)];
 			}
 			if ($image_failover === 'stop') {
 				/* translators: %s is the image model name that failed. */
@@ -777,7 +855,17 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 		$preferred_model = function_exists('cbia_get_image_model_for_provider')
 			? cbia_get_image_model_for_provider('openai', function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('openai') : 'gpt-image-2')
 			: 'gpt-image-2';
+		$image_type = class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_image_type($section, $idx) : ((int)$idx > 0 ? 'content' : 'featured');
 		foreach (cbia_image_model_chain('openai', $preferred_model) as $model) {
+			$quality = function_exists('cbia_get_image_quality') ? cbia_get_image_quality($section, $idx) : 'auto';
+			$request_config = class_exists('CBIA_Image_Pricing_Service')
+				? CBIA_Image_Pricing_Service::prepare_api_payload($model, (string)$prompt, $size, $quality, array('n' => 1))
+				: array('payload' => array('model' => $model, 'prompt' => (string)$prompt, 'n' => 1, 'size' => $size), 'model' => $model, 'quality' => $quality, 'size' => $size, 'warning' => '');
+			$model = (string)$request_config['model']; $quality = (string)$request_config['quality']; $size = (string)$request_config['size'];
+			$estimated_micro = class_exists('CBIA_Image_Pricing_Service') ? CBIA_Image_Pricing_Service::get_price_micro_usd($model, $quality, $size) : null;
+			$estimated_label = null === $estimated_micro ? 'variable' : CBIA_Image_Pricing_Service::format_usd($estimated_micro);
+			$request_fields = cbia_openai_image_request_fields($quality, $size);
+			if (!empty($request_config['warning'])) cbia_log((string)$request_config['warning'], 'WARN');
 			$tries = 2;
 			for ($t = 1; $t <= $tries; $t++) {
 				if (cbia_is_stop_requested()) return [false, 0, $model, __('Stop enabled', 'cbiastudio-blogflow-ai')];
@@ -786,21 +874,17 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 				if ($delay > 0) sleep($delay);
 
 				/* translators: 1: image model, 2: section label, 3: current attempt, 4: total attempts. */
-				cbia_log((sprintf(__('AI image: model=%1$s section=%2$s attempt %3$d/%4$d', 'cbiastudio-blogflow-ai'), (string)$model, (string)$section_label, (int)$t, (int)$tries)), 'INFO');
+				cbia_log(sprintf('AI image: model=%1$s requested_quality=%2$s requested_size=%3$s type=%4$s section=%5$s estimated_output=%6$s attempt %7$d/%8$d', (string)$model, (string)$quality, (string)$size, (string)$image_type, (string)$section_label, (string)$estimated_label, (int)$t, (int)$tries), 'INFO');
 
-				$payload = [
-					'model'  => $model,
-					'prompt' => (string)$prompt,
-					'n'      => 1,
-					'size'   => $size,
-					'quality'=> 'high',
-				];
+				$payload = (array)$request_config['payload'];
 
+				$request_started = microtime(true);
 				$resp = wp_remote_post('https://api.openai.com/v1/images/generations', [
 					'headers' => cbia_http_headers_openai($api_key),
 					'body'    => wp_json_encode($payload),
 					'timeout' => cbia_image_api_timeout_seconds(),
 				]);
+				$elapsed_ms = (int)round((microtime(true) - $request_started) * 1000);
 
 				if (is_wp_error($resp)) {
 					$http_err = (string)$resp->get_error_message();
@@ -808,21 +892,23 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 						$http_err .= sprintf(' (timeout=%ss, download_timeout=%ss)', (string)cbia_image_api_timeout_seconds(), (string)cbia_image_download_timeout_seconds());
 					}
 					cbia_log((__('AI image HTTP error: ', 'cbiastudio-blogflow-ai')) . $http_err, 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $http_err);
+					$attempts[] = array_merge($request_fields, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => $http_err));
 					continue;
 				}
 
 				$code = (int) wp_remote_retrieve_response_code($resp);
+				$request_id = sanitize_text_field((string)wp_remote_retrieve_header($resp, 'x-request-id'));
 				$body = (string) wp_remote_retrieve_body($resp);
 				$data = json_decode($body, true);
+				$image_usage = function_exists('cbia_usage_from_images_payload') ? cbia_usage_from_images_payload($data, $quality, $size) : $request_fields;
 
 				if ($code < 200 || $code >= 300) {
 					$msg = '';
 					if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
 					$http_err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 					/* translators: %d is the HTTP status code returned by the image API. */
-					cbia_log((sprintf(__('AI image HTTP %d error', 'cbiastudio-blogflow-ai'), (int)$code)) . ($msg ? " | {$msg}" : ''), 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $http_err);
+					cbia_log((sprintf(__('AI image HTTP %d error', 'cbiastudio-blogflow-ai'), (int)$code)) . ($msg ? " | {$msg}" : '') . ($request_id ? " | request_id={$request_id}" : ''), 'ERROR');
+					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => $http_err));
 					if (in_array($code, array(401, 403, 404), true)) {
 						return [false, 0, $model, $http_err, cbia_attach_attempts_meta(array(), $attempts)];
 					}
@@ -832,7 +918,7 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 				if (is_array($data) && !empty($data['error']['message'])) {
 					$payload_err = (string)$data['error']['message'];
 					cbia_log((__('AI image payload error: ', 'cbiastudio-blogflow-ai')) . $payload_err, 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $payload_err);
+					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => $payload_err));
 					if (stripos($payload_err, 'incorrect api key') !== false || stripos($payload_err, 'unauthorized') !== false || stripos($payload_err, 'forbidden') !== false) {
 						return [false, 0, $model, $payload_err, cbia_attach_attempts_meta(array(), $attempts)];
 					}
@@ -841,7 +927,7 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 
 				$bytes = '';
 				if (!empty($data['data'][0]['b64_json'])) {
-					$bytes = base64_decode((string)$data['data'][0]['b64_json']);
+					$bytes = base64_decode((string)$data['data'][0]['b64_json'], true);
 				} elseif (!empty($data['data'][0]['url'])) {
 					$img = wp_remote_get((string)$data['data'][0]['url'], ['timeout' => cbia_image_download_timeout_seconds()]);
 					if (!is_wp_error($img) && (int)wp_remote_retrieve_response_code($img) === 200) {
@@ -849,10 +935,10 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 					}
 				}
 
-				if ($bytes === '') {
+				if (!is_string($bytes) || $bytes === '') {
 					/* translators: %s is the image model name. */
 					cbia_log((sprintf(__('AI image: response without bytes (model=%s)', 'cbiastudio-blogflow-ai'), (string)$model)), 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => __('Response without bytes', 'cbiastudio-blogflow-ai'));
+					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => __('Response without bytes', 'cbiastudio-blogflow-ai')));
 					continue;
 				}
 
@@ -860,13 +946,17 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 				if (!$attach_id) {
 					/* translators: %s is the upload error message from WordPress media handling. */
 					cbia_log((sprintf(__('AI image: upload to Media Library failed: %s', 'cbiastudio-blogflow-ai'), (string)$uerr)), 'ERROR');
-					$attempts[] = array('type' => 'image', 'section' => (string)$section, 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$uerr, 'billable' => 1);
+					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => (string)$uerr, 'billable' => 1));
 					continue;
 				}
 
-				/* translators: 1: section label, 2: attachment ID. */
-				cbia_log((sprintf(__('AI image OK: section=%1$s attach_id=%2$d', 'cbiastudio-blogflow-ai'), (string)$section_label, (int)$attach_id)), 'INFO');
-				return [true, (int)$attach_id, $model, '', cbia_attach_attempts_meta(array(), $attempts)];
+				$image_meta = cbia_openai_finalize_image_meta($model, $request_fields, $image_usage, array('provider' => 'openai', 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'fallback_from' => ((string)$model !== (string)$preferred_model ? (string)$preferred_model : ''), 'image_type' => $image_type, 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms));
+				$effective_quality_label = $image_meta['effective_quality'] !== null ? (string)$image_meta['effective_quality'] : 'unknown';
+				$effective_size_label = $image_meta['effective_size'] !== null ? (string)$image_meta['effective_size'] : 'unknown';
+				$estimated_output_usd = $image_meta['estimated_micro_usd'] !== null ? rtrim(rtrim(number_format(((int)$image_meta['estimated_micro_usd']) / 1000000, 6, '.', ''), '0'), '.') : 'unknown';
+				cbia_log(sprintf('AI image OK: section=%1$s attach_id=%2$d model=%3$s requested_quality=%4$s effective_quality=%5$s requested_size=%6$s effective_size=%7$s cost_status=%8$s estimated_output_usd=%9$s HTTP=%10$d%11$s', (string)$section_label, (int)$attach_id, (string)$model, (string)$image_meta['requested_quality'], $effective_quality_label, (string)$image_meta['requested_size'], $effective_size_label, (string)($image_meta['cost_status'] ?? 'unknown'), (string)$estimated_output_usd, (int)$code, $request_id ? " request_id={$request_id}" : ''), 'INFO');
+				cbia_openai_store_image_response_meta((int)$attach_id, $image_meta, $image_type);
+				return [true, (int)$attach_id, $model, '', cbia_attach_attempts_meta($image_meta, $attempts)];
 			}
 			if ($image_failover === 'stop') {
 				/* translators: %s is the image model name that failed. */

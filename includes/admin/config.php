@@ -180,6 +180,27 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 				? cbia_providers_get_recommended_image_model($image_provider)
 				: 'gpt-image-2';
 		}
+		if ($image_provider === 'openai' && class_exists('CBIA_Image_Pricing_Service')) {
+			$image_model = CBIA_Image_Pricing_Service::validate_model($image_model);
+		}
+		$image_quality = isset($_POST['image_quality'])
+			? sanitize_key((string) wp_unslash($_POST['image_quality']))
+			: (string)($settings['image_quality'] ?? 'auto');
+		$image_quality = class_exists('CBIA_Image_Pricing_Service')
+			? CBIA_Image_Pricing_Service::validate_quality($image_quality)
+			: (in_array($image_quality, array('auto', 'low', 'medium', 'high'), true) ? $image_quality : 'auto');
+		$featured_image_quality = isset($_POST['featured_image_quality'])
+			? sanitize_key((string) wp_unslash($_POST['featured_image_quality']))
+			: (string)($settings['featured_image_quality'] ?? 'inherit');
+		$content_image_quality = isset($_POST['content_image_quality'])
+			? sanitize_key((string) wp_unslash($_POST['content_image_quality']))
+			: (string)($settings['content_image_quality'] ?? 'inherit');
+		$featured_image_quality = class_exists('CBIA_Image_Pricing_Service')
+			? CBIA_Image_Pricing_Service::validate_specific_quality($featured_image_quality)
+			: (in_array($featured_image_quality, array('inherit', 'auto', 'low', 'medium', 'high'), true) ? $featured_image_quality : 'inherit');
+		$content_image_quality = class_exists('CBIA_Image_Pricing_Service')
+			? CBIA_Image_Pricing_Service::validate_specific_quality($content_image_quality)
+			: (in_array($content_image_quality, array('inherit', 'auto', 'low', 'medium', 'high'), true) ? $content_image_quality : 'inherit');
 
 		// CAMBIO: compatibilidad con campo legacy openai_model
 		$model = ($text_provider === 'openai') ? $text_model : (string)($settings['openai_model'] ?? 'gpt-5-mini');
@@ -202,6 +223,7 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 				);
 				$mdl = isset($text_models_post[$pkey]) ? sanitize_text_field((string)$text_models_post[$pkey]) : (string)($providers_new[$pkey]['model'] ?? ($pdef['models'][0] ?? ''));
 				$img = isset($image_models_post[$pkey]) ? sanitize_text_field((string)$image_models_post[$pkey]) : (string)($providers_new[$pkey]['image_model'] ?? '');
+				if ($pkey === 'openai' && class_exists('CBIA_Image_Pricing_Service')) $img = CBIA_Image_Pricing_Service::validate_model($img);
 				if (function_exists('cbia_providers_supports_image') && !cbia_providers_supports_image($pkey)) {
 					$img = '';
 				}
@@ -388,6 +410,9 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 			'text_model'             => $text_model,
 			'image_provider'         => $image_provider,
 			'image_model'            => $image_model,
+			'image_quality'          => $image_quality,
+			'featured_image_quality' => $featured_image_quality,
+			'content_image_quality'  => $content_image_quality,
 			// CAMBIO: compatibilidad legacy OpenAI
 			'openai_model'           => $model,
 			'openai_temperature'     => $temp,

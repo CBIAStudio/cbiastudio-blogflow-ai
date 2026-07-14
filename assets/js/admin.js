@@ -621,6 +621,11 @@
         if (!isFinite(usdToEur) || usdToEur <= 0) usdToEur = 0.92;
         var modelSelect = document.getElementById('cbia-usage-model-filter');
         var typeSelect = document.getElementById('cbia-usage-type-filter');
+        var providerSelect = document.getElementById('cbia-usage-provider-filter');
+        var statusSelect = document.getElementById('cbia-usage-status-filter');
+        var requestStatusSelect = document.getElementById('cbia-usage-request-status-filter');
+        var fromInput = document.getElementById('cbia-usage-from');
+        var toInput = document.getElementById('cbia-usage-to');
         var searchInput = document.getElementById('cbia-usage-search');
         var daysSelect = document.getElementById('cbia-usage-days');
         var hiddenModel = document.getElementById('cbia-usage-model-hidden');
@@ -668,10 +673,8 @@
         }
 
         function eurToUsd(value) {
-            var num = Number(value || 0);
-            if (!isFinite(num)) num = 0;
-            if (!isFinite(usdToEur) || usdToEur <= 0) return num;
-            return num / usdToEur;
+            var num = Number(value);
+            return isFinite(num) ? num : 0;
         }
 
         function escapeHtml(value) {
@@ -863,17 +866,32 @@
         function canUseSummaryDataset() {
             var hasTypeFilter = !!String((typeSelect && typeSelect.value) || '').trim();
             var hasSearchFilter = !!getSearchValue();
-            return !hasTypeFilter && !hasSearchFilter;
+            var hasExtraFilter = !!String((providerSelect && providerSelect.value) || '').trim()
+                || !!String((statusSelect && statusSelect.value) || '').trim()
+                || !!String((requestStatusSelect && requestStatusSelect.value) || '').trim()
+                || !!(fromInput && fromInput.value) || !!(toInput && toInput.value);
+            return !hasTypeFilter && !hasSearchFilter && !hasExtraFilter;
         }
 
         function getFilteredRows() {
             var model = String((modelSelect && modelSelect.value) || '').trim();
             var type = String((typeSelect && typeSelect.value) || '').trim();
+            var provider = String((providerSelect && providerSelect.value) || '').trim();
+            var costStatus = String((statusSelect && statusSelect.value) || '').trim();
+            var requestStatus = String((requestStatusSelect && requestStatusSelect.value) || '').trim();
+            var fromTs = fromInput && fromInput.value ? new Date(fromInput.value).getTime() : 0;
+            var toTs = toInput && toInput.value ? new Date(toInput.value).getTime() : 0;
             var term = getSearchValue();
 
             return rows.filter(function (row) {
                 if (model && String(row.model || '') !== model) return false;
                 if (type && String(row.type || '') !== type) return false;
+                if (provider && String(row.provider || '') !== provider) return false;
+                if (costStatus && String(row.cost_status || 'unknown') !== costStatus) return false;
+                if (requestStatus && String(row.status || (row.ok ? 'success' : 'error')) !== requestStatus) return false;
+                var rowTs = row.ts ? new Date(String(row.ts).replace(' ', 'T')).getTime() : 0;
+                if (fromTs && rowTs && rowTs < fromTs) return false;
+                if (toTs && rowTs && rowTs > toTs) return false;
                 if (!term) return true;
 
                 var haystack = [
@@ -881,6 +899,9 @@
                     row.user_name,
                     row.post_title,
                     row.model,
+                    row.provider,
+                    row.batch_id,
+                    row.request_id,
                     row.type_label,
                     row.message_preview,
                     row.status_label
@@ -1039,7 +1060,7 @@
                     text_cost_eur: Number(src.text_cost_eur || 0),
                     image_cost_eur: Number(src.image_cost_eur || 0),
                     seo_cost_eur: Number(src.seo_cost_eur || 0),
-                    cost_eur: Number(src.cost_eur || 0)
+                    cost_eur: (src.cost_eur === null || src.cost_eur === undefined || src.cost_eur === '') ? null : Number(src.cost_eur)
                 });
             }
             return filled;
@@ -1525,6 +1546,8 @@
             var totalCost = 0;
             var avg = 0;
             var avgCostPerPost = 0;
+            var knownCostEvents = 0;
+            var unknownCostEvents = 0;
 
             if (canUseSummaryDataset()) {
                 var summary = getActiveSummary();
@@ -1536,6 +1559,8 @@
                     totalCost = Number(summary.totalCost || 0);
                     avg = Number(summary.avgTokens || 0);
                     avgCostPerPost = Number(summary.avgCostPerPost || 0);
+                    knownCostEvents = Number(summary.knownCostEvents || 0);
+                    unknownCostEvents = Number(summary.unknownCostEvents || 0);
                 }
             } else {
                 var uniquePosts = new Set();
@@ -1546,6 +1571,9 @@
                     totalTokens += Number(row.tokens_total || 0);
                     if (hasNumericValue(row.cost_eur)) {
                         totalCost += Number(row.cost_eur);
+                        knownCostEvents += 1;
+                    } else {
+                        unknownCostEvents += 1;
                     }
                 });
                 uniquePostsCount = uniquePosts.size;
@@ -1562,6 +1590,7 @@
             var avgNode = document.getElementById('cbia-usage-kpi-avg');
             var costTotalNode = document.getElementById('cbia-usage-kpi-cost-total');
             var costBlogNode = document.getElementById('cbia-usage-kpi-cost-blog');
+            var coverageNode = document.getElementById('cbia-usage-cost-coverage');
 
             if (callsNode) callsNode.textContent = numberFormat(totalCalls);
             if (postsNode) postsNode.textContent = numberFormat(uniquePostsCount);
@@ -1569,6 +1598,11 @@
             if (avgNode) avgNode.textContent = numberFormat(avg);
             if (costTotalNode) costTotalNode.textContent = canViewCosts ? currencyFormat(totalCost) : '-';
             if (costBlogNode) costBlogNode.textContent = canViewCosts ? currencyFormat(avgCostPerPost) : '-';
+            if (coverageNode) {
+                var coverageTotal = knownCostEvents + unknownCostEvents;
+                var coverage = coverageTotal ? Math.round((knownCostEvents / coverageTotal) * 1000) / 10 : 0;
+                coverageNode.textContent = ' ' + t('costCoverage', 'Local cost coverage') + ': ' + coverage + '% · ' + t('unknownEvents', 'Unknown events') + ': ' + numberFormat(unknownCostEvents) + '.';
+            }
         }
 
         function aggregatePostSummary(row, filteredRows) {
@@ -1653,6 +1687,20 @@
             return summary;
         }
 
+        function costReasonText(reason) {
+            var labels = {
+                automatic_quality_without_usage: t('automaticQualityWithoutUsage', 'Cost not determined: OpenAI selected the quality automatically and returned no sufficient usage data.'),
+                timeout_without_response_usage: t('timeoutWithoutResponseUsage', 'Cost not determined: the local connection timed out before usage data was received.'),
+                output_estimate_only: t('outputEstimateOnly', 'Output estimate only; this is not the total invoiced cost.'),
+                api_usage: t('apiUsage', 'Calculated from API usage and the local pricing catalog.'),
+                official_reconciliation: t('officialReconciliation', 'Officially reconciled cost.'),
+                model_without_pricing: t('modelWithoutPricing', 'The effective model has no local price.'),
+                missing_token_usage: t('missingTokenUsage', 'The response did not include sufficient token usage.'),
+                insufficient_usage_data: t('insufficientUsageData', 'Insufficient usage data.')
+            };
+            return labels[String(reason || '')] || labels.insufficient_usage_data;
+        }
+
         function renderDetail(row, filteredRows) {
             if (!detailPanel) return;
             if (!row) {
@@ -1701,10 +1749,18 @@
                 ? ('<div class="cbia-usage-detail-stat"><span>Total cost</span><strong>' + (summary ? currencyFormat(eurToUsd(summary.total_cost)) : '-') + '</strong></div>')
                 : '';
             var eventCostStat = canViewCosts
-                ? ('<div class="cbia-usage-detail-stat"><span>Event cost</span><strong>' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : '-') + '</strong></div>')
+                ? ('<div class="cbia-usage-detail-stat"><span>Event cost</span><strong>' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : t('unknownCost', 'Unknown')) + '</strong></div>')
                 : '';
             var billableFailuresRow = canViewCosts
                 ? ('<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Billable failures</div><div class="cbia-usage-detail-value">' + numberFormat(summary.billable_fail_count) + '</div></div>')
+                : '';
+            var imageResponseRows = String(row.type || '') === 'image'
+                ? ('<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('requestedQuality', 'Requested quality')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.requested_quality_label || row.requested_quality || '-') + '</div></div>'
+                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('effectiveQuality', 'Effective quality')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.effective_quality_label || row.effective_quality || t('notReturned', 'Not returned')) + '</div></div>'
+                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('requestedSize', 'Requested size')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.requested_size || '-') + '</div></div>'
+                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('effectiveSize', 'Effective size')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.effective_size || t('notReturned', 'Not returned')) + '</div></div>'
+                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('outputFormat', 'Output format')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.output_format || t('notReturned', 'Not returned')) + '</div></div>'
+                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('background', 'Background')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.background || t('notReturned', 'Not returned')) + '</div></div>')
                 : '';
 
             detailPanel.innerHTML = ''
@@ -1738,7 +1794,16 @@
                 + '  </div>'
                 + '  <div class="cbia-usage-detail-meta">'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Date</div><div class="cbia-usage-detail-value">' + escapeHtml(formatDateTime(row.ts)) + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Model</div><div class="cbia-usage-detail-value"><code>' + escapeHtml(row.model) + '</code></div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Model</div><div class="cbia-usage-detail-value"><code>' + escapeHtml(row.model) + '</code>' + (row.quality_label || row.quality ? ' · ' + escapeHtml(row.quality_label || row.quality) : '') + (row.size ? ' · ' + escapeHtml(row.size) : '') + '</div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('provider', 'Provider')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.provider || '-') + '</div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('requestedModel', 'Requested model')) + '</div><div class="cbia-usage-detail-value"><code>' + escapeHtml(row.model_requested || '-') + '</code></div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('effectiveModel', 'Effective model')) + '</div><div class="cbia-usage-detail-value"><code>' + escapeHtml(row.model_effective || row.model || '-') + '</code></div></div>'
+                +      imageResponseRows
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('costStatus', 'Cost status')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.cost_status || 'unknown') + '</div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('costSource', 'Cost source')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.cost_source || 'unavailable') + ' · ' + escapeHtml(row.pricing_version || '-') + '</div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('costReason', 'Cost reason')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(costReasonText(row.cost_reason)) + '</div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Request</div><div class="cbia-usage-detail-value">HTTP ' + escapeHtml(row.http_code || '-') + ' · attempt ' + escapeHtml(row.attempt || 1) + ' · ' + escapeHtml(row.elapsed_ms || 0) + ' ms · ' + escapeHtml(row.request_id || '-') + '</div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Batch / fallback</div><div class="cbia-usage-detail-value">' + escapeHtml(row.batch_id || '-') + ' · ' + escapeHtml(row.fallback_from || '-') + '</div></div>'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Type</div><div class="cbia-usage-detail-value"><span class="cbia-usage-type-badge type-' + escapeHtml(row.type) + '">' + escapeHtml(row.type_label) + '</span></div></div>'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Section</div><div class="cbia-usage-detail-value">' + escapeHtml(row.section_detail || row.section_label || '-') + '</div></div>'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Status</div><div class="cbia-usage-detail-value"><span class="cbia-usage-status-badge status-' + (row.ok ? 'ok' : 'error') + '">' + escapeHtml(row.status_label) + '</span></div></div>'
@@ -1769,7 +1834,7 @@
                 return;
             }
 
-            var displayRows = filtered.slice(0, 14);
+            var displayRows = filtered.slice();
             allFilteredRows = filtered.slice();
             tableBody.innerHTML = displayRows.map(function (row) {
                 var activeClass = rowKey(row) === selectedKey ? ' is-active' : '';
@@ -1786,8 +1851,8 @@
                     + '  <td><div class="cbia-usage-source"><span class="cbia-usage-source-title">' + escapeHtml(row.post_title || '-') + '</span><span class="cbia-usage-source-meta">#' + escapeHtml(String(row.post_id || 0)) + '</span></div></td>'
                     + '  <td><span class="cbia-usage-type-badge type-' + escapeHtml(row.type) + '">' + escapeHtml(typeLabel) + '</span></td>'
                     + '  <td><span class="cbia-usage-metric">' + (tokenMetricsApplicable ? numberFormat(row.tokens_total) : 'N/A') + '</span></td>'
-                    + (canViewCosts ? ('  <td><span class="cbia-usage-cost">' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : '-') + '</span></td>') : '')
-                    + '  <td><code class="cbia-usage-model-code">' + escapeHtml(row.model || '-') + '</code></td>'
+                    + (canViewCosts ? ('  <td><span class="cbia-usage-cost">' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : t('unknownCost', 'Unknown')) + '</span></td>') : '')
+                    + '  <td><code class="cbia-usage-model-code">' + escapeHtml(row.model || '-') + '</code>' + (row.quality_label || row.quality ? '<small class="cbia-usage-source-meta">' + escapeHtml(row.quality_label || row.quality) + (row.size ? ' · ' + escapeHtml(row.size) : '') + '</small>' : '') + '</td>'
                     + '</tr>';
             }).join('');
 
@@ -1838,10 +1903,36 @@
         if (typeSelect) {
             typeSelect.addEventListener('change', refresh);
         }
+        [providerSelect, statusSelect, requestStatusSelect, fromInput, toInput].forEach(function (control) {
+            if (control) control.addEventListener('change', refresh);
+        });
 
         if (searchInput) {
             searchInput.addEventListener('input', refresh);
         }
+
+        function runHistoricalRecalculation(apply) {
+            var resultNode = document.getElementById('cbia-usage-recalc-result');
+            if (apply && !window.confirm(t('recalcConfirm', 'Apply recalculation to stored usage rows? A backup option will be created first.'))) return;
+            var body = new URLSearchParams();
+            body.set('action', 'cbia_usage_recalculate_history');
+            body.set('_ajax_nonce', ajaxNonce);
+            body.set('apply', apply ? '1' : '0');
+            if (apply) body.set('confirm', 'RECALCULATE');
+            if (resultNode) resultNode.textContent = t('recalcRunning', 'Calculating...');
+            fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}, body: body.toString() })
+                .then(function (response) { return response.json(); })
+                .then(function (json) {
+                    if (!json || !json.success) throw new Error((json && json.data && json.data.message) || 'Recalculation failed');
+                    var d = json.data || {};
+                    if (resultNode) resultNode.textContent = 'Rows: ' + Number(d.rows_scanned || 0) + ' · exact: ' + Number(d.exact || 0) + ' · estimated: ' + Number(d.estimated || 0) + ' · unknown: ' + Number(d.unknown || 0) + (d.backup_option ? ' · backup: ' + d.backup_option : '');
+                    if (apply) window.location.reload();
+                }).catch(function (error) { if (resultNode) resultNode.textContent = error.message || 'Recalculation failed'; });
+        }
+        var recalcDryRun = document.getElementById('cbia-usage-recalc-dry-run');
+        var recalcApply = document.getElementById('cbia-usage-recalc-apply');
+        if (recalcDryRun) recalcDryRun.addEventListener('click', function () { runHistoricalRecalculation(false); });
+        if (recalcApply) recalcApply.addEventListener('click', function () { runHistoricalRecalculation(true); });
 
         if (daysSelect && periodForm) {
             daysSelect.addEventListener('change', function () {
