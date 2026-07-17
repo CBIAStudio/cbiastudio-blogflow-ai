@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.1.4
+# CBIAStudio BlogFlow with AI (WordPress) v2.1.5
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,20 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.1.5
+
+- Usage V2 persists every OpenAI text attempt immediately and moves temporary events to the final post idempotently.
+- Initial generation uses at most the selected model and one safe fallback for temporary failures.
+- Completed and incomplete Responses are distinguished; partial text can use one guarded expansion.
+- Blog and Preview share the selected minimum, and rejected short drafts do not generate images.
+- OpenAI text timeouts are 120 seconds initially and 150 seconds for the single expansion.
+
+## Comparative: 2.1.5 vs 2.1.4
+
+2.1.5 reduces duplicate calls and missing Usage events while preserving the DeepSeek V4 implementation introduced in 2.1.4.
+
+## Previous: 2.1.4
 
 ## What's New in 2.1.4
 

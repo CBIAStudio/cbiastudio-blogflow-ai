@@ -140,7 +140,7 @@ if (!function_exists('cbia_extract_text_from_responses_payload')) {
 
 if (!function_exists('cbia_usage_from_responses_payload')) {
     function cbia_usage_from_responses_payload($data) {
-        $u = ['input_tokens' => 0, 'cached_input_tokens' => 0, 'output_tokens' => 0, 'reasoning_tokens' => 0, 'total_tokens' => 0];
+        $u = ['input_tokens' => 0, 'cached_input_tokens' => 0, 'cached_tokens_reported' => 0, 'output_tokens' => 0, 'reasoning_tokens' => 0, 'total_tokens' => 0];
 
         if (!is_array($data)) return $u;
 
@@ -149,7 +149,9 @@ if (!function_exists('cbia_usage_from_responses_payload')) {
             $u['input_tokens']  = (int)($data['usage']['input_tokens'] ?? 0);
             $u['output_tokens'] = (int)($data['usage']['output_tokens'] ?? 0);
             $u['total_tokens']  = (int)($data['usage']['total_tokens'] ?? 0);
-            $u['cached_input_tokens'] = (int)($data['usage']['input_tokens_details']['cached_tokens'] ?? 0);
+            $details = is_array($data['usage']['input_tokens_details'] ?? null) ? $data['usage']['input_tokens_details'] : array();
+            $u['cached_tokens_reported'] = array_key_exists('cached_tokens', $details) ? 1 : 0;
+            $u['cached_input_tokens'] = (int)($details['cached_tokens'] ?? 0);
             $u['reasoning_tokens'] = (int)($data['usage']['output_tokens_details']['reasoning_tokens'] ?? 0);
 
             // algunos payloads usan "total_tokens" solo

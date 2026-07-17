@@ -295,7 +295,41 @@ if (!function_exists('cbia_openai_responses_call')) {
 	 * Devuelve 6 valores:
 	 * [ok(bool), text(string), usage(array), model_used(string), err(string), raw(array|string)]
 	 */
-		function cbia_openai_responses_call($prompt, $title_for_log = '', $tries = 2, $max_output_override = 0) {
+	function cbia_openai_text_timeout($context = array()) {
+		$phase = sanitize_key((string)($context['phase'] ?? $context['context'] ?? 'initial'));
+		$default = strpos($phase, 'expand') !== false ? 150 : 120;
+		return max(30, (int)apply_filters('cbia_openai_text_timeout', $default, $phase, $context));
+	}
+
+	function cbia_openai_text_attempt_context($context, $title, $sequence, $model, $preferred) {
+		$context = is_array($context) ? $context : array();
+		if (empty($context['temporary_context_id'])) {
+			$context['temporary_context_id'] = 'tmp-' . substr(hash('sha256', (string)$title . '|' . microtime(true) . '|' . wp_generate_uuid4()), 0, 24);
+		}
+		$context['attempt_id'] = sanitize_text_field((string)$context['temporary_context_id']) . '-a' . max(1, (int)$sequence);
+		$context['attempt'] = max(1, (int)$sequence);
+		if (empty($context['batch_id']) && !empty($GLOBALS['cbia_usage_batch_id'])) $context['batch_id'] = sanitize_text_field((string)$GLOBALS['cbia_usage_batch_id']);
+		if ($sequence > 1) {
+			$context['parent_attempt'] = 1;
+			$context['fallback_from'] = (string)$preferred;
+		}
+		$context['model_requested'] = (string)$preferred;
+		$context['model_effective'] = (string)$model;
+		$context['model'] = (string)$model;
+		$context['provider'] = 'openai';
+		$context['type'] = 'text';
+		$context['title'] = (string)$title;
+		return $context;
+	}
+
+	function cbia_openai_record_text_attempt($context, $usage, $result) {
+		$row = array_merge(is_array($usage) ? $usage : array(), is_array($context) ? $context : array(), is_array($result) ? $result : array());
+		$saved = function_exists('cbia_costes_record_usage') ? cbia_costes_record_usage((int)($context['post_id'] ?? 0), $row) : false;
+		cbia_log('Usage V2 OpenAI attempt=' . sanitize_text_field((string)($row['attempt_id'] ?? 'unknown')) . ' saved=' . ($saved ? 'yes' : 'no') . ' status=' . sanitize_key((string)($row['status'] ?? 'unknown')), $saved ? 'INFO' : 'WARN');
+		return (bool)$saved;
+	}
+
+		function cbia_openai_responses_call($prompt, $title_for_log = '', $tries = 2, $max_output_override = 0, $context = array()) {
 			cbia_try_unlimited_runtime();
 			$attempts = array();
 			// CAMBIO: proveedor de texto
@@ -312,7 +346,9 @@ if (!function_exists('cbia_openai_responses_call')) {
 		$disable_model_fallback = !empty($GLOBALS['cbia_disable_text_model_fallback']);
 		$chain = $disable_model_fallback
 			? array_values(array_filter(array(trim((string)$model_preferred))))
-			: cbia_model_fallback_chain($model_preferred);
+			: cbia_openai_text_attempt_chain($model_preferred);
+		$context = is_array($context) ? $context : array();
+		if (empty($context['temporary_context_id'])) $context['temporary_context_id'] = 'tmp-' . substr(hash('sha256', (string)$title_for_log . '|' . microtime(true) . '|' . wp_generate_uuid4()), 0, 24);
 
 		$system = "Eres un redactor editorial. Devuelve HTML simple con <h2>, <h3>, <p>, <ul>, <li>. NO uses <h1> ni envolturas <html>/<head>/<body>. No uses <table>, <iframe> ni <blockquote>.";
 		$global_last_error = __('Could not get a streaming response.', 'cbiastudio-blogflow-ai');
@@ -340,7 +376,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 			if ($google_key !== '') {
 				cbia_log("DeepSeek failed ({$last_err}). Text fallback -> Google Gemini.", 'WARN');
 				$GLOBALS['cbia_force_text_provider'] = 'google';
-				$google_result = cbia_openai_responses_call($prompt, $title_for_log, $tries, $max_output_override);
+				$google_result = cbia_openai_responses_call($prompt, $title_for_log, $tries, $max_output_override, $context);
 				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
 				else unset($GLOBALS['cbia_force_text_provider']);
 				$google_result = cbia_merge_provider_attempts($google_result, $deepseek_raw, $deepseek_model);
@@ -353,7 +389,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 			if ($openai_key !== '') {
 				cbia_log("Google fallback unavailable/failed. Text fallback -> OpenAI.", 'WARN');
 				$GLOBALS['cbia_force_text_provider'] = 'openai';
-				$openai_result = cbia_openai_responses_call($prompt, $title_for_log, $tries, $max_output_override);
+				$openai_result = cbia_openai_responses_call($prompt, $title_for_log, $tries, $max_output_override, $context);
 				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
 				else unset($GLOBALS['cbia_force_text_provider']);
 				$openai_result = cbia_merge_provider_attempts($openai_result, $deepseek_raw, $deepseek_model);
@@ -371,15 +407,18 @@ if (!function_exists('cbia_openai_responses_call')) {
 			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', __('No API key', 'cbiastudio-blogflow-ai'), []];
 		}
 
+		$sequence = 0;
 		foreach ($chain as $model) {
 			if (!cbia_is_responses_model($model)) continue;
 
-			for ($t = 1; $t <= max(1, (int)$tries); $t++) {
+			for ($t = 1; $t <= 1; $t++) {
+				$sequence++;
+				$attempt_context = cbia_openai_text_attempt_context($context, $title_for_log, $sequence, $model, $model_preferred);
 				if (cbia_is_stop_requested()) {
 					return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Stop enabled', 'cbiastudio-blogflow-ai'), []];
 				}
 
-				cbia_log(("OpenAI Responses: model={$model} attempt {$t}/{$tries} ") . ($title_for_log ? "| '{$title_for_log}'" : ''), 'INFO');
+				cbia_log(("OpenAI Responses: model={$model} attempt {$sequence}/" . count($chain) . " ") . ($title_for_log ? "| '{$title_for_log}'" : ''), 'INFO');
 
 				$max_out = (int)($s['responses_max_output_tokens'] ?? 6000);
 				$max_out_override = (int)$max_output_override;
@@ -401,12 +440,15 @@ if (!function_exists('cbia_openai_responses_call')) {
 				if (cbia_openai_model_supports_temperature($model)) {
 					$payload['temperature'] = $temperature;
 				}
+				$capabilities = cbia_openai_text_model_capabilities($model);
+				if (!empty($capabilities['reasoning_effort_minimal'])) $payload['reasoning'] = array('effort' => 'minimal');
+				if (!empty($capabilities['text_verbosity'])) $payload['text'] = array('verbosity' => 'high');
 
 				$request_started = microtime(true);
 				$resp = wp_remote_post('https://api.openai.com/v1/responses', [
 					'headers' => cbia_http_headers_openai($api_key),
 					'body'    => wp_json_encode($payload),
-					'timeout' => 60,
+					'timeout' => cbia_openai_text_timeout($context),
 				]);
 				$elapsed_ms = (int)round((microtime(true) - $request_started) * 1000);
 
@@ -414,7 +456,9 @@ if (!function_exists('cbia_openai_responses_call')) {
 					$err = $resp->get_error_message();
 					if (function_exists('cbia_mask_sensitive_log_text')) $err = cbia_mask_sensitive_log_text((string)$err);
 					cbia_log(("HTTP error: {$err}"), 'ERROR');
-					$attempts[] = array('type' => 'text', 'provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'model' => (string)$model, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => (string)$err);
+					$attempt = array_merge($attempt_context, array('elapsed_ms' => $elapsed_ms, 'ok' => 0, 'status' => 'timeout', 'error' => (string)$err));
+					$attempts[] = $attempt;
+					cbia_openai_record_text_attempt($attempt_context, cbia_usage_empty(), $attempt);
 					$last_err = (string)$err;
 					continue;
 				}
@@ -423,6 +467,13 @@ if (!function_exists('cbia_openai_responses_call')) {
 				$request_id = sanitize_text_field((string)wp_remote_retrieve_header($resp, 'x-request-id'));
 				$body = (string) wp_remote_retrieve_body($resp);
 				$data = json_decode($body, true);
+				if ($code >= 200 && $code < 300 && !is_array($data)) {
+					$err = 'Invalid JSON response';
+					$attempt = array_merge($attempt_context, array('elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => 0, 'status' => 'error', 'error' => $err));
+					$attempts[] = $attempt;
+					cbia_openai_record_text_attempt($attempt_context, cbia_usage_empty(), $attempt);
+					return [false, '', cbia_usage_empty(), $model, $err, cbia_attach_attempts_meta(array(), $attempts)];
+				}
 
 				if ($code < 200 || $code >= 300) {
 					$msg = '';
@@ -430,11 +481,16 @@ if (!function_exists('cbia_openai_responses_call')) {
 					if (function_exists('cbia_mask_sensitive_log_text')) $msg = cbia_mask_sensitive_log_text((string)$msg);
 					$err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 					cbia_log(("OpenAI error: {$err}"), 'ERROR');
-					$attempts[] = array('type' => 'text', 'provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'model' => (string)$model, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => 0, 'error' => (string)$err);
+					$usage_error = cbia_usage_from_responses_payload($data);
+					$attempt = array_merge($attempt_context, $usage_error, array('elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => 0, 'status' => 'error', 'error' => (string)$err));
+					$attempts[] = $attempt;
+					cbia_openai_record_text_attempt($attempt_context, $usage_error, $attempt);
 					$last_err = (string)$err;
-					if (in_array($code, array(401, 403, 404), true)) {
-						return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, $last_err, cbia_attach_attempts_meta(array(), $attempts)];
+					if (!in_array($code, array(408, 429, 500, 502, 503, 504), true)) {
+						return [false, '', $usage_error, $model, $last_err, cbia_attach_attempts_meta(array(), $attempts)];
 					}
+					$retry_after = (int)wp_remote_retrieve_header($resp, 'retry-after');
+					if ($retry_after > 0 && $sequence < count($chain)) sleep(min(120, $retry_after));
 					continue;
 				}
 
@@ -442,28 +498,38 @@ if (!function_exists('cbia_openai_responses_call')) {
 					$err = (string)$data['error']['message'];
 					if (function_exists('cbia_mask_sensitive_log_text')) $err = cbia_mask_sensitive_log_text((string)$err);
 					cbia_log(("OpenAI error payload: {$err}"), 'ERROR');
-					$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
+					$usage_error = cbia_usage_from_responses_payload($data);
+					$attempt = array_merge($attempt_context, $usage_error, array('elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => 0, 'status' => 'error', 'error' => (string)$err));
+					$attempts[] = $attempt;
+					cbia_openai_record_text_attempt($attempt_context, $usage_error, $attempt);
 					$last_err = (string)$err;
 					if (stripos($err, 'incorrect api key') !== false || stripos($err, 'unauthorized') !== false || stripos($err, 'forbidden') !== false) {
-						return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, $last_err, cbia_attach_attempts_meta(array(), $attempts)];
+						return [false, '', $usage_error, $model, $last_err, cbia_attach_attempts_meta(array(), $attempts)];
 					}
-					continue;
+					return [false, '', $usage_error, $model, $last_err, cbia_attach_attempts_meta($data, $attempts)];
 				}
 
 				$text = cbia_extract_text_from_responses_payload($data);
 				$usage = cbia_usage_from_responses_payload($data);
+				$response_status = sanitize_key((string)($data['status'] ?? 'completed'));
+				$incomplete_reason = sanitize_key((string)($data['incomplete_details']['reason'] ?? ''));
 
 				if ($text === '') {
 					cbia_log(("Response without text (model={$model})"), 'ERROR');
-					$attempts[] = array_merge($usage, array('type' => 'text', 'provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'model' => (string)$model, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => 0, 'error' => 'Response without text'));
+					$attempt = array_merge($attempt_context, $usage, array('elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => 0, 'status' => $response_status ?: 'error', 'status_reason' => $incomplete_reason, 'error' => 'Response without text'));
+					$attempts[] = $attempt;
+					cbia_openai_record_text_attempt($attempt_context, $usage, $attempt);
 					$last_err = 'Response without text';
-					continue;
+					return [false, '', $usage, $model, $last_err, cbia_attach_attempts_meta($data, $attempts)];
 				}
 
 				cbia_log(("OpenAI Responses OK: model={$model} tokens_in=") . (int)($usage['input_tokens'] ?? 0) . " tokens_out=" . (int)($usage['output_tokens'] ?? 0), 'INFO');
 
-				$data['_cbia_request_meta'] = array('provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'fallback_from' => ((string)$model !== (string)$model_preferred ? (string)$model_preferred : ''), 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms);
-				return [true, $text, $usage, $model, '', cbia_attach_attempts_meta($data, $attempts)];
+				$completed = ($response_status === '' || $response_status === 'completed');
+				$attempt = array_merge($attempt_context, $usage, array('elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => $completed ? 1 : 0, 'status' => $completed ? 'success' : 'incomplete', 'status_reason' => $incomplete_reason));
+				cbia_openai_record_text_attempt($attempt_context, $usage, $attempt);
+				$data['_cbia_request_meta'] = array_merge($attempt_context, array('provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'fallback_from' => ((string)$model !== (string)$model_preferred ? (string)$model_preferred : ''), 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'status' => $completed ? 'success' : 'incomplete', 'status_reason' => $incomplete_reason));
+				return [$completed, $text, $usage, $model, $completed ? '' : ('Incomplete response' . ($incomplete_reason ? ': ' . $incomplete_reason : '')), cbia_attach_attempts_meta($data, $attempts)];
 			}
 		}
 

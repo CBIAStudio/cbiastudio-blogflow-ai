@@ -165,10 +165,12 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $this->emit($emit, 'cbia_status', array('message' => 'Generating content...'));
 
             $prompt = $this->build_prompt($title, $settings);
-            list($ok, $text_html, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, $title, 2);
+            list($preview_min, $preview_max) = cbia_pick_length_target_words((string)($settings['post_length_variant'] ?? 'medium'), !empty($settings['include_faq']));
+            $preview_budget = cbia_estimate_output_tokens_for_length_target($preview_min, $preview_max, (string)($settings['post_language'] ?? 'English'), !empty($settings['include_faq']), !empty($settings['include_practical_examples']));
+            list($ok, $text_html, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, $title, 2, $preview_budget, array('context' => 'preview_text', 'phase' => 'initial'));
             $text_attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($raw) : array();
             $text_meta = is_array($raw['_cbia_request_meta'] ?? null) ? $raw['_cbia_request_meta'] : array();
-            if (!$ok) {
+            if (!$ok && trim((string)$text_html) === '') {
                 return new WP_Error('preview_generation_failed', $err ?: 'Could not generate preview.');
             }
 
@@ -199,9 +201,9 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             if (function_exists('cbia_pick_length_target_words') && function_exists('cbia_count_words_from_html') && function_exists('cbia_expand_text_to_length_target')) {
                 list($min_words, $max_words) = cbia_pick_length_target_words($length_variant, !empty($settings['include_faq']));
                 $current_words = (int) cbia_count_words_from_html((string) $text_html);
-                $soft_floor = $this->get_soft_length_floor((int)$min_words);
-                if ($current_words < (int) $soft_floor) {
-                    $text_html = cbia_expand_text_to_length_target($title, (string)$text_html, (array)$settings, (int)$min_words, (int)$max_words);
+                if ($current_words < (int)$min_words) {
+                    $preview_expansion_status = array();
+                    $text_html = cbia_expand_text_to_length_target($title, (string)$text_html, (array)$settings, (int)$min_words, (int)$max_words, $unused_expansion_calls, $preview_expansion_status);
                     if (!empty($settings['include_practical_examples'])) {
                         $text_html = $this->ensure_practical_examples_block(
                             (string)$text_html,
@@ -212,6 +214,9 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     }
                 }
                 $text_html = $this->enforce_length_ceiling((string)$text_html, (int)$max_words, !empty($settings['include_faq']));
+                if ((int)cbia_count_words_from_html((string)$text_html) < (int)$min_words) {
+                    return new WP_Error('preview_length_insufficient', 'Generated text remains below the selected minimum. Images were not generated.');
+                }
             }
             if (function_exists('cbia_log')) {
                 cbia_log(sprintf("AI preview text OK: HTML generated for '%s'", (string)$title), 'INFO');

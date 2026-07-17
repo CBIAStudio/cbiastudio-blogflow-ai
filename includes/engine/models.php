@@ -33,6 +33,41 @@ if (!function_exists('cbia_model_fallback_chain')) {
     }
 }
 
+if (!function_exists('cbia_openai_text_attempt_chain')) {
+    /**
+     * OpenAI text hotfix: at most the selected model plus one safe fallback.
+     */
+    function cbia_openai_text_attempt_chain($preferred) {
+        $preferred = trim((string)$preferred);
+        if ($preferred === '') $preferred = 'gpt-5-mini';
+
+        $fallbacks = apply_filters('cbia_openai_text_safe_fallbacks', array(
+            'gpt-5-mini',
+            'gpt-4.1-mini',
+        ), $preferred);
+        $chain = array($preferred);
+        foreach ((array)$fallbacks as $candidate) {
+            $candidate = trim((string)$candidate);
+            if ($candidate !== '' && $candidate !== $preferred && cbia_is_responses_model($candidate)) {
+                $chain[] = $candidate;
+                break;
+            }
+        }
+        return array_slice(array_values(array_unique($chain)), 0, 2);
+    }
+}
+
+if (!function_exists('cbia_openai_text_model_capabilities')) {
+    function cbia_openai_text_model_capabilities($model) {
+        $model = strtolower(trim((string)$model));
+        $supports_controls = (bool)preg_match('/^gpt-5(?:-(?:mini|nano))?(?:-|$)/', $model);
+        return apply_filters('cbia_openai_text_model_capabilities', array(
+            'reasoning_effort_minimal' => $supports_controls,
+            'text_verbosity' => $supports_controls,
+        ), $model);
+    }
+}
+
 if (!function_exists('cbia_is_responses_model')) {
     function cbia_is_responses_model($m) {
         $m = strtolower(trim((string)$m));

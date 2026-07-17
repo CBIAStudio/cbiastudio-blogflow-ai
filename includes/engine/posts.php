@@ -45,30 +45,7 @@ if (!function_exists('cbia_get_soft_length_floor_words')) {
 
 if (!function_exists('cbia_get_effective_length_floor_words')) {
 	function cbia_get_effective_length_floor_words($min_words, array $settings = array()): int {
-		$min_words = max(1, (int)$min_words);
-		$variant = sanitize_key((string)($settings['post_length_variant'] ?? 'medium'));
-		if (!in_array($variant, array('short', 'medium', 'long'), true)) {
-			$variant = 'medium';
-		}
-		$include_faq = !empty($settings['include_faq']);
-		$include_examples = !empty($settings['include_practical_examples']);
-
-		if ($variant === 'short') {
-			$ratio = $include_faq ? 0.88 : 0.82;
-			if ($include_examples) $ratio = max($ratio, 0.88);
-			return max(1, (int)floor($min_words * $ratio));
-		}
-
-		if ($variant === 'long') {
-			$ratio = $include_faq ? 0.90 : 0.84;
-			if ($include_examples) $ratio = max($ratio, 0.90);
-			return max(1, (int)floor($min_words * $ratio));
-		}
-
-		if ($include_faq && $include_examples) return max(1, (int)floor($min_words * 0.92));
-		if ($include_faq) return max(1, (int)floor($min_words * 0.88));
-		if ($include_examples) return max(1, (int)floor($min_words * 0.86));
-		return 1400;
+		return max(1, (int)apply_filters('cbia_effective_length_floor_words', (int)$min_words, $settings));
 	}
 }
 
@@ -268,8 +245,9 @@ if (!function_exists('cbia_ensure_practical_examples_html')) {
 }
 
 if (!function_exists('cbia_expand_text_to_length_target')) {
-	function cbia_expand_text_to_length_target($title, $html, array $settings, $min_words, $max_words, &$expansion_calls = null) {
+	function cbia_expand_text_to_length_target($title, $html, array $settings, $min_words, $max_words, &$expansion_calls = null, &$expansion_status = null) {
 		$current = (string)$html;
+		$expansion_status = array('ok' => false, 'reason' => 'not_needed');
 		$language = (string)($settings['post_language'] ?? 'English');
 		$is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
 		$include_examples = !empty($settings['include_practical_examples']);
@@ -279,7 +257,17 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 		for ($attempt = 1; $attempt <= $max_tries; $attempt++) {
 			if (cbia_is_stop_requested()) return $current;
 			$current_words = cbia_count_words_from_html($current);
-			if ($current_words >= (int)$min_words) return $current;
+			if ($current_words >= (int)$min_words) {
+				$expansion_status = array('ok' => true, 'reason' => 'already_sufficient');
+				return $current;
+			}
+			$estimated_input_tokens = (int)ceil(strlen(wp_strip_all_tags($current)) / 4);
+			$input_guard = max(2000, (int)apply_filters('cbia_openai_expansion_input_token_guard', 12000, $settings));
+			if ($estimated_input_tokens > $input_guard) {
+				$expansion_status = array('ok' => false, 'reason' => 'input_guard', 'estimated_input_tokens' => $estimated_input_tokens);
+				cbia_log(sprintf("Length expansion skipped on '%s': estimated input %d exceeds guard %d.", (string)$title, $estimated_input_tokens, $input_guard), 'WARN');
+				return $current;
+			}
 			$missing_words = max(0, (int)$min_words - (int)$current_words);
 			$target_words = max((int)$min_words, min((int)$max_words, (int)$current_words + $missing_words + 120));
 
@@ -315,7 +303,7 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 			}
 
 			$expand_max_out = cbia_estimate_output_tokens_for_length_target((int)$min_words, (int)$max_words, $language, $include_faq, $include_examples);
-			list($ok_expand, $expanded_html, $usage_expand, $model_expand, $err_expand, $raw_expand) = cbia_openai_responses_call($prompt, $title, 1, $expand_max_out);
+			list($ok_expand, $expanded_html, $usage_expand, $model_expand, $err_expand, $raw_expand) = cbia_openai_responses_call($prompt, $title, 1, $expand_max_out, array('context' => 'blog_text_expand', 'phase' => 'expand'));
 			if (is_array($expansion_calls)) {
 				$expansion_calls[] = array(
 					'context' => 'blog_text_expand',
@@ -329,10 +317,13 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 				);
 			}
 			if (!$ok_expand || trim((string)$expanded_html) === '') {
+				$expansion_status = array('ok' => false, 'reason' => 'request_failed', 'error' => (string)$err_expand);
 				cbia_log(sprintf("Length expansion failed on '%s' (attempt %d): %s", (string)$title, (int)$attempt, (string)($err_expand ?: 'unknown')), 'WARN');
 				continue;
 			}
 			$current = cbia_fix_bracket_headings(cbia_strip_h1_to_h2(cbia_strip_document_wrappers((string)$expanded_html)));
+			$expanded_words = cbia_count_words_from_html($current);
+			$expansion_status = array('ok' => $expanded_words >= (int)$min_words, 'reason' => $expanded_words >= (int)$min_words ? 'sufficient' : 'still_short', 'words' => $expanded_words);
 			cbia_log(sprintf(
 				"Length expansion OK on '%s' (attempt %d): %d words using model %s.",
 				(string)$title,
@@ -511,6 +502,7 @@ if (!function_exists('cbia_record_blog_generation_cost_rows')) {
 				'input_tokens' => (int)($text_usage['input_tokens'] ?? 0),
 				'output_tokens' => (int)($text_usage['output_tokens'] ?? 0),
 				'cached_input_tokens' => (int)($text_usage['cached_input_tokens'] ?? 0),
+				'cached_tokens_reported' => !empty($text_usage['cached_tokens_reported']) ? 1 : 0,
 				'ok' => !empty($text_call['ok']) ? 1 : 0,
 				'error' => (string)($text_call['error'] ?? ''),
 				'context' => (string)($text_call['context'] ?? 'blog_text'),
@@ -538,6 +530,7 @@ if (!function_exists('cbia_record_blog_generation_cost_rows')) {
 					'input_tokens' => (int)($usage['input_tokens'] ?? 0),
 					'output_tokens' => (int)($usage['output_tokens'] ?? 0),
 					'cached_input_tokens' => (int)($usage['cached_input_tokens'] ?? 0),
+					'cached_tokens_reported' => !empty($usage['cached_tokens_reported']) ? 1 : 0,
 					'ok' => !empty($ec['ok']) ? 1 : 0,
 					'error' => (string)($ec['error'] ?? ''),
 					'context' => 'blog_text_expand',
@@ -709,7 +702,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			(int)$max_words,
 			(int)$initial_max_out
 		), 'INFO');
-		list($ok, $text_html, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, $title, 2, $initial_max_out);
+		list($ok, $text_html, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, $title, 2, $initial_max_out, array('context' => 'blog_text', 'phase' => 'initial'));
 		$text_attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($raw) : array();
 		$text_call = array(
 			'context' => 'blog_text',
@@ -719,7 +712,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			'error'   => (string)($err ?: ''),
 			'meta'    => is_array($raw['_cbia_request_meta'] ?? null) ? $raw['_cbia_request_meta'] : array(),
 		);
-		if (!$ok) {
+		if (!$ok && trim((string)$text_html) === '') {
 				cbia_log(sprintf("Text generation failed for '%s': %s", (string)$title, (string)($err ?: 'unknown')), 'ERROR');
 			// Si OpenAI devolvió usage pero no hay post, deja rastro en el log de costes.
 			if (function_exists('cbia_costes_log')) {
@@ -777,7 +770,8 @@ if (!function_exists('cbia_create_single_blog_post')) {
 				(int)$min_words,
 				(int)$effective_min_words
 			), 'WARN');
-			$text_html = cbia_expand_text_to_length_target($title, $text_html, $s, (int)$min_words, (int)$max_words, $expansion_calls);
+			$expansion_status = array();
+			$text_html = cbia_expand_text_to_length_target($title, $text_html, $s, (int)$min_words, (int)$max_words, $expansion_calls, $expansion_status);
 			if (!empty($s['include_practical_examples'])) {
 				$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);
 			}
@@ -800,6 +794,12 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		}
 		$current_words = cbia_count_words_from_html($text_html);
 		cbia_log(sprintf("Final text length on '%s': %d words.", (string)$title, (int)$current_words), 'INFO');
+		if ($current_words < (int)$min_words) {
+			list($draft_ok, $draft_id, $draft_error) = cbia_create_post_in_wp_engine($title, $text_html, 0, $post_date_mysql, 'draft');
+			cbia_record_blog_generation_cost_rows($draft_ok ? (int)$draft_id : 0, $title, $text_prompt, $text_call, $text_attempts, $image_calls, $expansion_calls, 'needs_manual_review_length');
+			cbia_log(sprintf("Text rejected before images on '%s': %d words, minimum %d. Draft=%d.", (string)$title, (int)$current_words, (int)$min_words, (int)$draft_id), 'ERROR');
+			return array('ok' => false, 'post_id' => $draft_ok ? (int)$draft_id : 0, 'error' => $draft_ok ? 'needs_manual_review_length' : ($draft_error ?: 'insufficient_length'));
+		}
 
 			cbia_log(sprintf("AI text OK: generated HTML for '%s'", (string)$title), 'INFO');
         // 3) Procesar marcadores de imagen

@@ -624,8 +624,8 @@ if (!function_exists('cbia_prompt_length_shape')) {
         }
 
         return $faq
-            ? array('target' => '1800-2000', 'min' => 1800, 'opening' => '220-260', 'blocks' => 4, 'block' => '260-310', 'faq' => '65-80', 'closing' => '120-150')
-            : array('target' => '1800-2000', 'min' => 1800, 'opening' => '220-260', 'blocks' => 5, 'block' => '250-300', 'faq' => '0', 'closing' => '150-190');
+            ? array('target' => '1900-2100', 'min' => 1800, 'opening' => '230-270', 'blocks' => 4, 'block' => '280-320', 'faq' => '70-85', 'closing' => '130-160')
+            : array('target' => '1900-2100', 'min' => 1800, 'opening' => '230-270', 'blocks' => 5, 'block' => '280-320', 'faq' => '0', 'closing' => '160-200');
     }
 }
 

@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.0
-Stable tag: 2.1.4
+Stable tag: 2.1.5
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -155,6 +155,13 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://platform.deepseek.com/privacy
 
 == Changelog ==
+
+= 2.1.5 =
+* OpenAI text attempts are recorded immediately in Usage V2, including failed, timed-out, incomplete, preview, and pre-publication requests.
+* Initial OpenAI generation is limited to the selected model plus one safe fallback for temporary errors only.
+* OpenAI text uses 120-second initial and 150-second expansion timeouts, with request IDs and idempotent attempt tracking.
+* Medium prompts target 1900-2100 words internally while enforcing the selected 1800-word minimum consistently in Blog and Preview.
+* A single guarded expansion is allowed; insufficient text is kept as a draft and no images are generated.
 
 = 2.1.4 =
 * Added DeepSeek V4 Flash and DeepSeek V4 Pro with explicit optional reasoning controls.

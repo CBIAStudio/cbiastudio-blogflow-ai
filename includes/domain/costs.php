@@ -266,9 +266,9 @@ if (!function_exists('cbia_costes_calculate_row')) {
             $p = $table[$model];
             $micro = (($in - $cin) * (float)$p['in']) + ($cin * (float)$p['cin']) + ($out * (float)$p['out']);
             $result['cost_micro_usd'] = max(0, (int)round($micro));
-            $result['cost_status'] = 'exact';
+            $result['cost_status'] = !empty($row['cached_tokens_reported']) ? 'exact' : 'estimated';
             $result['cost_source'] = 'api_usage_local_catalog';
-            $result['cost_reason'] = 'api_usage';
+            $result['cost_reason'] = !empty($row['cached_tokens_reported']) ? 'api_usage' : 'api_usage_cache_breakdown_missing';
             return $result;
         }
 
@@ -559,6 +559,7 @@ if (!function_exists('cbia_costes_record_usage')) {
             'cache_hit_tokens' => max(0, (int)($usage['cache_hit_tokens'] ?? $cin_t)),
             'cache_miss_tokens' => max(0, (int)($usage['cache_miss_tokens'] ?? 0)),
             'cache_breakdown_available' => !empty($usage['cache_breakdown_available']) ? 1 : 0,
+            'cached_tokens_reported' => !empty($usage['cached_tokens_reported']) ? 1 : 0,
             'out' => max(0, $out_t),
             'reasoning_tokens' => max(0, (int)($usage['reasoning_tokens'] ?? 0)),
             'thinking' => sanitize_key((string)($usage['thinking'] ?? '')),
@@ -579,7 +580,7 @@ if (!function_exists('cbia_costes_record_usage')) {
         foreach (array('http_code', 'parent_attempt', 'elapsed_ms') as $int_key) {
             if (isset($usage[$int_key])) $row[$int_key] = max(0, (int)$usage[$int_key]);
         }
-        foreach (array('request_id', 'batch_id', 'fallback_from', 'attempt_id') as $text_key) {
+        foreach (array('request_id', 'batch_id', 'fallback_from', 'attempt_id', 'temporary_context_id') as $text_key) {
             if (isset($usage[$text_key]) && (string)$usage[$text_key] !== '') $row[$text_key] = sanitize_text_field((string)$usage[$text_key]);
         }
         if (empty($row['attempt_id'])) {
@@ -662,26 +663,52 @@ if (!function_exists('cbia_costes_record_usage')) {
         $cost = cbia_costes_calculate_row($row, cbia_costes_get_settings());
         foreach ($cost as $key => $value) $row[$key] = $value;
 
+        $attempt_id = (string)($row['attempt_id'] ?? '');
+        $orphan_key = cbia_costes_orphan_usage_key();
+        $orphan_rows = get_option($orphan_key, array());
+        if (!is_array($orphan_rows)) $orphan_rows = array();
+
         if ($post_id <= 0) {
             $row['post_id'] = 0;
-            $key = cbia_costes_orphan_usage_key();
-            $rows = get_option($key, array());
-            if (!is_array($rows)) $rows = array();
-            $rows[] = $row;
-            if (count($rows) > 1000) $rows = array_slice($rows, -1000);
-            update_option($key, $rows, false);
+            $found = false;
+            foreach ($orphan_rows as $index => $stored) {
+                if ($attempt_id !== '' && is_array($stored) && (string)($stored['attempt_id'] ?? '') === $attempt_id) {
+                    $orphan_rows[$index] = array_merge($stored, $row);
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) $orphan_rows[] = $row;
+            if (count($orphan_rows) > 1000) $orphan_rows = array_slice($orphan_rows, -1000);
+            $saved = update_option($orphan_key, $orphan_rows, false);
+            if (!$saved) $saved = (get_option($orphan_key, array()) == $orphan_rows);
             do_action('cbia_usage_row_recorded', 0, $row);
-            return true;
+            return (bool)$saved;
         }
 
         $key = '_cbia_usage_rows';
         $rows = get_post_meta($post_id, $key, true);
         if (!is_array($rows)) $rows = array();
-        $rows[] = $row;
+        $found = false;
+        foreach ($rows as $index => $stored) {
+            if ($attempt_id !== '' && is_array($stored) && (string)($stored['attempt_id'] ?? '') === $attempt_id) {
+                $rows[$index] = array_merge($stored, $row);
+                $found = true;
+                break;
+            }
+        }
+        if (!$found) $rows[] = $row;
 
         if (count($rows) > 200) $rows = array_slice($rows, -200);
 
-        update_post_meta($post_id, $key, $rows);
+        $saved = update_post_meta($post_id, $key, $rows);
+        if (!$saved) $saved = (get_post_meta($post_id, $key, true) == $rows);
+        if ($saved && $attempt_id !== '') {
+            $filtered_orphans = array_values(array_filter($orphan_rows, static function($stored) use ($attempt_id) {
+                return !is_array($stored) || (string)($stored['attempt_id'] ?? '') !== $attempt_id;
+            }));
+            if (count($filtered_orphans) !== count($orphan_rows)) update_option($orphan_key, $filtered_orphans, false);
+        }
         update_post_meta($post_id, '_cbia_usage_last_ts', $row['ts']);
         update_post_meta($post_id, '_cbia_usage_last_model', $model);
         /**
@@ -692,7 +719,7 @@ if (!function_exists('cbia_costes_record_usage')) {
          */
         do_action('cbia_usage_row_recorded', $post_id, $row);
 
-        return true;
+        return (bool)$saved;
     }
 }
 
@@ -931,6 +958,7 @@ if (!function_exists('cbia_costes_record_failed_attempts')) {
                 'model_effective' => $model,
                 'input_tokens' => max(0, (int)($attempt['input_tokens'] ?? 0)),
                 'cached_input_tokens' => max(0, (int)($attempt['cached_input_tokens'] ?? 0)),
+                'cached_tokens_reported' => !empty($attempt['cached_tokens_reported']) ? 1 : 0,
                 'cache_hit_tokens' => max(0, (int)($attempt['cache_hit_tokens'] ?? ($attempt['cached_input_tokens'] ?? 0))),
                 'cache_miss_tokens' => max(0, (int)($attempt['cache_miss_tokens'] ?? 0)),
                 'cache_breakdown_available' => !empty($attempt['cache_breakdown_available']) ? 1 : 0,
@@ -946,7 +974,7 @@ if (!function_exists('cbia_costes_record_failed_attempts')) {
                 'cost_source' => 'unavailable',
                 'status_reason' => sanitize_text_field((string)($args['status_reason'] ?? 'request_failed')),
             );
-            foreach (array('section', 'context', 'title', 'batch_id', 'fallback_from', 'request_id', 'attempt_id') as $key) {
+            foreach (array('section', 'context', 'title', 'batch_id', 'fallback_from', 'request_id', 'attempt_id', 'temporary_context_id') as $key) {
                 $value = $attempt[$key] ?? ($args[$key] ?? '');
                 if ((string)$value !== '') $row[$key] = (string)$value;
             }

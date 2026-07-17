@@ -88,7 +88,7 @@ assert_same('unknown', $auto_effective_unknown['cost_status'], 'Auto without eff
 $auto_with_usage = cbia_costes_calculate_row(array_merge($parsed_usage, array('type' => 'image', 'model' => 'gpt-image-2', 'ok' => 1)));
 assert_same('exact', $auto_with_usage['cost_status'], 'Auto with complete usage status');
 
-$text = cbia_costes_calculate_row(array('type' => 'text', 'model' => 'gpt-5-mini', 'ok' => 1, 'in' => 1000, 'out' => 1000));
+$text = cbia_costes_calculate_row(array('type' => 'text', 'model' => 'gpt-5-mini', 'ok' => 1, 'in' => 1000, 'out' => 1000, 'cached_tokens_reported' => 1));
 assert_same('exact', $text['cost_status'], 'Text cost status');
 assert_same(2250, $text['cost_micro_usd'], 'Text micro-USD');
 
@@ -111,8 +111,8 @@ assert_same(null, $timeout['cost_micro_usd'], 'Timeout is not zero');
 assert_same('timeout_without_response_usage', $timeout['cost_reason'], 'Timeout reason');
 
 $fixture = array();
-for ($i = 0; $i < 45; $i++) $fixture[] = array('type' => 'text', 'model' => 'gpt-5-mini', 'ok' => 1, 'in' => 100, 'out' => 200, 'batch_id' => 'fixture-20-posts');
-$fixture[] = array('type' => 'text', 'model' => 'gpt-5.4-mini', 'model_requested' => 'gpt-5-mini', 'model_effective' => 'gpt-5.4-mini', 'fallback_from' => 'gpt-5-mini', 'parent_attempt' => 1, 'attempt' => 2, 'ok' => 1, 'in' => 100, 'out' => 200, 'batch_id' => 'fixture-20-posts');
+for ($i = 0; $i < 45; $i++) $fixture[] = array('type' => 'text', 'model' => 'gpt-5-mini', 'ok' => 1, 'in' => 100, 'out' => 200, 'cached_tokens_reported' => 1, 'batch_id' => 'fixture-20-posts');
+$fixture[] = array('type' => 'text', 'model' => 'gpt-5.4-mini', 'model_requested' => 'gpt-5-mini', 'model_effective' => 'gpt-5.4-mini', 'fallback_from' => 'gpt-5-mini', 'parent_attempt' => 1, 'attempt' => 2, 'ok' => 1, 'in' => 100, 'out' => 200, 'cached_tokens_reported' => 1, 'batch_id' => 'fixture-20-posts');
 $fixture[] = array('type' => 'text', 'model' => 'gpt-5-mini', 'ok' => 0, 'status' => 'timeout', 'error' => 'cURL error 28: timeout', 'attempt' => 1, 'batch_id' => 'fixture-20-posts');
 for ($i = 0; $i < 56; $i++) $fixture[] = array('type' => 'image', 'model' => 'gpt-image-2', 'ok' => 1, 'quality' => 'auto', 'size' => '1536x1024', 'batch_id' => 'fixture-20-posts');
 for ($i = 0; $i < 2; $i++) $fixture[] = array('type' => 'image', 'model' => 'gpt-image-2', 'ok' => 1, 'quality' => 'low', 'size' => '1536x1024', 'batch_id' => 'fixture-20-posts');
