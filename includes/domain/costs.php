@@ -241,6 +241,23 @@ if (!function_exists('cbia_costes_calculate_row')) {
         $out = max(0, (int)($row['out'] ?? ($row['output_tokens'] ?? 0)));
 
         if ($type !== 'image') {
+            $provider = sanitize_key((string)($row['provider'] ?? ''));
+            if (($provider === 'deepseek' || strpos($model, 'deepseek-') === 0) && function_exists('cbia_deepseek_calculate_cost')) {
+                $deepseek_cost = cbia_deepseek_calculate_cost($model, array(
+                    'input_tokens' => $in,
+                    'cache_hit_tokens' => max(0, (int)($row['cache_hit_tokens'] ?? $cin)),
+                    'cache_miss_tokens' => max(0, (int)($row['cache_miss_tokens'] ?? 0)),
+                    'cache_breakdown_available' => !empty($row['cache_breakdown_available']) ? 1 : 0,
+                    'output_tokens' => $out,
+                ));
+                $result['cost_micro_usd'] = $deepseek_cost['cost_micro_usd'];
+                $result['cost_status'] = $deepseek_cost['cost_status'];
+                $result['cost_source'] = $deepseek_cost['cost_micro_usd'] === null ? 'unavailable' : 'local_catalog';
+                $result['cost_reason'] = $deepseek_cost['cost_reason'];
+                $result['pricing_version'] = 'deepseek-v4-20260714';
+                $result['pricing_verified_at'] = '2026-07-14';
+                return $result;
+            }
             $table = apply_filters('cbia_openai_text_pricing_catalog', cbia_costes_price_table_usd_per_million());
             if ($model === '' || !isset($table[$model]) || ($in + $out) <= 0) {
                 $result['cost_reason'] = $model === '' || !isset($table[$model]) ? 'model_without_pricing' : 'missing_token_usage';
@@ -539,12 +556,25 @@ if (!function_exists('cbia_costes_record_usage')) {
             'model_effective' => sanitize_text_field((string)($usage['model_effective'] ?? $model)),
             'in' => max(0, $in_t),
             'cin' => max(0, $cin_t),
+            'cache_hit_tokens' => max(0, (int)($usage['cache_hit_tokens'] ?? $cin_t)),
+            'cache_miss_tokens' => max(0, (int)($usage['cache_miss_tokens'] ?? 0)),
+            'cache_breakdown_available' => !empty($usage['cache_breakdown_available']) ? 1 : 0,
             'out' => max(0, $out_t),
             'reasoning_tokens' => max(0, (int)($usage['reasoning_tokens'] ?? 0)),
+            'thinking' => sanitize_key((string)($usage['thinking'] ?? '')),
+            'reasoning_effort' => sanitize_key((string)($usage['reasoning_effort'] ?? '')),
             'ok' => $ok,
             'attempt' => max(1, $attempt),
             'error' => $err,
         );
+        if (strpos(strtolower($row['model_effective']), 'deepseek-') === 0 && function_exists('cbia_deepseek_get_runtime_config')) {
+            $deepseek_config = cbia_deepseek_get_runtime_config($row['model_effective']);
+            $row['provider'] = 'deepseek';
+            $row['model_effective'] = (string)$deepseek_config['model_effective'];
+            $row['model'] = $row['model_effective'];
+            if ($row['thinking'] === '') $row['thinking'] = (string)$deepseek_config['thinking'];
+            if ($row['reasoning_effort'] === '') $row['reasoning_effort'] = (string)$deepseek_config['reasoning_effort'];
+        }
         $row['status'] = sanitize_key((string)($usage['status'] ?? ($ok ? 'success' : (stripos($err, 'timeout') !== false || stripos($err, 'timed out') !== false || stripos($err, 'cURL error 28') !== false ? 'timeout' : 'error'))));
         foreach (array('http_code', 'parent_attempt', 'elapsed_ms') as $int_key) {
             if (isset($usage[$int_key])) $row[$int_key] = max(0, (int)$usage[$int_key]);
@@ -901,8 +931,13 @@ if (!function_exists('cbia_costes_record_failed_attempts')) {
                 'model_effective' => $model,
                 'input_tokens' => max(0, (int)($attempt['input_tokens'] ?? 0)),
                 'cached_input_tokens' => max(0, (int)($attempt['cached_input_tokens'] ?? 0)),
+                'cache_hit_tokens' => max(0, (int)($attempt['cache_hit_tokens'] ?? ($attempt['cached_input_tokens'] ?? 0))),
+                'cache_miss_tokens' => max(0, (int)($attempt['cache_miss_tokens'] ?? 0)),
+                'cache_breakdown_available' => !empty($attempt['cache_breakdown_available']) ? 1 : 0,
                 'output_tokens' => max(0, (int)($attempt['output_tokens'] ?? 0)),
                 'reasoning_tokens' => max(0, (int)($attempt['reasoning_tokens'] ?? 0)),
+                'thinking' => sanitize_key((string)($attempt['thinking'] ?? '')),
+                'reasoning_effort' => sanitize_key((string)($attempt['reasoning_effort'] ?? '')),
                 'ok' => 0,
                 'attempt' => max(1, (int)($attempt['attempt'] ?? 1)),
                 'error' => sanitize_text_field((string)($attempt['error'] ?? 'Unknown failed attempt')),

@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.0
-Stable tag: 2.1.3
+Stable tag: 2.1.4
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -155,6 +155,12 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://platform.deepseek.com/privacy
 
 == Changelog ==
+
+= 2.1.4 =
+* Added DeepSeek V4 Flash and DeepSeek V4 Pro with explicit optional reasoning controls.
+* Safely migrates legacy DeepSeek Chat and Reasoner settings without changing API keys or content settings.
+* Usage V2 records effective model, cache hit/miss tokens, reasoning metadata, retries, request details, and evidence-aware local costs.
+* DeepSeek requests use provider-specific timeouts and retry only temporary failures.
 
 = 2.1.3 =
 * OpenAI Image responses now keep requested and effective quality/size separately.

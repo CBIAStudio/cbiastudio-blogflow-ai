@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.1.3
+# CBIAStudio BlogFlow with AI (WordPress) v2.1.4
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,20 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.1.4
+
+- DeepSeek text generation now supports `deepseek-v4-flash` and `deepseek-v4-pro`.
+- Settings expose reasoning mode and High/Maximum effort only while DeepSeek is selected.
+- Legacy `deepseek-chat` and `deepseek-reasoner` settings migrate safely and remain normalized at runtime.
+- Usage V2 records DeepSeek cache hit/miss tokens, reasoning metadata, request attempts, and exact or conservative estimated costs.
+- DeepSeek retries are limited to temporary failures, with 120/180 second provider-specific timeouts.
+
+## Comparative: 2.1.4 vs 2.1.3
+
+2.1.4 replaces legacy DeepSeek model requests with the V4 API contract while preserving keys, prompts, scheduling, posts, and existing Usage events.
+
+## Previous: 2.1.3
 
 ## What's New in 2.1.3
 

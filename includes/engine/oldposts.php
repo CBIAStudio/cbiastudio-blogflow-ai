@@ -733,6 +733,10 @@ if (!function_exists('cbia_oldposts_ai_optimize_title')) {
                 'input_tokens' => (int)($usage['input_tokens'] ?? 0),
                 'output_tokens' => (int)($usage['output_tokens'] ?? 0),
                 'cached_input_tokens' => (int)($usage['cached_input_tokens'] ?? 0),
+                'cache_hit_tokens' => (int)($usage['cache_hit_tokens'] ?? 0),
+                'cache_miss_tokens' => (int)($usage['cache_miss_tokens'] ?? 0),
+                'cache_breakdown_available' => !empty($usage['cache_breakdown_available']) ? 1 : 0,
+                'reasoning_tokens' => (int)($usage['reasoning_tokens'] ?? 0),
                 'ok' => 1,
                 'error' => '',
             ));
@@ -858,6 +862,10 @@ if (!function_exists('cbia_oldposts_ai_regenerate_content')) {
                 'input_tokens' => (int)($usage['input_tokens'] ?? 0),
                 'output_tokens' => (int)($usage['output_tokens'] ?? 0),
                 'cached_input_tokens' => (int)($usage['cached_input_tokens'] ?? 0),
+                'cache_hit_tokens' => (int)($usage['cache_hit_tokens'] ?? 0),
+                'cache_miss_tokens' => (int)($usage['cache_miss_tokens'] ?? 0),
+                'cache_breakdown_available' => !empty($usage['cache_breakdown_available']) ? 1 : 0,
+                'reasoning_tokens' => (int)($usage['reasoning_tokens'] ?? 0),
                 'ok' => 1,
                 'error' => '',
             ));

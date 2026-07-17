@@ -166,6 +166,18 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 				? cbia_providers_get_recommended_text_model($text_provider)
 				: 'gpt-5-mini';
 		}
+		$deepseek_thinking_mode = isset($_POST['deepseek_thinking_mode'])
+			? sanitize_key((string) wp_unslash($_POST['deepseek_thinking_mode']))
+			: (string)($settings['deepseek_thinking_mode'] ?? 'disabled');
+		$deepseek_reasoning_effort = isset($_POST['deepseek_reasoning_effort'])
+			? sanitize_key((string) wp_unslash($_POST['deepseek_reasoning_effort']))
+			: (string)($settings['deepseek_reasoning_effort'] ?? 'high');
+		if (function_exists('cbia_deepseek_normalize_runtime_config')) {
+			$deepseek_config = cbia_deepseek_normalize_runtime_config($text_provider === 'deepseek' ? $text_model : 'deepseek-v4-flash', $deepseek_thinking_mode, $deepseek_reasoning_effort);
+			$deepseek_thinking_mode = (string)$deepseek_config['thinking'];
+			$deepseek_reasoning_effort = (string)$deepseek_config['reasoning_effort'];
+			if ($text_provider === 'deepseek') $text_model = (string)$deepseek_config['model_effective'];
+		}
 		if ($text_provider === 'openai') {
 			$text_model = cbia_config_safe_model($text_model);
 		}
@@ -222,6 +234,9 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 					sanitize_text_field((string)($providers_new[$pkey]['api_key'] ?? ''))
 				);
 				$mdl = isset($text_models_post[$pkey]) ? sanitize_text_field((string)$text_models_post[$pkey]) : (string)($providers_new[$pkey]['model'] ?? ($pdef['models'][0] ?? ''));
+				if ($pkey === 'deepseek' && function_exists('cbia_deepseek_normalize_runtime_config')) {
+					$mdl = (string)cbia_deepseek_normalize_runtime_config($mdl, $deepseek_thinking_mode, $deepseek_reasoning_effort)['model_effective'];
+				}
 				$img = isset($image_models_post[$pkey]) ? sanitize_text_field((string)$image_models_post[$pkey]) : (string)($providers_new[$pkey]['image_model'] ?? '');
 				if ($pkey === 'openai' && class_exists('CBIA_Image_Pricing_Service')) $img = CBIA_Image_Pricing_Service::validate_model($img);
 				if (function_exists('cbia_providers_supports_image') && !cbia_providers_supports_image($pkey)) {
@@ -404,6 +419,8 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 			'openai_api_key'         => $api_key,
 			'google_api_key'         => $google_api_key,
 			'deepseek_api_key'       => $deepseek_api_key,
+			'deepseek_thinking_mode' => $deepseek_thinking_mode,
+			'deepseek_reasoning_effort' => $deepseek_reasoning_effort,
 			'openai_consent'         => $openai_consent,
 			// CAMBIO: provider/model texto e imagen
 			'text_provider'          => $text_provider,

@@ -13,6 +13,19 @@ if (!function_exists('cbia_attach_attempts_meta')) {
 	}
 }
 
+if (!function_exists('cbia_merge_provider_attempts')) {
+	function cbia_merge_provider_attempts($result, $previous_raw, $fallback_from) {
+		if (!is_array($result)) return $result;
+		$raw = is_array($result[5] ?? null) ? $result[5] : array();
+		$previous_attempts = is_array($previous_raw['_cbia_attempts'] ?? null) ? $previous_raw['_cbia_attempts'] : array();
+		$current_attempts = is_array($raw['_cbia_attempts'] ?? null) ? $raw['_cbia_attempts'] : array();
+		$raw['_cbia_attempts'] = array_merge($previous_attempts, $current_attempts);
+		if (is_array($raw['_cbia_request_meta'] ?? null)) $raw['_cbia_request_meta']['fallback_from'] = sanitize_text_field((string)$fallback_from);
+		$result[5] = $raw;
+		return $result;
+	}
+}
+
 if (!function_exists('cbia_openai_model_supports_temperature')) {
 	function cbia_openai_model_supports_temperature($model) {
 		$model = strtolower(trim((string)$model));
@@ -319,6 +332,8 @@ if (!function_exists('cbia_openai_responses_call')) {
 			}
 
 			$last_err = (string)($deepseek_result[4] ?? __('Could not get a response.', 'cbiastudio-blogflow-ai'));
+			$deepseek_raw = is_array($deepseek_result[5] ?? null) ? $deepseek_result[5] : array();
+			$deepseek_model = (string)($deepseek_result[3] ?? 'deepseek-v4-flash');
 			$prev_forced = isset($GLOBALS['cbia_force_text_provider']) ? (string)$GLOBALS['cbia_force_text_provider'] : '';
 
 			$google_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : '';
@@ -328,7 +343,9 @@ if (!function_exists('cbia_openai_responses_call')) {
 				$google_result = cbia_openai_responses_call($prompt, $title_for_log, $tries, $max_output_override);
 				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
 				else unset($GLOBALS['cbia_force_text_provider']);
+				$google_result = cbia_merge_provider_attempts($google_result, $deepseek_raw, $deepseek_model);
 				if (!empty($google_result[0])) return $google_result;
+				$deepseek_raw = is_array($google_result[5] ?? null) ? $google_result[5] : $deepseek_raw;
 				$last_err = (string)($google_result[4] ?? $last_err);
 			}
 
@@ -339,11 +356,13 @@ if (!function_exists('cbia_openai_responses_call')) {
 				$openai_result = cbia_openai_responses_call($prompt, $title_for_log, $tries, $max_output_override);
 				if ($prev_forced !== '') $GLOBALS['cbia_force_text_provider'] = $prev_forced;
 				else unset($GLOBALS['cbia_force_text_provider']);
+				$openai_result = cbia_merge_provider_attempts($openai_result, $deepseek_raw, $deepseek_model);
 				if (!empty($openai_result[0])) return $openai_result;
+				$deepseek_raw = is_array($openai_result[5] ?? null) ? $openai_result[5] : $deepseek_raw;
 				$last_err = (string)($openai_result[4] ?? $last_err);
 			}
 
-			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], 'deepseek-chat', $last_err, []];
+			return [false, '', cbia_usage_empty(), $deepseek_model, $last_err, $deepseek_raw];
 		}
 		// CAMBIO: key OpenAI desde settings por proveedor
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : cbia_openai_api_key();
@@ -1129,99 +1148,102 @@ if (!function_exists('cbia_google_generate_content_call')) {
 
 if (!function_exists('cbia_deepseek_chat_call')) {
 	/**
-	 * DeepSeek chat completions (OpenAI-compatible).
-	 * Returns [ok, text, usage, model, err, raw]
+	 * DeepSeek V4 chat completions.
+	 * Returns [ok, text, usage, effective_model, err, raw].
 	 */
 	function cbia_deepseek_chat_call($prompt, $system = '', $tries = 2) {
 		$attempts = array();
 		$cfg = cbia_get_provider_config('deepseek');
-		// CAMBIO: key y modelo segun settings de texto
 		$api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('deepseek') : (string)($cfg['api_key'] ?? '');
 		if ($api_key === '') {
 			cbia_log(__('Missing DeepSeek API key for text generation.', 'cbiastudio-blogflow-ai'), 'ERROR');
-			return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], '', __('No API key (DeepSeek)', 'cbiastudio-blogflow-ai'), []];
+			return array(false, '', cbia_usage_empty(), '', __('No API key (DeepSeek)', 'cbiastudio-blogflow-ai'), array());
 		}
 
-		$model = function_exists('cbia_get_text_model_for_provider')
-			? cbia_get_text_model_for_provider('deepseek', 'deepseek-chat')
-			: cbia_get_provider_model('deepseek', 'deepseek-chat');
+		$requested_model = function_exists('cbia_get_text_model_for_provider')
+			? cbia_get_text_model_for_provider('deepseek', 'deepseek-v4-flash')
+			: cbia_get_provider_model('deepseek', 'deepseek-v4-flash');
+		$config = cbia_deepseek_get_runtime_config($requested_model);
+		$model = (string)$config['model_effective'];
 		$base_url = rtrim((string)($cfg['base_url'] ?? 'https://api.deepseek.com'), '/');
-		$api_version = trim((string)($cfg['api_version'] ?? 'v1'), '/');
-		$path = $api_version !== '' ? '/' . $api_version . '/chat/completions' : '/chat/completions';
-		$url = $base_url . $path;
+		$url = $base_url . '/chat/completions';
 
-		$max_out = (int)(cbia_get_settings()['responses_max_output_tokens'] ?? 6000);
-		if ($max_out < 256) $max_out = 256;
-		if ($max_out > 12000) $max_out = 12000;
+		$settings = cbia_get_settings();
+		$max_out = max(256, min(12000, (int)($settings['responses_max_output_tokens'] ?? 6000)));
+		$messages = array();
+		if ($system !== '') $messages[] = array('role' => 'system', 'content' => (string)$system);
+		$messages[] = array('role' => 'user', 'content' => (string)$prompt);
+		$payload = cbia_deepseek_build_payload($config, $messages, $max_out, (float)($settings['openai_temperature'] ?? 0.7));
+		$timeout = cbia_deepseek_timeout_seconds($config['thinking'], $model);
+		$tries = max(1, (int)$tries);
+		$last_error = __('Could not get a response.', 'cbiastudio-blogflow-ai');
 
-		$messages = [];
-		if ($system !== '') {
-			$messages[] = ['role' => 'system', 'content' => (string)$system];
-		}
-		$messages[] = ['role' => 'user', 'content' => (string)$prompt];
-
-		$payload = [
-			'model' => $model,
-			'messages' => $messages,
-			'stream' => false,
-			'max_tokens' => $max_out,
-			'temperature' => (float)(cbia_get_settings()['openai_temperature'] ?? 0.7),
-		];
-
-		for ($t = 1; $t <= max(1, (int)$tries); $t++) {
+		for ($t = 1; $t <= $tries; $t++) {
 			if (cbia_is_stop_requested()) {
-				return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Stop enabled', 'cbiastudio-blogflow-ai'), []];
+				return array(false, '', cbia_usage_empty(), $model, __('Stop enabled', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts));
 			}
 
-			cbia_log(("DeepSeek: model={$model} attempt {$t}/{$tries}"), 'INFO');
-
-			$resp = wp_remote_post($url, [
-				'headers' => [
-					'Content-Type' => 'application/json',
-					'Authorization' => 'Bearer ' . $api_key,
-				],
-				'body'    => wp_json_encode($payload),
-				'timeout' => 60,
-			]);
+			cbia_log(sprintf('DeepSeek: model=%s thinking=%s effort=%s attempt %d/%d', $model, $config['thinking'], $config['thinking'] === 'enabled' ? $config['reasoning_effort'] : 'n/a', $t, $tries), 'INFO');
+			$started = microtime(true);
+			$resp = wp_remote_post($url, array(
+				'headers' => array('Content-Type' => 'application/json', 'Authorization' => 'Bearer ' . $api_key),
+				'body' => wp_json_encode($payload),
+				'timeout' => $timeout,
+			));
+			$elapsed_ms = max(0, (int)round((microtime(true) - $started) * 1000));
 
 			if (is_wp_error($resp)) {
-				$err = (string)$resp->get_error_message();
-				cbia_log(("DeepSeek HTTP error: ") . $err, 'ERROR');
-				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => $err);
+				$raw_error = (string)$resp->get_error_message();
+				$error = function_exists('cbia_mask_sensitive_log_text') ? cbia_mask_sensitive_log_text($raw_error) : sanitize_text_field($raw_error);
+				$is_timeout = stripos($raw_error, 'timed out') !== false || stripos($raw_error, 'timeout') !== false || stripos($raw_error, 'cURL error 28') !== false;
+				$last_error = $error;
+				$attempts[] = array('type' => 'text', 'provider' => 'deepseek', 'model' => $model, 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'attempt' => $t, 'ok' => 0, 'status' => $is_timeout ? 'timeout' : 'error', 'timeout' => $is_timeout ? 1 : 0, 'elapsed_ms' => $elapsed_ms, 'error' => $error);
+				cbia_log('DeepSeek HTTP error: ' . $error, 'ERROR');
+				if (!$is_timeout || $t >= $tries) break;
+				cbia_deepseek_wait_before_retry(array(), $t);
 				continue;
 			}
 
-			$code = (int) wp_remote_retrieve_response_code($resp);
-			$body = (string) wp_remote_retrieve_body($resp);
+			$code = (int)wp_remote_retrieve_response_code($resp);
+			$body = (string)wp_remote_retrieve_body($resp);
+			$request_id = sanitize_text_field((string)wp_remote_retrieve_header($resp, 'x-request-id'));
 			$data = json_decode($body, true);
+			$usage = cbia_deepseek_parse_usage($data);
 
 			if ($code < 200 || $code >= 300) {
-				$msg = '';
-				if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
-				$err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
-				cbia_log(("DeepSeek error: {$err}"), 'ERROR');
-				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => (string)$err);
+				$message = is_array($data) && !empty($data['error']['message']) ? (string)$data['error']['message'] : '';
+				$message = function_exists('cbia_mask_sensitive_log_text') ? cbia_mask_sensitive_log_text($message) : sanitize_text_field($message);
+				$last_error = 'HTTP ' . $code . ($message !== '' ? ' | ' . $message : '');
+				$attempts[] = array_merge($usage, array('type' => 'text', 'provider' => 'deepseek', 'model' => $model, 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'attempt' => $t, 'ok' => 0, 'status' => 'error', 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'error' => $last_error));
+				cbia_log('DeepSeek error: ' . $last_error, 'ERROR');
+				if (!cbia_deepseek_is_retryable_http_code($code) || $t >= $tries) break;
+				if (!cbia_deepseek_wait_before_retry($resp, $t)) break;
 				continue;
 			}
 
-			if (!is_array($data) || empty($data['choices'][0]['message']['content'])) {
-				cbia_log(("DeepSeek: response without text (model={$model})"), 'ERROR');
-				$attempts[] = array('type' => 'text', 'model' => (string)$model, 'attempt' => (int)$t, 'ok' => 0, 'error' => 'Response without text');
+			if (!is_array($data)) {
+				$last_error = __('DeepSeek returned invalid JSON.', 'cbiastudio-blogflow-ai');
+				$attempts[] = array('type' => 'text', 'provider' => 'deepseek', 'model' => $model, 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'attempt' => $t, 'ok' => 0, 'status' => 'error', 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'error' => $last_error);
+				cbia_log($last_error, 'ERROR');
+				break;
+			}
+
+			$text = trim((string)($data['choices'][0]['message']['content'] ?? ''));
+			if (isset($data['choices'][0]['message']['reasoning_content'])) unset($data['choices'][0]['message']['reasoning_content']);
+			if ($text === '') {
+				$last_error = __('DeepSeek returned an empty content response.', 'cbiastudio-blogflow-ai');
+				$attempts[] = array_merge($usage, array('type' => 'text', 'provider' => 'deepseek', 'model' => $model, 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'attempt' => $t, 'ok' => 0, 'status' => 'error', 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'error' => $last_error));
+				cbia_log($last_error, 'ERROR');
+				if ($t >= $tries) break;
+				cbia_deepseek_wait_before_retry($resp, $t);
 				continue;
 			}
 
-			$text = (string)$data['choices'][0]['message']['content'];
-			$usage = ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0];
-			if (!empty($data['usage'])) {
-				$usage['input_tokens'] = (int)($data['usage']['prompt_tokens'] ?? 0);
-				$usage['output_tokens'] = (int)($data['usage']['completion_tokens'] ?? 0);
-				$usage['total_tokens'] = (int)($data['usage']['total_tokens'] ?? 0);
-			}
-
-			cbia_log(("DeepSeek OK: model={$model} tokens_in=") . (int)$usage['input_tokens'] . " tokens_out=" . (int)$usage['output_tokens'], 'INFO');
-			return [true, $text, $usage, $model, '', cbia_attach_attempts_meta($data, $attempts)];
+			$data['_cbia_request_meta'] = array_merge($usage, array('provider' => 'deepseek', 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'attempt' => $t, 'timeout' => 0));
+			cbia_log(sprintf('DeepSeek OK: model=%s tokens_in=%d cache_hit=%d cache_miss=%d tokens_out=%d', $model, $usage['input_tokens'], $usage['cache_hit_tokens'], $usage['cache_miss_tokens'], $usage['output_tokens']), 'INFO');
+			return array(true, $text, $usage, $model, '', cbia_attach_attempts_meta($data, $attempts));
 		}
 
-		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Could not get a response.', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts)];
+		return array(false, '', cbia_usage_empty(), $model, $last_error, cbia_attach_attempts_meta(array(), $attempts));
 	}
 }

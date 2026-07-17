@@ -352,6 +352,26 @@
             });
         }
 
+        function updateDeepSeekSettings() {
+            var visible = getProvider('text') === 'deepseek';
+            var thinking = document.getElementById('cbia-deepseek-thinking');
+            var enabled = visible && thinking && thinking.value === 'enabled';
+            document.querySelectorAll('.abb-deepseek-settings').forEach(function (el) {
+                el.style.display = visible ? '' : 'none';
+            });
+            document.querySelectorAll('.abb-deepseek-effort').forEach(function (el) {
+                el.style.display = enabled ? '' : 'none';
+            });
+            var effort = document.getElementById('cbia-deepseek-effort');
+            if (effort) {
+                effort.disabled = !enabled;
+                var effortWrap = effort.closest('.abb-select-wrap');
+                var effortTrigger = effortWrap ? effortWrap.querySelector('.abb-select-trigger') : null;
+                if (effortWrap) effortWrap.classList.toggle('is-disabled', !enabled);
+                if (effortTrigger) effortTrigger.disabled = !enabled;
+            }
+        }
+
         function updateKeys() {
             var textProvider = getProvider('text');
             var imageProvider = getProvider('image');
@@ -365,6 +385,7 @@
                 el.style.display = show ? '' : 'none';
             });
             updateGoogleImageExtras();
+            updateDeepSeekSettings();
         }
 
         wrappers.forEach(function (wrapper) {
@@ -436,7 +457,10 @@
         document.querySelectorAll('.abb-provider-model[data-scope="image"] select').forEach(function (sel) {
             sel.addEventListener('change', updateGoogleImageExtras);
         });
+        var deepSeekThinking = document.getElementById('cbia-deepseek-thinking');
+        if (deepSeekThinking) deepSeekThinking.addEventListener('change', updateDeepSeekSettings);
         updateGoogleImageExtras();
+        updateDeepSeekSettings();
     }
 
     function initAbbSelects() {
@@ -1693,6 +1717,7 @@
                 timeout_without_response_usage: t('timeoutWithoutResponseUsage', 'Cost not determined: the local connection timed out before usage data was received.'),
                 output_estimate_only: t('outputEstimateOnly', 'Output estimate only; this is not the total invoiced cost.'),
                 api_usage: t('apiUsage', 'Calculated from API usage and the local pricing catalog.'),
+                cache_breakdown_missing_all_input_priced_as_miss: t('cacheBreakdownMissing', 'Estimated conservatively because the API did not return the cache breakdown; all input was priced as cache miss.'),
                 official_reconciliation: t('officialReconciliation', 'Officially reconciled cost.'),
                 model_without_pricing: t('modelWithoutPricing', 'The effective model has no local price.'),
                 missing_token_usage: t('missingTokenUsage', 'The response did not include sufficient token usage.'),
@@ -1798,6 +1823,10 @@
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('provider', 'Provider')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.provider || '-') + '</div></div>'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('requestedModel', 'Requested model')) + '</div><div class="cbia-usage-detail-value"><code>' + escapeHtml(row.model_requested || '-') + '</code></div></div>'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('effectiveModel', 'Effective model')) + '</div><div class="cbia-usage-detail-value"><code>' + escapeHtml(row.model_effective || row.model || '-') + '</code></div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('thinking', 'Reasoning mode')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.thinking || '-') + '</div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('reasoningEffort', 'Reasoning effort')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.reasoning_effort || '-') + '</div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('cacheTokens', 'Cache hit / miss tokens')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.cache_hit_tokens || 0) + ' / ' + escapeHtml(row.cache_miss_tokens || 0) + '</div></div>'
+                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('reasoningTokens', 'Reasoning tokens')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.reasoning_tokens || 0) + '</div></div>'
                 +      imageResponseRows
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('costStatus', 'Cost status')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.cost_status || 'unknown') + '</div></div>'
                 + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('costSource', 'Cost source')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.cost_source || 'unavailable') + ' · ' + escapeHtml(row.pricing_version || '-') + '</div></div>'

@@ -201,6 +201,7 @@ foreach ($post_ids as $post_id) {
         $tokens_total = $tokens_in + $tokens_out;
         $is_ok = !empty($row['ok']);
         $row_cost_eur = null;
+        $row_cost_meta = function_exists('cbia_costes_calculate_row') ? cbia_costes_calculate_row($row, $cost_settings) : array();
         if (function_exists('cbia_costes_calc_row_eur')) {
             $row_cost_eur = cbia_costes_calc_row_eur($row, $cost_settings, $cost_table);
             if ($row_cost_eur !== null && $post_multiplier !== 1.0) {
@@ -278,6 +279,25 @@ foreach ($post_ids as $post_id) {
             'section_detail' => $section_detail,
             'attach_id' => $attach_id,
             'model' => $model,
+            'provider' => sanitize_key((string)($row['provider'] ?? '')),
+            'model_requested' => sanitize_text_field((string)($row['model_requested'] ?? $model)),
+            'model_effective' => sanitize_text_field((string)($row['model_effective'] ?? $model)),
+            'thinking' => sanitize_key((string)($row['thinking'] ?? '')),
+            'reasoning_effort' => sanitize_key((string)($row['reasoning_effort'] ?? '')),
+            'cache_hit_tokens' => max(0, (int)($row['cache_hit_tokens'] ?? ($row['cin'] ?? 0))),
+            'cache_miss_tokens' => max(0, (int)($row['cache_miss_tokens'] ?? 0)),
+            'reasoning_tokens' => max(0, (int)($row['reasoning_tokens'] ?? 0)),
+            'cost_status' => sanitize_key((string)($row_cost_meta['cost_status'] ?? 'unknown')),
+            'cost_source' => sanitize_key((string)($row_cost_meta['cost_source'] ?? 'unavailable')),
+            'cost_reason' => sanitize_key((string)($row_cost_meta['cost_reason'] ?? 'insufficient_usage_data')),
+            'pricing_version' => sanitize_text_field((string)($row_cost_meta['pricing_version'] ?? '')),
+            'pricing_verified_at' => sanitize_text_field((string)($row_cost_meta['pricing_verified_at'] ?? '')),
+            'http_code' => max(0, (int)($row['http_code'] ?? 0)),
+            'request_id' => sanitize_text_field((string)($row['request_id'] ?? '')),
+            'attempt' => max(1, (int)($row['attempt'] ?? 1)),
+            'elapsed_ms' => max(0, (int)($row['elapsed_ms'] ?? 0)),
+            'batch_id' => sanitize_text_field((string)($row['batch_id'] ?? '')),
+            'fallback_from' => sanitize_text_field((string)($row['fallback_from'] ?? '')),
             'quality' => sanitize_key((string)($row['quality'] ?? ($row['image_quality'] ?? ''))),
             'quality_label' => cbia_usage_image_quality_label($row['quality'] ?? ($row['image_quality'] ?? '')),
             'size' => sanitize_text_field((string)($row['size'] ?? ($row['image_size_estimate'] ?? ''))),
@@ -366,6 +386,7 @@ if (function_exists('cbia_costes_get_orphan_usage_rows')) {
         $tokens_out = (int) ($row['out'] ?? 0);
         $tokens_total = $tokens_in + $tokens_out;
         $row_cost_eur = null;
+        $row_cost_meta = function_exists('cbia_costes_calculate_row') ? cbia_costes_calculate_row($row, $cost_settings) : array();
         if (function_exists('cbia_costes_calc_row_eur')) {
             $row_cost_eur = cbia_costes_calc_row_eur($row, $cost_settings, $cost_table);
             if ($row_cost_eur !== null && $orphan_multiplier !== 1.0) {
@@ -449,6 +470,25 @@ if (function_exists('cbia_costes_get_orphan_usage_rows')) {
             'section_detail' => $section_detail,
             'attach_id' => (int) ($row['attach_id'] ?? 0),
             'model' => $model,
+            'provider' => sanitize_key((string)($row['provider'] ?? '')),
+            'model_requested' => sanitize_text_field((string)($row['model_requested'] ?? $model)),
+            'model_effective' => sanitize_text_field((string)($row['model_effective'] ?? $model)),
+            'thinking' => sanitize_key((string)($row['thinking'] ?? '')),
+            'reasoning_effort' => sanitize_key((string)($row['reasoning_effort'] ?? '')),
+            'cache_hit_tokens' => max(0, (int)($row['cache_hit_tokens'] ?? ($row['cin'] ?? 0))),
+            'cache_miss_tokens' => max(0, (int)($row['cache_miss_tokens'] ?? 0)),
+            'reasoning_tokens' => max(0, (int)($row['reasoning_tokens'] ?? 0)),
+            'cost_status' => sanitize_key((string)($row_cost_meta['cost_status'] ?? 'unknown')),
+            'cost_source' => sanitize_key((string)($row_cost_meta['cost_source'] ?? 'unavailable')),
+            'cost_reason' => sanitize_key((string)($row_cost_meta['cost_reason'] ?? 'insufficient_usage_data')),
+            'pricing_version' => sanitize_text_field((string)($row_cost_meta['pricing_version'] ?? '')),
+            'pricing_verified_at' => sanitize_text_field((string)($row_cost_meta['pricing_verified_at'] ?? '')),
+            'http_code' => max(0, (int)($row['http_code'] ?? 0)),
+            'request_id' => sanitize_text_field((string)($row['request_id'] ?? '')),
+            'attempt' => max(1, (int)($row['attempt'] ?? 1)),
+            'elapsed_ms' => max(0, (int)($row['elapsed_ms'] ?? 0)),
+            'batch_id' => sanitize_text_field((string)($row['batch_id'] ?? '')),
+            'fallback_from' => sanitize_text_field((string)($row['fallback_from'] ?? '')),
             'quality' => sanitize_key((string)($row['quality'] ?? ($row['image_quality'] ?? ''))),
             'quality_label' => cbia_usage_image_quality_label($row['quality'] ?? ($row['image_quality'] ?? '')),
             'size' => sanitize_text_field((string)($row['size'] ?? ($row['image_size_estimate'] ?? ''))),
@@ -792,6 +832,10 @@ $dashboard_payload['i18n'] = array(
     'provider' => __('Provider', 'cbiastudio-blogflow-ai'),
     'requestedModel' => __('Requested model', 'cbiastudio-blogflow-ai'),
     'effectiveModel' => __('Effective model', 'cbiastudio-blogflow-ai'),
+    'thinking' => __('Reasoning mode', 'cbiastudio-blogflow-ai'),
+    'reasoningEffort' => __('Reasoning effort', 'cbiastudio-blogflow-ai'),
+    'cacheTokens' => __('Cache hit / miss tokens', 'cbiastudio-blogflow-ai'),
+    'reasoningTokens' => __('Reasoning tokens', 'cbiastudio-blogflow-ai'),
     'requestedQuality' => __('Requested quality', 'cbiastudio-blogflow-ai'),
     'effectiveQuality' => __('Effective quality', 'cbiastudio-blogflow-ai'),
     'requestedSize' => __('Requested size', 'cbiastudio-blogflow-ai'),
@@ -806,6 +850,7 @@ $dashboard_payload['i18n'] = array(
     'timeoutWithoutResponseUsage' => __('Cost not determined: the local connection timed out before usage data was received.', 'cbiastudio-blogflow-ai'),
     'outputEstimateOnly' => __('Output estimate only; this is not the total invoiced cost.', 'cbiastudio-blogflow-ai'),
     'apiUsage' => __('Calculated from API usage and the local pricing catalog.', 'cbiastudio-blogflow-ai'),
+    'cacheBreakdownMissing' => __('Estimated conservatively because the API did not return the cache breakdown; all input was priced as cache miss.', 'cbiastudio-blogflow-ai'),
     'officialReconciliation' => __('Officially reconciled cost.', 'cbiastudio-blogflow-ai'),
     'insufficientUsageData' => __('Insufficient usage data.', 'cbiastudio-blogflow-ai'),
     'modelWithoutPricing' => __('The effective model has no local price.', 'cbiastudio-blogflow-ai'),

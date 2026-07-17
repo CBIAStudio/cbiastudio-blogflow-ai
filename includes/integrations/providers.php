@@ -31,11 +31,11 @@ if (!function_exists('cbia_providers_defaults')) {
                 'deepseek' => array(
                     'label' => 'DeepSeek',
                     'api_key' => '',
-                    'model' => 'deepseek-chat',
+                    'model' => 'deepseek-v4-flash',
                     // CAMBIO: sin modelo de imagen por defecto
                     'image_model' => '',
                     'base_url' => 'https://api.deepseek.com',
-                    'api_version' => 'v1',
+                    'api_version' => '',
                 ),
             ),
         );
@@ -289,6 +289,7 @@ if (!function_exists('cbia_providers_get_model_list')) {
     function cbia_providers_get_model_list(string $provider): array {
         $stored = cbia_providers_get_model_lists_store();
         if (!empty($stored[$provider]) && is_array($stored[$provider])) {
+            if ($provider === 'deepseek') return array('deepseek-v4-flash', 'deepseek-v4-pro');
             return $stored[$provider];
         }
         $lists = array(
@@ -298,7 +299,7 @@ if (!function_exists('cbia_providers_get_model_list')) {
                 'gemini-2.5-pro',
                 'gemini-2.5-flash-lite',
             ),
-            'deepseek' => array('deepseek-chat', 'deepseek-reasoner'),
+            'deepseek' => array('deepseek-v4-flash', 'deepseek-v4-pro'),
         );
         return $lists[$provider] ?? array();
     }
@@ -343,7 +344,7 @@ if (!function_exists('cbia_providers_get_recommended_text_model')) {
     function cbia_providers_get_recommended_text_model(string $provider): string {
         $provider = sanitize_key($provider);
         if ($provider === 'google') return 'gemini-2.5-flash';
-        if ($provider === 'deepseek') return 'deepseek-chat';
+        if ($provider === 'deepseek') return 'deepseek-v4-flash';
         return function_exists('cbia_get_recommended_text_model') ? cbia_get_recommended_text_model() : 'gpt-5-mini';
     }
 }

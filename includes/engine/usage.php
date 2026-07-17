@@ -232,7 +232,16 @@ if (!function_exists('cbia_usage_from_images_payload')) {
 
 if (!function_exists('cbia_usage_empty')) {
     function cbia_usage_empty() {
-        return ['input_tokens' => 0, 'output_tokens' => 0, 'total_tokens' => 0];
+        return array(
+            'input_tokens' => 0,
+            'cached_input_tokens' => 0,
+            'cache_hit_tokens' => 0,
+            'cache_miss_tokens' => 0,
+            'cache_breakdown_available' => 0,
+            'output_tokens' => 0,
+            'reasoning_tokens' => 0,
+            'total_tokens' => 0,
+        );
     }
 }
 
@@ -241,9 +250,15 @@ if (!function_exists('cbia_usage_normalize')) {
         $u = cbia_usage_empty();
         if (is_array($usage)) {
             $u['input_tokens']  = (int)($usage['input_tokens'] ?? 0);
+            $u['cached_input_tokens'] = (int)($usage['cached_input_tokens'] ?? ($usage['cache_hit_tokens'] ?? 0));
+            $u['cache_hit_tokens'] = (int)($usage['cache_hit_tokens'] ?? $u['cached_input_tokens']);
+            $u['cache_miss_tokens'] = (int)($usage['cache_miss_tokens'] ?? 0);
+            $u['cache_breakdown_available'] = !empty($usage['cache_breakdown_available']) ? 1 : 0;
             $u['output_tokens'] = (int)($usage['output_tokens'] ?? 0);
+            $u['reasoning_tokens'] = (int)($usage['reasoning_tokens'] ?? 0);
             $u['total_tokens']  = (int)($usage['total_tokens'] ?? 0);
         }
+        foreach ($u as $key => $value) $u[$key] = max(0, (int)$value);
         if ($u['total_tokens'] <= 0) $u['total_tokens'] = $u['input_tokens'] + $u['output_tokens'];
         return $u;
     }
@@ -276,7 +291,12 @@ if (!function_exists('cbia_usage_append_call')) {
             'context'      => $ctx,
             'model'        => $mdl,
             'input_tokens' => (int)$u['input_tokens'],
+            'cached_input_tokens' => (int)$u['cached_input_tokens'],
+            'cache_hit_tokens' => (int)$u['cache_hit_tokens'],
+            'cache_miss_tokens' => (int)$u['cache_miss_tokens'],
+            'cache_breakdown_available' => (int)$u['cache_breakdown_available'],
             'output_tokens'=> (int)$u['output_tokens'],
+            'reasoning_tokens' => (int)$u['reasoning_tokens'],
             'total_tokens' => (int)$u['total_tokens'],
         ), is_array($extra) ? $extra : array());
 

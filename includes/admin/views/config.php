@@ -50,6 +50,8 @@ if (!isset($s['image_provider'])) $s['image_provider'] = 'openai';
 if (!isset($s['text_model'])) $s['text_model'] = '';
 if (!isset($s['google_api_key'])) $s['google_api_key'] = '';
 if (!isset($s['deepseek_api_key'])) $s['deepseek_api_key'] = '';
+if (!isset($s['deepseek_thinking_mode'])) $s['deepseek_thinking_mode'] = 'disabled';
+if (!isset($s['deepseek_reasoning_effort'])) $s['deepseek_reasoning_effort'] = 'high';
 if (!isset($s['content_images_banner_enabled'])) $s['content_images_banner_enabled'] = 1;
 if (!isset($s['openai_consent'])) $s['openai_consent'] = 1;
 if (!isset($s['image_format_intro'])) $s['image_format_intro'] = 'panoramic_1536x1024';
@@ -241,6 +243,8 @@ foreach ($providers_list as $pkey => $pdef) {
         $label = $mdl;
         if ($pkey === 'google' && $mdl === 'gemini-2.5-flash') $label .= ' (Recomendado)';
         if ($pkey === 'openai' && $mdl === $recommended) $label .= ' (RECOMENDADO)';
+        if ($pkey === 'deepseek' && $mdl === 'deepseek-v4-flash') $label = __('DeepSeek V4 Flash — Recommended', 'cbiastudio-blogflow-ai');
+        if ($pkey === 'deepseek' && $mdl === 'deepseek-v4-pro') $label = __('DeepSeek V4 Pro — Maximum capability', 'cbiastudio-blogflow-ai');
         echo '<option value="' . esc_attr($mdl) . '" ' . selected($saved, $mdl, false) . '>' . esc_html($label) . '</option>';
     }
     echo '</select>';
@@ -285,6 +289,26 @@ $quality_fields = array(
     'featured_image_quality' => array('id' => 'cbia-featured-image-quality', 'label' => __('Featured image quality', 'cbiastudio-blogflow-ai'), 'value' => CBIA_Image_Pricing_Service::validate_specific_quality($s['featured_image_quality'] ?? 'inherit'), 'options' => $specific_image_qualities, 'help' => __('Allows a different quality for the article featured image.', 'cbiastudio-blogflow-ai')),
     'content_image_quality' => array('id' => 'cbia-content-image-quality', 'label' => __('Content image quality', 'cbiastudio-blogflow-ai'), 'value' => CBIA_Image_Pricing_Service::validate_specific_quality($s['content_image_quality'] ?? 'inherit'), 'options' => $specific_image_qualities, 'help' => __('Applied to images inserted inside the article content.', 'cbiastudio-blogflow-ai')),
 );
+
+$deepseek_config = function_exists('cbia_deepseek_normalize_runtime_config')
+    ? cbia_deepseek_normalize_runtime_config($s['text_model'] ?? 'deepseek-v4-flash', $s['deepseek_thinking_mode'], $s['deepseek_reasoning_effort'])
+    : array('thinking' => 'disabled', 'reasoning_effort' => 'high');
+$deepseek_visible = $text_provider === 'deepseek';
+echo '<div class="abb-field abb-deepseek-settings"' . ($deepseek_visible ? '' : ' style="display:none;"') . '>';
+echo '<label for="cbia-deepseek-thinking">' . esc_html__('Reasoning mode', 'cbiastudio-blogflow-ai') . '</label>';
+echo '<select id="cbia-deepseek-thinking" name="deepseek_thinking_mode" class="abb-select">';
+echo '<option value="disabled" ' . selected($deepseek_config['thinking'], 'disabled', false) . '>' . esc_html__('Disabled — faster and lower cost', 'cbiastudio-blogflow-ai') . '</option>';
+echo '<option value="enabled" ' . selected($deepseek_config['thinking'], 'enabled', false) . '>' . esc_html__('Enabled — deeper reasoning', 'cbiastudio-blogflow-ai') . '</option>';
+echo '</select></div>';
+echo '<div class="abb-field abb-deepseek-settings abb-deepseek-effort"' . ($deepseek_visible && $deepseek_config['thinking'] === 'enabled' ? '' : ' style="display:none;"') . '>';
+echo '<label for="cbia-deepseek-effort">' . esc_html__('Reasoning effort', 'cbiastudio-blogflow-ai') . '</label>';
+echo '<select id="cbia-deepseek-effort" name="deepseek_reasoning_effort" class="abb-select"' . disabled($deepseek_config['thinking'], 'disabled', false) . '>';
+echo '<option value="high" ' . selected($deepseek_config['reasoning_effort'], 'high', false) . '>' . esc_html__('High', 'cbiastudio-blogflow-ai') . '</option>';
+echo '<option value="max" ' . selected($deepseek_config['reasoning_effort'], 'max', false) . '>' . esc_html__('Maximum', 'cbiastudio-blogflow-ai') . '</option>';
+echo '</select></div>';
+echo '<div class="abb-field abb-deepseek-settings"' . ($deepseek_visible ? '' : ' style="display:none;"') . '>';
+echo '<label>' . esc_html__('Indicative pricing', 'cbiastudio-blogflow-ai') . '</label>';
+echo '<p class="description">' . esc_html__('Flash: cache hit $0.0028, cache miss $0.14, output $0.28 per 1M tokens. Pro: cache hit $0.003625, cache miss $0.435, output $0.87 per 1M tokens. Verified July 14, 2026.', 'cbiastudio-blogflow-ai') . '</p></div>';
 echo '</div>'; // grid
 
 // API keys: texto

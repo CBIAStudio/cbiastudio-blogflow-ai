@@ -167,6 +167,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $prompt = $this->build_prompt($title, $settings);
             list($ok, $text_html, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, $title, 2);
             $text_attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($raw) : array();
+            $text_meta = is_array($raw['_cbia_request_meta'] ?? null) ? $raw['_cbia_request_meta'] : array();
             if (!$ok) {
                 return new WP_Error('preview_generation_failed', $err ?: 'Could not generate preview.');
             }
@@ -340,6 +341,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'usage' => is_array($usage) ? $usage : array(),
                         'text_model' => (string)$model_used,
                         'text_attempts' => $text_attempts,
+                        'text_meta' => $text_meta,
                         'image_calls' => array_merge(
                             $usage_image_calls,
                             $this->normalize_preview_image_calls((array)($rendered['images'] ?? array()))
@@ -371,6 +373,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     'usage' => is_array($usage) ? $usage : array(),
                     'text_model' => (string)$model_used,
                     'text_attempts' => $text_attempts,
+                    'text_meta' => $text_meta,
                     'image_calls' => array_merge(
                         $usage_image_calls,
                         $this->normalize_preview_image_calls((array)($rendered['images'] ?? array()))
@@ -416,6 +419,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 'text_model' => (string)$model_used,
                 'usage' => is_array($usage) ? $usage : array(),
                 'text_attempts' => $text_attempts,
+                'text_meta' => $text_meta,
                 'image_calls' => array_merge(
                     $usage_image_calls,
                     $this->normalize_preview_image_calls((array)($rendered['images'] ?? array()))
@@ -758,19 +762,20 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $usage = is_array($payload['usage'] ?? null) ? $payload['usage'] : array();
             $text_model = sanitize_text_field((string)($payload['text_model'] ?? ''));
             $text_attempts = is_array($payload['text_attempts'] ?? null) ? $payload['text_attempts'] : array();
+            $text_meta = is_array($payload['text_meta'] ?? null) ? $payload['text_meta'] : array();
 
             if ($text_model !== '' && function_exists('cbia_costes_record_usage')) {
                 if (!empty($text_attempts) && function_exists('cbia_costes_record_failed_attempts')) {
                     cbia_costes_record_failed_attempts($post_id, $text_attempts, array('type' => 'text'));
                 }
-                cbia_costes_record_usage($post_id, array(
+                cbia_costes_record_usage($post_id, array_merge($text_meta, array(
                     'type' => 'text',
                     'model' => $text_model,
                     'input_tokens' => (int)($usage['input_tokens'] ?? 0),
                     'output_tokens' => (int)($usage['output_tokens'] ?? 0),
                     'cached_input_tokens' => (int)($usage['cached_input_tokens'] ?? 0),
                     'ok' => 1,
-                ));
+                )));
             }
             if ($text_model !== '' && function_exists('cbia_usage_append_call')) {
                 cbia_usage_append_call($post_id, 'blog_text', $text_model, $usage, array(
