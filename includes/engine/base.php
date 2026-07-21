@@ -485,7 +485,7 @@ if (!function_exists('cbia_run_test_configuration')) {
             elseif (function_exists('cbia_log_message')) cbia_log_message('[' . $level . '] ' . $message);
         };
 
-        $log('TEST text: provider=' . $provider . ' model=' . $model . ' endpoint=' . $endpoint . ' api_key_configured=' . ($key_configured ? 'yes' : 'no') . ' fallback_allowed=no attempt=1/1 thinking=' . ($provider === 'deepseek' ? $thinking : 'n/a') . ' timeout=30');
+        $log('TEST text: provider=' . $provider . ' model=' . $model . ' endpoint=' . $endpoint . ' api_key_configured=' . ($key_configured ? 'yes' : 'no') . ' fallback_allowed=no attempt=1/1 thinking=' . ($provider === 'deepseek' ? $thinking : 'n/a') . ' timeout=30 stop_flag_before=' . ($stop_before ? 'enabled' : 'disabled'));
         $log('TEST images: provider=' . $image_provider . ' model=' . $image_model . ' api_key_configured=' . ($image_key_configured ? 'yes' : 'no') . ' result=local_configuration_only paid_generation=no');
 
         $allowed_providers = array('openai', 'deepseek', 'google');
@@ -508,7 +508,7 @@ if (!function_exists('cbia_run_test_configuration')) {
                 'cost_status' => 'exact', 'cost_source' => 'local_preflight', 'attempt_id' => 'configuration-test-' . substr(hash('sha256', microtime(true) . '|' . wp_generate_uuid4()), 0, 24),
             )) : false;
             $stop_after = cbia_is_stop_requested();
-            $log('TEST text blocked: provider=' . $provider . ' model=' . $model . ' request_sent=no billable=no error_type=' . $error_type . ' usage_event_saved=' . ($saved ? 'yes' : 'no') . ' stop_flag_changed=' . ($stop_before !== $stop_after ? 'yes' : 'no'), 'ERROR');
+            $log('TEST text blocked: provider=' . $provider . ' model=' . $model . ' api_key_configured=' . ($key_configured ? 'yes' : 'no') . ' request_sent=no billable=no error_type=' . $error_type . ' usage_event_saved=' . ($saved ? 'yes' : 'no') . ' stop_flag_after=' . ($stop_after ? 'enabled' : 'disabled') . ' stop_flag_changed=' . ($stop_before !== $stop_after ? 'yes' : 'no'), 'ERROR');
             return array('ok' => false, 'error' => $error_type, 'message' => $message, 'text' => array('provider' => $provider, 'model' => $model), 'image' => array('provider' => $image_provider, 'model' => $image_model, 'key_configured' => $image_key_configured), 'stop_flag_changed' => $stop_before !== $stop_after);
         }
 
@@ -546,12 +546,12 @@ if (!function_exists('cbia_run_test_configuration')) {
 
         if ($ok) {
             $message = sprintf(__('%1$s configured correctly. Model tested: %2$s.', 'cbiastudio-blogflow-ai'), ucfirst($provider), $model_effective);
-            $log('TEST text OK: provider=' . $provider . ' model_requested=' . $model . ' model_effective=' . $model_effective . ' HTTP=' . $http_code . ' request_id=' . sanitize_text_field((string)($meta['request_id'] ?? '')) . ' tokens_input=' . (int)($usage['input_tokens'] ?? 0) . ' tokens_output=' . (int)($usage['output_tokens'] ?? 0) . ' elapsed_ms=' . $elapsed_ms . ' usage_event_saved=' . ($usage_saved ? 'yes' : 'no') . ' stop_flag_changed=' . ($changed ? 'yes' : 'no'));
+            $log('TEST text OK: provider=' . $provider . ' model_requested=' . $model . ' model_effective=' . $model_effective . ' HTTP=' . $http_code . ' request_id=' . sanitize_text_field((string)($meta['request_id'] ?? '')) . ' tokens_input=' . (int)($usage['input_tokens'] ?? 0) . ' tokens_output=' . (int)($usage['output_tokens'] ?? 0) . ' cost_status=' . ($is_timeout ? 'unknown' : 'estimated') . ' elapsed_ms=' . $elapsed_ms . ' usage_event_saved=' . ($usage_saved ? 'yes' : 'no') . ' stop_flag_after=' . ($stop_after ? 'enabled' : 'disabled') . ' stop_flag_changed=' . ($changed ? 'yes' : 'no'));
         } else {
             $message = $error_type === 'authentication'
                 ? sprintf(__('%s rejected the API key.', 'cbiastudio-blogflow-ai'), ucfirst($provider))
                 : sprintf(__('Could not validate %s.', 'cbiastudio-blogflow-ai'), ucfirst($provider));
-            $log('TEST text failed: provider=' . $provider . ' model=' . $model . ' HTTP=' . $http_code . ' error_type=' . $error_type . ' message=' . $error . ' usage_event_saved=' . ($usage_saved ? 'yes' : 'no') . ' stop_flag_changed=' . ($changed ? 'yes' : 'no'), 'ERROR');
+            $log('TEST text failed: provider=' . $provider . ' model=' . $model . ' HTTP=' . $http_code . ' error_type=' . $error_type . ' message=' . $error . ' usage_event_saved=' . ($usage_saved ? 'yes' : 'no') . ' stop_flag_after=' . ($stop_after ? 'enabled' : 'disabled') . ' stop_flag_changed=' . ($changed ? 'yes' : 'no'), 'ERROR');
         }
 
         return array('ok' => $ok, 'error' => $ok ? '' : $error_type, 'message' => $message, 'http_code' => $http_code, 'usage_saved' => $usage_saved, 'text' => array('provider' => $provider, 'model' => $model_effective, 'usage' => $usage), 'image' => array('provider' => $image_provider, 'model' => $image_model, 'key_configured' => $image_key_configured, 'paid_generation' => false), 'stop_flag_changed' => $changed);
