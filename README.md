@@ -11,6 +11,10 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 
 ## What's New in 2.1.5
 
+- Provider API keys are validated and stored independently without accepting masks, asterisks, whitespace or control characters; invalid submissions preserve the previous key.
+- Settings and diagnostics expose only configured booleans, never key values or prefix/suffix fragments.
+- OpenAI, DeepSeek and Google routes use the central provider resolver; authentication errors are sanitized and recorded as exact zero-cost rejected requests.
+- Oldposts v3 validates image credentials before resets, preserves the previous featured image on failure, and restores content when internal regeneration cannot start.
 - Configuration Test uses the exact saved provider/model/key, performs one text attempt without cross-provider fallback, and checks image configuration locally without a paid image request.
 - The test preserves the global STOP flag and records its authorized text attempt once in Usage V2, including local blocks and unknown sent timeouts.
 - Saving API keys updates only explicitly entered credentials and never changes provider/model selections or exposes key fragments.

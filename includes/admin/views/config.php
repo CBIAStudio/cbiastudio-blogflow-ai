@@ -321,14 +321,12 @@ foreach ($providers_list as $pkey => $pdef) {
     if ($pkey === 'google') $key_val = (string)($s['google_api_key'] ?? '');
     if ($pkey === 'deepseek') $key_val = (string)($s['deepseek_api_key'] ?? '');
     if ($key_val === '' && !empty($provider_settings['providers'][$pkey]['api_key'])) $key_val = (string)$provider_settings['providers'][$pkey]['api_key'];
-    $masked = '';
-    if ($key_val !== '') {
-        $masked = '************';
-    }
+    $key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($pkey);
+    $masked = $key_configured ? __('API key configured', 'cbiastudio-blogflow-ai') : '';
     $link = $provider_key_urls[$pkey] ?? '';
     echo '<div class="abb-provider-key" data-scope="text" data-provider="' . esc_attr($pkey) . '" style="display:none;">';
     echo '<div class="abb-api-input">';
-		echo '<input class="abb-input" type="password" name="provider_api_key_text[' . esc_attr($pkey) . ']" value="" autocomplete="off" placeholder="' . esc_attr($masked) . '" />';
+		echo '<input class="abb-input" type="password" name="provider_api_key_text[' . esc_attr($pkey) . ']" value="" autocomplete="off" data-key-configured="' . ($key_configured ? '1' : '0') . '" placeholder="' . esc_attr($masked) . '" />';
     if ($link !== '') {
         echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Get API key', 'cbiastudio-blogflow-ai') . '</a>';
     }
@@ -346,14 +344,12 @@ foreach ($image_providers_list as $pkey => $pdef) {
     if ($pkey === 'google') $key_val = (string)($s['google_api_key'] ?? '');
     if ($pkey === 'deepseek') $key_val = (string)($s['deepseek_api_key'] ?? '');
     if ($key_val === '' && !empty($provider_settings['providers'][$pkey]['api_key'])) $key_val = (string)$provider_settings['providers'][$pkey]['api_key'];
-    $masked = '';
-    if ($key_val !== '') {
-        $masked = '************';
-    }
+    $key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($pkey);
+    $masked = $key_configured ? __('API key configured', 'cbiastudio-blogflow-ai') : '';
     $link = $provider_key_urls[$pkey] ?? '';
     echo '<div class="abb-provider-key" data-scope="image" data-provider="' . esc_attr($pkey) . '" style="display:none;">';
     echo '<div class="abb-api-input">';
-		echo '<input class="abb-input" type="password" name="provider_api_key_image[' . esc_attr($pkey) . ']" value="" autocomplete="off" placeholder="' . esc_attr($masked) . '" />';
+		echo '<input class="abb-input" type="password" name="provider_api_key_image[' . esc_attr($pkey) . ']" value="" autocomplete="off" data-key-configured="' . ($key_configured ? '1' : '0') . '" placeholder="' . esc_attr($masked) . '" />';
     if ($link !== '') {
         echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Get API key', 'cbiastudio-blogflow-ai') . '</a>';
     }

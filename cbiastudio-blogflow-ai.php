@@ -99,8 +99,11 @@ if (!function_exists('cbia_log')) {
 	function cbia_mask_sensitive_log_text(string $text): string {
 		$text = (string)$text;
 		if ($text === '') return $text;
-		$text = preg_replace('/(Incorrect API key provided:\s*)([^\s\.,]+)/i', '$1[REDACTED]', $text);
-		$text = preg_replace('/(\bapi[_\s-]?key\s*:\s*)([^\s\.,]+)/i', '$1[REDACTED]', $text);
+		$text = preg_replace('/(Incorrect API key provided:\s*)([^\r\n]+)/i', '$1[REDACTED]', $text);
+		$text = preg_replace('/(\bapi[_\s-]?key\s*(?:provided)?\s*[:=]\s*)([^\s,;]+)/i', '$1[REDACTED]', $text);
+		$text = preg_replace('/(\bAuthorization\s*[:=]\s*)([^\r\n,;]+)/i', '$1[REDACTED]', $text);
+		$text = preg_replace('/\bBearer\s+[A-Za-z0-9._~+\/-]+/i', 'Bearer [REDACTED]', $text);
+		$text = preg_replace('/("(?:api_key|access_token|token|cookie)"\s*:\s*")[^"]+("?)/i', '$1[REDACTED]$2', $text);
 		$text = preg_replace('/([?&](?:key|api_key)=)([^&\s]+)/i', '$1[REDACTED]', $text);
 		$text = preg_replace('/\bsk-[A-Za-z0-9_\-]{10,}\b/', 'sk-[REDACTED]', $text);
 		return (string)$text;
@@ -269,9 +272,14 @@ if (!function_exists('cbia_update_settings_merge')) {
 		if (!is_array($current)) $current = [];
 		foreach (array('openai_api_key', 'google_api_key', 'deepseek_api_key', 'google_service_account_json') as $secret_key) {
 			if (!array_key_exists($secret_key, $partial)) continue;
-			$submitted_secret = trim((string)$partial[$secret_key]);
-			$is_mask = function_exists('cbia_is_masked_api_key_value') && cbia_is_masked_api_key_value($submitted_secret);
-			if (($submitted_secret === '' || $is_mask) && !empty($current[$secret_key])) unset($partial[$secret_key]);
+			if ($secret_key === 'google_service_account_json') {
+				if (trim((string)$partial[$secret_key]) === '' && !empty($current[$secret_key])) unset($partial[$secret_key]);
+				continue;
+			}
+			$provider = str_replace('_api_key', '', $secret_key);
+			$result = function_exists('cbia_sanitize_provider_api_key') ? cbia_sanitize_provider_api_key($provider, $partial[$secret_key]) : array('valid' => trim((string)$partial[$secret_key]) !== '', 'value' => trim((string)$partial[$secret_key]));
+			if (empty($result['valid'])) unset($partial[$secret_key]);
+			else $partial[$secret_key] = (string)$result['value'];
 		}
 		$merged = array_replace_recursive($current, $partial);
 		update_option(CBIA_OPTION_SETTINGS, $merged, false);

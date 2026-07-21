@@ -157,6 +157,9 @@ This plugin can connect to third-party AI services only when the site administra
 == Changelog ==
 
 = 2.1.5 =
+* Provider API keys are isolated by provider, reject masks/control characters, and preserve the previous valid value when a submission is invalid.
+* Diagnostics and settings expose configured state only; provider errors are sanitized before logs, AJAX and Usage storage.
+* Authentication rejections are exact zero-cost Usage events, and Oldposts v3 preflights credentials before destructive image operations.
 * Configuration Test now uses the exact saved text provider, provider-specific model and API key with one attempt and no cross-provider fallback.
 * Configuration Test reports text and local-only image checks separately, preserves STOP, and records its single text attempt in Usage V2.
 * The API-key-only save action updates only explicitly entered keys; empty, absent and masked fields preserve existing provider credentials.

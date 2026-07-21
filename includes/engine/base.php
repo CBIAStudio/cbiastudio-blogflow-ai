@@ -50,11 +50,26 @@ if (!function_exists('cbia_mask_sensitive_log_text')) {
     function cbia_mask_sensitive_log_text(string $text): string {
         $text = (string)$text;
         if ($text === '') return $text;
-        $text = preg_replace('/(Incorrect API key provided:\s*)([^\s\.,]+)/i', '$1[REDACTED]', $text);
-        $text = preg_replace('/(\bapi[_\s-]?key\s*:\s*)([^\s\.,]+)/i', '$1[REDACTED]', $text);
+        $text = preg_replace('/(Incorrect API key provided:\s*)([^\r\n]+)/i', '$1[REDACTED]', $text);
+        $text = preg_replace('/(\bapi[_\s-]?key\s*(?:provided)?\s*[:=]\s*)([^\s,;]+)/i', '$1[REDACTED]', $text);
+        $text = preg_replace('/(\bAuthorization\s*[:=]\s*)([^\r\n,;]+)/i', '$1[REDACTED]', $text);
+        $text = preg_replace('/\bBearer\s+[A-Za-z0-9._~+\/-]+/i', 'Bearer [REDACTED]', $text);
+        $text = preg_replace('/("(?:api_key|access_token|token|cookie)"\s*:\s*")[^"]+("?)/i', '$1[REDACTED]$2', $text);
         $text = preg_replace('/([?&](?:key|api_key)=)([^&\s]+)/i', '$1[REDACTED]', $text);
         $text = preg_replace('/\bsk-[A-Za-z0-9_\-]{10,}\b/', 'sk-[REDACTED]', $text);
         return (string)$text;
+    }
+}
+
+if (!function_exists('cbia_sanitize_provider_error')) {
+    function cbia_sanitize_provider_error(string $provider, $message, int $http_code = 0): string {
+        $provider = sanitize_key($provider);
+        if (in_array($http_code, array(401, 403), true)) {
+            if ($provider === 'openai') return __('The OpenAI API key was rejected. Save it again in Settings.', 'cbiastudio-blogflow-ai');
+            return sprintf(__('The %s API key was rejected. Save it again in Settings.', 'cbiastudio-blogflow-ai'), ucfirst($provider ?: 'provider'));
+        }
+        $safe = cbia_mask_sensitive_log_text((string)$message);
+        return $safe !== '' ? $safe : __('The provider returned an error.', 'cbiastudio-blogflow-ai');
     }
 }
 
@@ -75,9 +90,34 @@ if (!function_exists('cbia_is_masked_api_key_value')) {
 }
 
 if (!function_exists('cbia_normalize_submitted_api_key')) {
-    function cbia_normalize_submitted_api_key($value): string {
-        $value = trim(sanitize_text_field((string)$value));
-        return cbia_is_masked_api_key_value($value) ? '' : $value;
+    function cbia_normalize_submitted_api_key($value, string $provider = ''): string {
+        $result = cbia_sanitize_provider_api_key($provider, $value);
+        return !empty($result['valid']) ? (string)$result['value'] : '';
+    }
+}
+
+if (!function_exists('cbia_sanitize_provider_api_key')) {
+    function cbia_sanitize_provider_api_key(string $provider, $candidate): array {
+        $provider = sanitize_key($provider);
+        if (!is_string($candidate)) {
+            return array('valid' => false, 'value' => '', 'code' => 'not_string');
+        }
+        // Only ordinary boundary spaces and pasted CR/LF are safe to remove.
+        $value = (string)preg_replace('/^[ \r\n]+|[ \r\n]+$/', '', $candidate);
+        if ($value === '') return array('valid' => false, 'value' => '', 'code' => 'empty');
+        if (cbia_is_masked_api_key_value($value)) return array('valid' => false, 'value' => '', 'code' => 'masked');
+        if (strpos($value, '*') !== false) return array('valid' => false, 'value' => '', 'code' => 'masked');
+        if (preg_match('/[\x00-\x20\x7F]/', $value)) return array('valid' => false, 'value' => '', 'code' => 'control_or_whitespace');
+        if (strlen($value) < 8) return array('valid' => false, 'value' => '', 'code' => 'too_short');
+        return array('valid' => true, 'value' => $value, 'code' => '');
+    }
+}
+
+if (!function_exists('cbia_provider_api_key_error_message')) {
+    function cbia_provider_api_key_error_message(string $provider, string $code): string {
+        if ($code === 'masked') return __('The visual mask was not saved as an API key. The previous key was preserved.', 'cbiastudio-blogflow-ai');
+        if ($code === 'empty') return __('The API key field was empty. The previous key was preserved.', 'cbiastudio-blogflow-ai');
+        return sprintf(__('The %s API key contains spaces, control characters or a mask. The previous key was preserved.', 'cbiastudio-blogflow-ai'), ucfirst(sanitize_key($provider)));
     }
 }
 
@@ -195,6 +235,7 @@ if (!function_exists('cbia_openai_api_key')) {
      * API key accessor (kept for legacy compatibility).
      */
     function cbia_openai_api_key(): string {
+        if (function_exists('cbia_get_provider_api_key')) return cbia_get_provider_api_key('openai');
         if (function_exists('cbia_get_settings')) {
             $settings = cbia_get_settings();
             return (string)($settings['openai_api_key'] ?? '');
@@ -231,23 +272,26 @@ if (!function_exists('cbia_get_provider_api_key')) {
             'google'  => (string)($settings['google_api_key'] ?? ''),
             'deepseek'=> (string)($settings['deepseek_api_key'] ?? ''),
         );
-        $main_key = trim((string)($map[$provider] ?? ''));
+        $main_key = (string)($map[$provider] ?? '');
 
         $provider_key = '';
         if (function_exists('cbia_providers_get_settings')) {
             $p = cbia_providers_get_settings();
             if (!empty($p['providers'][$provider]['api_key'])) {
-                $provider_key = trim((string)$p['providers'][$provider]['api_key']);
+                $provider_key = (string)$p['providers'][$provider]['api_key'];
             }
         }
 
-        if ($main_key !== '' && !cbia_is_masked_api_key_value($main_key)) return $main_key;
-        if ($provider_key !== '' && !cbia_is_masked_api_key_value($provider_key)) return $provider_key;
+        $main_result = cbia_sanitize_provider_api_key($provider, $main_key);
+        if (!empty($main_result['valid'])) return (string)$main_result['value'];
+        $provider_result = cbia_sanitize_provider_api_key($provider, $provider_key);
+        if (!empty($provider_result['valid'])) return (string)$provider_result['value'];
 
         // The legacy generic key belonged to OpenAI. Never reuse it across providers.
         if ($provider === 'openai') {
             $legacy = cbia_get_legacy_api_key();
-            if ($legacy !== '' && !cbia_is_masked_api_key_value($legacy)) return $legacy;
+            $legacy_result = cbia_sanitize_provider_api_key($provider, $legacy);
+            if (!empty($legacy_result['valid'])) return (string)$legacy_result['value'];
         }
 
         return '';
@@ -256,7 +300,19 @@ if (!function_exists('cbia_get_provider_api_key')) {
 
 if (!function_exists('cbia_has_provider_api_key')) {
     function cbia_has_provider_api_key(string $provider): bool {
-        return trim(cbia_get_provider_api_key($provider)) !== '';
+        return cbia_get_provider_api_key($provider) !== '';
+    }
+}
+
+if (!function_exists('cbia_image_provider_preflight')) {
+    function cbia_image_provider_preflight(): array {
+        $provider = function_exists('cbia_get_image_provider') ? sanitize_key(cbia_get_image_provider()) : 'openai';
+        $model = function_exists('cbia_get_image_model_for_provider') ? (string)cbia_get_image_model_for_provider($provider, '') : '';
+        $key = cbia_get_provider_api_key($provider);
+        if ($provider === '' || $key === '') {
+            return array('ok' => false, 'provider' => $provider ?: 'unknown', 'model' => $model, 'code' => 'invalid_image_api_key', 'message' => cbia_provider_api_key_error_message($provider ?: 'provider', 'invalid'));
+        }
+        return array('ok' => true, 'provider' => $provider, 'model' => $model, 'code' => '', 'message' => '');
     }
 }
 

@@ -3,9 +3,7 @@
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 if (!current_user_can('manage_options')) return;
 
-$settings = get_option('cbia_settings', array());
-$api_key = (string)($settings['openai_api_key'] ?? '');
-$api_masked = $api_key !== '' ? (substr($api_key, 0, 4) . '...' . substr($api_key, -4)) : '';
+$api_key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key('openai');
 
 $yes = __('Yes', 'cbiastudio-blogflow-ai');
 $no = __('No', 'cbiastudio-blogflow-ai');
@@ -23,8 +21,7 @@ $info = array(
     __('WP_DEBUG_LOG', 'cbiastudio-blogflow-ai') => (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) ? 'true' : 'false',
     __('DISABLE_WP_CRON', 'cbiastudio-blogflow-ai') => (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) ? 'true' : 'false',
     __('Timezone', 'cbiastudio-blogflow-ai') => (string)wp_timezone_string(),
-    // translators: %s is a masked API key preview.
-    __('OpenAI API Key', 'cbiastudio-blogflow-ai') => $api_key !== '' ? sprintf(__('Yes (%s)', 'cbiastudio-blogflow-ai'), $api_masked) : $no,
+    __('OpenAI API Key', 'cbiastudio-blogflow-ai') => $api_key_configured ? $yes : $no,
     __('Plugin directory writable', 'cbiastudio-blogflow-ai') => wp_is_writable(CBIA_PLUGIN_DIR) ? $yes : $no,
     __('WP content writable', 'cbiastudio-blogflow-ai') => defined('WP_CONTENT_DIR') && wp_is_writable(WP_CONTENT_DIR) ? $yes : $no,
 );

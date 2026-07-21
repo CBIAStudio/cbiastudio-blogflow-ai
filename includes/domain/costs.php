@@ -551,7 +551,10 @@ if (!function_exists('cbia_costes_record_usage')) {
         $cin_t = isset($usage['cached_input_tokens']) ? (int)$usage['cached_input_tokens'] : 0;
         $ok    = !empty($usage['ok']) ? 1 : 0;
         $attempt = isset($usage['attempt']) ? (int)$usage['attempt'] : 1;
-        $err   = isset($usage['error']) ? (string)$usage['error'] : '';
+        $provider = sanitize_key((string)($usage['provider'] ?? 'openai'));
+        $http_code = max(0, (int)($usage['http_code'] ?? 0));
+        $err = isset($usage['error']) ? (string)$usage['error'] : '';
+        if (function_exists('cbia_sanitize_provider_error')) $err = cbia_sanitize_provider_error($provider, $err, $http_code);
 
         // normaliza type
         $type = strtolower(trim($type));
@@ -560,7 +563,7 @@ if (!function_exists('cbia_costes_record_usage')) {
         $row = array(
             'ts' => current_time('mysql'),
             'type' => $type,
-            'provider' => sanitize_key((string)($usage['provider'] ?? 'openai')),
+            'provider' => $provider,
             'model' => $model,
             'model_requested' => sanitize_text_field((string)($usage['model_requested'] ?? $model)),
             'model_effective' => sanitize_text_field((string)($usage['model_effective'] ?? $model)),
@@ -678,6 +681,15 @@ if (!function_exists('cbia_costes_record_usage')) {
 
         $cost = cbia_costes_calculate_row($row, cbia_costes_get_settings());
         foreach ($cost as $key => $value) $row[$key] = $value;
+        if (in_array($http_code, array(401, 403), true) || (string)($usage['error_type'] ?? '') === 'authentication') {
+            $row['request_sent'] = 1; $row['billable'] = 0; $row['cost_micro_usd'] = 0;
+            $row['cost_usd'] = 0.0; $row['cost_status'] = 'exact';
+            $row['cost_source'] = 'provider_rejected_before_generation';
+            $row['result_status'] = 'authentication_error'; $row['error_type'] = 'authentication';
+        } elseif ((string)($usage['result_status'] ?? '') === 'blocked_local') {
+            $row['request_sent'] = 0; $row['billable'] = 0; $row['cost_micro_usd'] = 0;
+            $row['cost_usd'] = 0.0; $row['cost_status'] = 'exact'; $row['cost_source'] = 'local_preflight';
+        }
 
         $attempt_id = (string)($row['attempt_id'] ?? '');
         $orphan_key = cbia_costes_orphan_usage_key();

@@ -1322,10 +1322,10 @@ if (!function_exists('cbia_repair_provider_api_keys_into_main_settings')) {
         $map = array('openai' => 'openai_api_key', 'google' => 'google_api_key', 'deepseek' => 'deepseek_api_key');
         $changed = false;
         foreach ($map as $provider => $settings_key) {
-            $main_key = trim((string)($settings[$settings_key] ?? ''));
-            $provider_key = trim((string)($provider_settings['providers'][$provider]['api_key'] ?? ''));
-            if ($main_key === '' && $provider_key !== '') {
-                $settings[$settings_key] = $provider_key;
+            $main_result = cbia_sanitize_provider_api_key($provider, (string)($settings[$settings_key] ?? ''));
+            $provider_result = cbia_sanitize_provider_api_key($provider, (string)($provider_settings['providers'][$provider]['api_key'] ?? ''));
+            if (empty($main_result['valid']) && !empty($provider_result['valid'])) {
+                $settings[$settings_key] = (string)$provider_result['value'];
                 $changed = true;
             }
         }
@@ -3744,7 +3744,7 @@ if (!function_exists('cbia_ajax_ai_composer_save_api_key')) {
             wp_send_json_error(array('message' => __('Unauthorized', 'cbiastudio-blogflow-ai')), 403);
         }
         $provider = isset($_POST['provider']) ? sanitize_key((string)wp_unslash($_POST['provider'])) : '';
-        $key = isset($_POST['api_key']) ? sanitize_text_field((string)wp_unslash($_POST['api_key'])) : '';
+        $key = isset($_POST['api_key']) ? (string)wp_unslash($_POST['api_key']) : '';
         $scope = isset($_POST['scope']) ? sanitize_key((string)wp_unslash($_POST['scope'])) : '';
         $model = isset($_POST['model']) ? sanitize_text_field((string)wp_unslash($_POST['model'])) : '';
         $use_existing_key = isset($_POST['use_existing_key']) ? absint(wp_unslash($_POST['use_existing_key'])) : 0;
@@ -3757,7 +3757,13 @@ if (!function_exists('cbia_ajax_ai_composer_save_api_key')) {
         if ($scope === 'image' && $provider === 'openai' && $model !== '' && class_exists('CBIA_Image_Pricing_Service')) {
             $model = CBIA_Image_Pricing_Service::validate_model($model);
         }
-        if ($key === '' && !$use_existing_key) {
+        if ($key !== '') {
+            $key_result = cbia_sanitize_provider_api_key($provider, $key);
+            if (empty($key_result['valid'])) {
+                wp_send_json_error(array('message' => cbia_provider_api_key_error_message($provider, (string)$key_result['code'])), 400);
+            }
+            $key = (string)$key_result['value'];
+        } elseif (!$use_existing_key) {
             wp_send_json_error(array('message' => __('API key cannot be empty.', 'cbiastudio-blogflow-ai')), 400);
         }
 
@@ -3770,19 +3776,8 @@ if (!function_exists('cbia_ajax_ai_composer_save_api_key')) {
         $field = $map[$provider];
         if ($key !== '') {
             $settings[$field] = $key;
-        } elseif ($use_existing_key && empty($settings[$field])) {
+        } elseif ($use_existing_key && cbia_get_provider_api_key($provider) === '') {
             wp_send_json_error(array('message' => __('That provider has no saved API key.', 'cbiastudio-blogflow-ai')), 400);
-        }
-        if ($scope === 'text') {
-            $settings['text_provider'] = $provider;
-            if ($model !== '') {
-                $settings['text_model'] = $model;
-            }
-        } elseif ($scope === 'image') {
-            $settings['image_provider'] = $provider;
-            if ($model !== '') {
-                $settings['image_model'] = $model;
-            }
         }
         update_option('cbia_settings', $settings, false);
 
@@ -3792,11 +3787,6 @@ if (!function_exists('cbia_ajax_ai_composer_save_api_key')) {
             if (!isset($ps['providers'][$provider]) || !is_array($ps['providers'][$provider])) $ps['providers'][$provider] = array();
             if ($key !== '') {
                 $ps['providers'][$provider]['api_key'] = $key;
-            }
-            if ($scope === 'text' && $model !== '') {
-                $ps['providers'][$provider]['model'] = $model;
-            } elseif ($scope === 'image' && $model !== '') {
-                $ps['providers'][$provider]['image_model'] = $model;
             }
             cbia_providers_save_settings($ps);
         }
@@ -3834,7 +3824,7 @@ if (!function_exists('cbia_ajax_ai_composer_test_api_key')) {
         }
         $provider = isset($_POST['provider']) ? sanitize_key((string)wp_unslash($_POST['provider'])) : '';
         $scope = isset($_POST['scope']) ? sanitize_key((string)wp_unslash($_POST['scope'])) : 'text';
-        $key = isset($_POST['api_key']) ? sanitize_text_field((string)wp_unslash($_POST['api_key'])) : '';
+        $key = isset($_POST['api_key']) ? (string)wp_unslash($_POST['api_key']) : '';
         $use_existing_key = isset($_POST['use_existing_key']) ? absint(wp_unslash($_POST['use_existing_key'])) : 0;
         if (!in_array($provider, array('openai', 'google', 'deepseek'), true)) {
             wp_send_json_error(array('message' => __('Invalid provider.', 'cbiastudio-blogflow-ai')), 400);
@@ -3857,6 +3847,13 @@ if (!function_exists('cbia_ajax_ai_composer_test_api_key')) {
                     $key = (string)($settings[$field] ?? '');
                 }
             }
+        }
+        if ($key !== '') {
+            $key_result = cbia_sanitize_provider_api_key($provider, $key);
+            if (empty($key_result['valid'])) {
+                wp_send_json_error(array('message' => cbia_provider_api_key_error_message($provider, (string)$key_result['code'])), 400);
+            }
+            $key = (string)$key_result['value'];
         }
         if ($key === '') {
             wp_send_json_error(array('message' => __('API key cannot be empty.', 'cbiastudio-blogflow-ai')), 400);
@@ -3892,7 +3889,7 @@ if (!function_exists('cbia_ajax_ai_composer_test_api_key')) {
         }
         $resp = wp_remote_get($url, $args);
         if (is_wp_error($resp)) {
-            wp_send_json_error(array('message' => $resp->get_error_message()), 400);
+            wp_send_json_error(array('message' => cbia_sanitize_provider_error($provider, $resp->get_error_message())), 400);
         }
         $code = (int)wp_remote_retrieve_response_code($resp);
         $body = (string)wp_remote_retrieve_body($resp);
@@ -3906,7 +3903,7 @@ if (!function_exists('cbia_ajax_ai_composer_test_api_key')) {
                     $message .= ' | ' . sanitize_text_field((string)$data['message']);
                 }
             }
-            wp_send_json_error(array('message' => $message), 400);
+            wp_send_json_error(array('message' => 'HTTP ' . $code . ' | ' . cbia_sanitize_provider_error($provider, $message, $code)), 400);
         }
         $count = 0;
         if ($provider === 'openai' || $provider === 'deepseek') {

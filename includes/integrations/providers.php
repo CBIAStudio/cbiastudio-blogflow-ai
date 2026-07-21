@@ -56,11 +56,17 @@ if (!function_exists('cbia_providers_save_settings')) {
         if (!empty($settings['providers']) && is_array($settings['providers'])) {
             foreach ($settings['providers'] as $provider => $provider_settings) {
                 if (!is_array($provider_settings)) continue;
-                $new_key = trim((string)($provider_settings['api_key'] ?? ''));
-                $old_key = trim((string)($current['providers'][$provider]['api_key'] ?? ''));
-                $new_is_mask = function_exists('cbia_is_masked_api_key_value') && cbia_is_masked_api_key_value($new_key);
-                if (($new_key === '' || $new_is_mask) && $old_key !== '') {
+                $new_key = (string)($provider_settings['api_key'] ?? '');
+                $old_key = (string)($current['providers'][$provider]['api_key'] ?? '');
+                $result = function_exists('cbia_sanitize_provider_api_key')
+                    ? cbia_sanitize_provider_api_key((string)$provider, $new_key)
+                    : array('valid' => $new_key !== '', 'value' => $new_key);
+                if (!empty($result['valid'])) {
+                    $settings['providers'][$provider]['api_key'] = (string)$result['value'];
+                } elseif ($old_key !== '') {
                     $settings['providers'][$provider]['api_key'] = $old_key;
+                } else {
+                    unset($settings['providers'][$provider]['api_key']);
                 }
             }
         }
@@ -127,7 +133,7 @@ if (!function_exists('cbia_providers_save_model_list')) {
 
 if (!function_exists('cbia_providers_fetch_openai_models')) {
     function cbia_providers_fetch_openai_models(array $provider_cfg): array {
-        $api_key = (string)($provider_cfg['api_key'] ?? '');
+        $api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('openai') : (string)($provider_cfg['api_key'] ?? '');
         if ($api_key === '') return array();
 
         $base_url = rtrim((string)($provider_cfg['base_url'] ?? 'https://api.openai.com'), '/');
@@ -166,7 +172,7 @@ if (!function_exists('cbia_providers_fetch_openai_models')) {
 
 if (!function_exists('cbia_providers_fetch_google_models')) {
     function cbia_providers_fetch_google_models(array $provider_cfg): array {
-        $api_key = (string)($provider_cfg['api_key'] ?? '');
+        $api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('google') : (string)($provider_cfg['api_key'] ?? '');
         if ($api_key === '') return array();
 
         $base_url = rtrim((string)($provider_cfg['base_url'] ?? 'https://generativelanguage.googleapis.com'), '/');
@@ -210,7 +216,7 @@ if (!function_exists('cbia_providers_fetch_google_models')) {
 
 if (!function_exists('cbia_providers_fetch_deepseek_models')) {
     function cbia_providers_fetch_deepseek_models(array $provider_cfg): array {
-        $api_key = (string)($provider_cfg['api_key'] ?? '');
+        $api_key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('deepseek') : (string)($provider_cfg['api_key'] ?? '');
         if ($api_key === '') return array();
 
         $base_url = rtrim((string)($provider_cfg['base_url'] ?? 'https://api.deepseek.com'), '/');

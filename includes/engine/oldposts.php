@@ -1049,10 +1049,6 @@ if (!function_exists('cbia_oldposts_regenerate_featured_image')) {
             $desc = (string)$markers[0];
         }
 
-        if ($remove_old) {
-            delete_post_thumbnail($post_id);
-        }
-
         list($ok, $attach_id, $model, $err, $meta) = cbia_generate_image_openai($desc, 'intro', $title);
         $attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($meta) : array();
         if (!$ok && !empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
@@ -1062,6 +1058,7 @@ if (!function_exists('cbia_oldposts_regenerate_featured_image')) {
         if (!empty($attempts) && function_exists('cbia_costes_record_failed_attempts')) {
             cbia_costes_record_failed_attempts($post_id, $attempts, array('type' => 'image', 'prompt' => $desc, 'section' => 'intro'));
         }
+            if ($remove_old) delete_post_thumbnail($post_id);
             set_post_thumbnail($post_id, (int)$attach_id);
             wp_update_post(array(
                 'ID' => (int)$attach_id,
@@ -1093,6 +1090,8 @@ if (!function_exists('cbia_oldposts_regenerate_featured_image')) {
             return true;
         }
 
+        $error_provider = function_exists('cbia_get_image_provider') ? cbia_get_image_provider() : 'openai';
+        $err = function_exists('cbia_sanitize_provider_error') ? cbia_sanitize_provider_error((string)$error_provider, (string)($err ?: '')) : (string)($err ?: '');
         /* translators: 1: post ID, 2: provider error message. */
         cbia_oldposts_log_message(sprintf(__('[ERROR] Featured image failed on post %1$d: %2$s', 'cbiastudio-blogflow-ai'), $post_id, (string)($err ?: '')));
         if (function_exists('cbia_costes_record_usage') && empty($attempts)) {
@@ -1464,6 +1463,10 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
         }
 
         $processed=0; $ok=0; $sk=0; $fail=0;
+        $image_actions_requested = !empty($opts['do_images_reset']) || !empty($opts['do_images_content_only']) || !empty($opts['do_featured_only']);
+        $image_preflight = $image_actions_requested && function_exists('cbia_image_provider_preflight')
+            ? cbia_image_provider_preflight()
+            : array('ok' => true, 'provider' => '', 'model' => '', 'code' => '', 'message' => '');
 
         while ($q->have_posts()) {
             $q->the_post();
@@ -1489,6 +1492,15 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
             $failed_actions = array();
             $yoast_scores_done = false;
             $content_refreshed_with_images = false;
+
+            if ($image_actions_requested && empty($image_preflight['ok'])) {
+                $safe_error = (string)($image_preflight['message'] ?? __('Image generation was blocked by local credential validation.', 'cbiastudio-blogflow-ai'));
+                cbia_oldposts_log_message(sprintf(__('[BLOCKED] Image actions on post %1$d: %2$s', 'cbiastudio-blogflow-ai'), $pid, $safe_error));
+                $did_fail = true;
+                $did_skip_all = false;
+                $failed_actions[] = 'image credential preflight';
+                if (function_exists('cbia_costes_record_usage')) cbia_costes_record_usage($pid, array('type' => 'image', 'provider' => (string)$image_preflight['provider'], 'model' => (string)$image_preflight['model'], 'ok' => 0, 'status' => 'blocked_local', 'result_status' => 'blocked_local', 'error_type' => 'invalid_api_key', 'error' => $safe_error, 'request_sent' => 0, 'billable' => 0, 'cost_micro_usd' => 0, 'cost_status' => 'exact', 'cost_source' => 'local_preflight'));
+            }
 
             // 1) TÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­TULO (IA)
             if (!empty($opts['do_title'])) {
@@ -1546,7 +1558,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
             }
 
             // 4) IMÃƒÆ’Ã†â€™Ãƒâ€šÃ‚Â­GENES reset
-            if (!empty($opts['do_images_reset'])) {
+            if (!empty($opts['do_images_reset']) && !empty($image_preflight['ok'])) {
                 $r = cbia_oldposts_images_reset_pending($pid, $images_limit, !empty($opts['force_images_reset']), !empty($opts['clear_featured']));
                 if ($r === true) {
                     $did_any = true; $did_skip_all=false;
@@ -1561,7 +1573,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
             }
 
             // 4.1) IMÃƒÆ’Ã†â€™Ãƒâ€šÃ‚ÂGENES: solo contenido (sin tocar destacada)
-            if (!empty($opts['do_images_content_only'])) {
+            if (!empty($opts['do_images_content_only']) && !empty($image_preflight['ok'])) {
                 if ($content_refreshed_with_images) {
                     /* translators: %d is the post ID. */
                     cbia_oldposts_log_message(sprintf(__("[INFO] Internal images will use the freshly regenerated content for post %d.", 'cbiastudio-blogflow-ai'), $pid));
@@ -1575,6 +1587,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                     $post = get_post($pid);
                     $content = $post ? (string)$post->post_content : $content;
                 } else {
+                    $content_before_image_reset = (string)$content;
                     $r = cbia_oldposts_images_reset_content_only($pid, $images_limit, !empty($opts['force_images_content_only']));
                     if ($r === true) {
                         $did_any = true; $did_skip_all=false;
@@ -1585,6 +1598,10 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
                             $did_any = true; $did_skip_all=false;
                             $post = get_post($pid);
                             $content = $post ? (string)$post->post_content : $content;
+                        } else {
+                            wp_update_post(array('ID' => (int)$pid, 'post_content' => $content_before_image_reset));
+                            $did_fail = true;
+                            $failed_actions[] = 'internal images';
                         }
                     } elseif ($r === 'skipped') {
                         // no
@@ -1596,7 +1613,7 @@ if (!function_exists('cbia_oldposts_run_batch_v3')) {
             }
 
             // 4.2) IMAGEN DESTACADA: solo destacada
-            if (!empty($opts['do_featured_only'])) {
+            if (!empty($opts['do_featured_only']) && !empty($image_preflight['ok'])) {
                 $force_featured = !empty($opts['force_featured_only']) || $content_refreshed_with_images;
                 if ($content_refreshed_with_images && empty($opts['force_featured_only'])) {
                     /* translators: %d is the post ID. */

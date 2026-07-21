@@ -157,7 +157,7 @@ if (!function_exists('cbia_google_generate_image_gemini')) {
 		$body = (string) wp_remote_retrieve_body($resp);
 		$data = json_decode($body, true);
 		if ($code < 200 || $code >= 300) {
-			$msg = is_array($data) && !empty($data['error']['message']) ? (string)$data['error']['message'] : 'HTTP error';
+			$msg = cbia_sanitize_provider_error('google', is_array($data) && !empty($data['error']['message']) ? (string)$data['error']['message'] : 'HTTP error', $code);
 			cbia_log(sprintf(('Google Gemini Image error HTTP %s | %s'), $code, $msg), 'ERROR');
 			return [false, 0, (string)$model, $msg];
 		}
@@ -242,7 +242,7 @@ if (!function_exists('cbia_google_generate_image_imagen')) {
 		$body = (string) wp_remote_retrieve_body($resp);
 		$data = json_decode($body, true);
 		if ($code < 200 || $code >= 300) {
-			$msg = is_array($data) && !empty($data['error']['message']) ? (string)$data['error']['message'] : 'HTTP error';
+			$msg = cbia_sanitize_provider_error('google', is_array($data) && !empty($data['error']['message']) ? (string)$data['error']['message'] : 'HTTP error', $code);
 			cbia_log(sprintf(('Google Imagen error HTTP %s | %s'), $code, $msg), 'ERROR');
 			return [false, 0, (string)$model, $msg];
 		}
@@ -512,7 +512,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 				if ($code < 200 || $code >= 300) {
 					$msg = '';
 					if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
-					if (function_exists('cbia_mask_sensitive_log_text')) $msg = cbia_mask_sensitive_log_text((string)$msg);
+					$msg = cbia_sanitize_provider_error('openai', $msg, $code);
 					$err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 					cbia_log(("OpenAI error: {$err}"), 'ERROR');
 					$usage_error = cbia_usage_from_responses_payload($data);
@@ -861,7 +861,7 @@ if (!function_exists('cbia_generate_image_openai')) {
 				$elapsed_ms = (int)round((microtime(true) - $request_started) * 1000);
 
 				if (is_wp_error($resp)) {
-					$http_err = (string)$resp->get_error_message();
+					$http_err = cbia_sanitize_provider_error('openai', $resp->get_error_message());
 					if (strpos($http_err, 'cURL error 28') !== false) {
 						$http_err .= sprintf(' (timeout=%ss, download_timeout=%ss)', (string)cbia_image_api_timeout_seconds(), (string)cbia_image_download_timeout_seconds());
 					}
@@ -879,10 +879,12 @@ if (!function_exists('cbia_generate_image_openai')) {
 				if ($code < 200 || $code >= 300) {
 					$msg = '';
 					if (is_array($data) && !empty($data['error']['message'])) $msg = (string)$data['error']['message'];
+					$msg = cbia_sanitize_provider_error('openai', $msg, $code);
 					$http_err = "HTTP {$code}" . ($msg ? " | {$msg}" : '');
 					/* translators: %d is the HTTP status code returned by the image API. */
 					cbia_log((sprintf(__('AI image HTTP %d error', 'cbiastudio-blogflow-ai'), (int)$code)) . ($msg ? " | {$msg}" : '') . ($request_id ? " | request_id={$request_id}" : ''), 'ERROR');
-					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => $http_err));
+					$failure_cost = in_array($code, array(401, 403), true) ? array('request_sent' => 1, 'billable' => 0, 'cost_micro_usd' => 0, 'cost_status' => 'exact', 'cost_source' => 'provider_rejected_before_generation', 'result_status' => 'authentication_error', 'error_type' => 'authentication', 'status' => 'authentication_error') : array();
+					$attempts[] = array_merge($request_fields, $image_usage, $failure_cost, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => $http_err));
 					if (in_array($code, array(401, 403, 404), true)) {
 						return [false, 0, $model, $http_err, cbia_attach_attempts_meta(array(), $attempts)];
 					}
@@ -890,7 +892,7 @@ if (!function_exists('cbia_generate_image_openai')) {
 				}
 
 				if (is_array($data) && !empty($data['error']['message'])) {
-					$payload_err = (string)$data['error']['message'];
+					$payload_err = cbia_sanitize_provider_error('openai', (string)$data['error']['message'], $code);
 					cbia_log((__('AI image payload error: ', 'cbiastudio-blogflow-ai')) . $payload_err, 'ERROR');
 					$attempts[] = array_merge($request_fields, $image_usage, array('type' => 'image', 'provider' => 'openai', 'section' => (string)$section, 'image_type' => $image_type, 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'model' => (string)$model, 'http_code' => $code, 'request_id' => $request_id, 'attempt' => (int)$t, 'elapsed_ms' => $elapsed_ms, 'ok' => 0, 'error' => $payload_err));
 					if (stripos($payload_err, 'incorrect api key') !== false || stripos($payload_err, 'unauthorized') !== false || stripos($payload_err, 'forbidden') !== false) {
@@ -1339,9 +1341,16 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 
 			if ($code < 200 || $code >= 300) {
 				$message = is_array($data) && !empty($data['error']['message']) ? (string)$data['error']['message'] : '';
-				$message = function_exists('cbia_mask_sensitive_log_text') ? cbia_mask_sensitive_log_text($message) : sanitize_text_field($message);
+				if (function_exists('cbia_sanitize_provider_error')) {
+					$message = cbia_sanitize_provider_error('deepseek', $message, $code);
+				} elseif (in_array($code, array(401, 403), true)) {
+					$message = 'DeepSeek authentication failed. Verify the API key in settings.';
+				} elseif (function_exists('cbia_mask_sensitive_log_text')) {
+					$message = cbia_mask_sensitive_log_text($message);
+				}
 				$last_error = 'HTTP ' . $code . ($message !== '' ? ' | ' . $message : '');
-				$attempts[] = array_merge($usage, array('type' => 'text', 'provider' => 'deepseek', 'model' => $model, 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'attempt' => $t, 'ok' => 0, 'status' => 'error', 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'error' => $last_error));
+				$auth_meta = in_array($code, array(401, 403), true) ? array('request_sent'=>1,'billable'=>0,'cost_micro_usd'=>0,'cost_status'=>'exact','cost_source'=>'provider_rejected_before_generation','result_status'=>'authentication_error','error_type'=>'authentication','status'=>'authentication_error') : array();
+				$attempts[] = array_merge($usage, $auth_meta, array('type' => 'text', 'provider' => 'deepseek', 'model' => $model, 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'attempt' => $t, 'ok' => 0, 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'error' => $last_error));
 				cbia_log('DeepSeek error: ' . $last_error, 'ERROR');
 				if (!cbia_deepseek_is_retryable_http_code($code) || $t >= $tries) break;
 				if (!cbia_deepseek_wait_before_retry($resp, $t)) break;

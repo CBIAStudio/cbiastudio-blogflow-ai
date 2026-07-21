@@ -54,44 +54,52 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 		$providers_list = isset($providers_all['providers']) && is_array($providers_all['providers']) ? $providers_all['providers'] : [];
 		$provider_settings_existing = function_exists('cbia_providers_get_settings') ? cbia_providers_get_settings() : [];
 		if (!is_array($provider_settings_existing)) $provider_settings_existing = [];
-		$provider_existing_key = function (string $provider) use ($provider_settings_existing): string {
-			$value = trim((string)($provider_settings_existing['providers'][$provider]['api_key'] ?? ''));
-			return function_exists('cbia_is_masked_api_key_value') && cbia_is_masked_api_key_value($value) ? '' : $value;
+		$api_key_validation_warnings = array();
+		foreach (array_keys($providers_list) as $candidate_provider) {
+			foreach (array($provider_api_key_text_post, $provider_api_key_image_post, $provider_api_key_post) as $candidate_source) {
+				if (!array_key_exists($candidate_provider, $candidate_source) || (string)$candidate_source[$candidate_provider] === '') continue;
+				$result = cbia_sanitize_provider_api_key($candidate_provider, (string)$candidate_source[$candidate_provider]);
+				if (empty($result['valid'])) {
+					$api_key_validation_warnings[] = cbia_provider_api_key_error_message($candidate_provider, (string)$result['code']);
+					break;
+				}
+			}
+		}
+		$provider_existing_key = function (string $provider): string {
+			return function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key($provider) : '';
 		};
 
 		// CAMBIO: API keys por proveedor (con fallback legacy)
 		$first_non_empty = function (...$vals) {
 			foreach ($vals as $val) {
 				if (!is_string($val)) continue;
-				$val = function_exists('cbia_normalize_submitted_api_key')
-					? cbia_normalize_submitted_api_key($val)
-					: trim(sanitize_text_field($val));
+				$val = function_exists('cbia_normalize_submitted_api_key') ? cbia_normalize_submitted_api_key($val) : trim($val);
 				if ($val !== '') return $val;
 			}
 			return '';
 		};
 		$api_key = $first_non_empty(
-			sanitize_text_field((string)($provider_api_key_text_post['openai'] ?? '')),
-			sanitize_text_field((string)($provider_api_key_image_post['openai'] ?? '')),
-			sanitize_text_field((string)($provider_api_key_post['openai'] ?? '')),
-			isset($_POST['openai_api_key']) ? sanitize_text_field(wp_unslash($_POST['openai_api_key'])) : '',
-			sanitize_text_field((string)($settings['openai_api_key'] ?? '')),
+			(string)($provider_api_key_text_post['openai'] ?? ''),
+			(string)($provider_api_key_image_post['openai'] ?? ''),
+			(string)($provider_api_key_post['openai'] ?? ''),
+			isset($_POST['openai_api_key']) ? (string)wp_unslash($_POST['openai_api_key']) : '',
+			(string)($settings['openai_api_key'] ?? ''),
 			sanitize_text_field($provider_existing_key('openai'))
 		);
 		$google_api_key = $first_non_empty(
-			sanitize_text_field((string)($provider_api_key_text_post['google'] ?? '')),
-			sanitize_text_field((string)($provider_api_key_image_post['google'] ?? '')),
-			sanitize_text_field((string)($provider_api_key_post['google'] ?? '')),
-			isset($_POST['google_api_key']) ? sanitize_text_field(wp_unslash($_POST['google_api_key'])) : '',
-			sanitize_text_field((string)($settings['google_api_key'] ?? '')),
+			(string)($provider_api_key_text_post['google'] ?? ''),
+			(string)($provider_api_key_image_post['google'] ?? ''),
+			(string)($provider_api_key_post['google'] ?? ''),
+			isset($_POST['google_api_key']) ? (string)wp_unslash($_POST['google_api_key']) : '',
+			(string)($settings['google_api_key'] ?? ''),
 			sanitize_text_field($provider_existing_key('google'))
 		);
 		$deepseek_api_key = $first_non_empty(
-			sanitize_text_field((string)($provider_api_key_text_post['deepseek'] ?? '')),
-			sanitize_text_field((string)($provider_api_key_image_post['deepseek'] ?? '')),
-			sanitize_text_field((string)($provider_api_key_post['deepseek'] ?? '')),
-			isset($_POST['deepseek_api_key']) ? sanitize_text_field(wp_unslash($_POST['deepseek_api_key'])) : '',
-			sanitize_text_field((string)($settings['deepseek_api_key'] ?? '')),
+			(string)($provider_api_key_text_post['deepseek'] ?? ''),
+			(string)($provider_api_key_image_post['deepseek'] ?? ''),
+			(string)($provider_api_key_post['deepseek'] ?? ''),
+			isset($_POST['deepseek_api_key']) ? (string)wp_unslash($_POST['deepseek_api_key']) : '',
+			(string)($settings['deepseek_api_key'] ?? ''),
 			sanitize_text_field($provider_existing_key('deepseek'))
 		);
 		$openai_consent = 1;
@@ -118,9 +126,9 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 			$posted_keys = [];
 			foreach (array_keys($providers_list) as $pkey) {
 				$posted_key = $first_non_empty(
-					sanitize_text_field((string)($provider_api_key_text_post[$pkey] ?? '')),
-					sanitize_text_field((string)($provider_api_key_image_post[$pkey] ?? '')),
-					sanitize_text_field((string)($provider_api_key_post[$pkey] ?? ''))
+					(string)($provider_api_key_text_post[$pkey] ?? ''),
+					(string)($provider_api_key_image_post[$pkey] ?? ''),
+					(string)($provider_api_key_post[$pkey] ?? '')
 				);
 				if ($posted_key !== '') $posted_keys[$pkey] = $posted_key;
 			}
@@ -137,7 +145,7 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 					if ($posted_key !== '') {
 						$providers_new[$pkey]['api_key'] = $posted_key;
 					} elseif (!empty($providers_new[$pkey]['api_key'])) {
-						$providers_new[$pkey]['api_key'] = sanitize_text_field((string)$providers_new[$pkey]['api_key']);
+						$providers_new[$pkey]['api_key'] = (string)$providers_new[$pkey]['api_key'];
 					}
 				}
 				cbia_providers_save_settings([
@@ -145,7 +153,8 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 				]);
 			}
 
-			delete_transient('cbia_config_warnings');
+			if (!empty($api_key_validation_warnings)) set_transient('cbia_config_warnings', array_values(array_unique($api_key_validation_warnings)), 60);
+			else delete_transient('cbia_config_warnings');
 			$redirect_url = admin_url('admin.php?page=cbia&tab=config&keys_saved=1');
 			if (!headers_sent()) {
 				wp_safe_redirect($redirect_url);
@@ -227,10 +236,10 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 			$providers_new = is_array($provider_settings['providers'] ?? null) ? $provider_settings['providers'] : [];
 			foreach ($providers_list as $pkey => $pdef) {
 				$api = $first_non_empty(
-					sanitize_text_field((string)($provider_api_key_text_post[$pkey] ?? '')),
-					sanitize_text_field((string)($provider_api_key_image_post[$pkey] ?? '')),
-					sanitize_text_field((string)($provider_api_key_post[$pkey] ?? '')),
-					sanitize_text_field((string)($providers_new[$pkey]['api_key'] ?? ''))
+					(string)($provider_api_key_text_post[$pkey] ?? ''),
+					(string)($provider_api_key_image_post[$pkey] ?? ''),
+					(string)($provider_api_key_post[$pkey] ?? ''),
+					(string)($providers_new[$pkey]['api_key'] ?? '')
 				);
 				$mdl = isset($text_models_post[$pkey]) ? sanitize_text_field((string)$text_models_post[$pkey]) : (string)($providers_new[$pkey]['model'] ?? ($pdef['models'][0] ?? ''));
 				if ($pkey === 'deepseek' && function_exists('cbia_deepseek_normalize_runtime_config')) {
@@ -460,7 +469,7 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 		];
 
 		// CAMBIO: avisos por API key faltante (sin bloquear guardado)
-		$warnings = [];
+		$warnings = $api_key_validation_warnings;
 		$key_map = [
 			'openai'  => $api_key,
 			'google'  => $google_api_key,
