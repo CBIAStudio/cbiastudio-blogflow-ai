@@ -244,9 +244,11 @@ if (!function_exists('cbia_get_provider_api_key')) {
         if ($main_key !== '' && !cbia_is_masked_api_key_value($main_key)) return $main_key;
         if ($provider_key !== '' && !cbia_is_masked_api_key_value($provider_key)) return $provider_key;
 
-        // Fallback legacy: api_key unico
-        $legacy = cbia_get_legacy_api_key();
-        if ($legacy !== '' && !cbia_is_masked_api_key_value($legacy)) return $legacy;
+        // The legacy generic key belonged to OpenAI. Never reuse it across providers.
+        if ($provider === 'openai') {
+            $legacy = cbia_get_legacy_api_key();
+            if ($legacy !== '' && !cbia_is_masked_api_key_value($legacy)) return $legacy;
+        }
 
         return '';
     }
@@ -465,59 +467,94 @@ if (!function_exists('cbia_run_test_configuration')) {
      * Returns an array with ok/error details for future UI use.
      */
     function cbia_run_test_configuration(): array {
-        $log = function ($msg, $level = 'INFO') {
-            if (function_exists('cbia_log_message')) {
-                cbia_log_message((string)$msg);
-            } elseif (function_exists('cbia_log')) {
-                cbia_log((string)$msg, (string)$level);
-            }
+        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
+        $provider = function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : sanitize_key((string)($settings['text_provider'] ?? 'openai'));
+        $model = function_exists('cbia_get_text_model_for_provider') ? cbia_get_text_model_for_provider($provider, '') : sanitize_text_field((string)($settings['text_model'] ?? ''));
+        $image_provider = function_exists('cbia_get_image_provider') ? cbia_get_image_provider() : sanitize_key((string)($settings['image_provider'] ?? 'openai'));
+        $image_model = function_exists('cbia_get_image_model_for_provider') ? cbia_get_image_model_for_provider($image_provider, '') : sanitize_text_field((string)($settings['image_model'] ?? ''));
+        $key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($provider);
+        $image_key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($image_provider);
+        $stop_before = cbia_is_stop_requested();
+        $endpoints = array('openai' => 'api.openai.com', 'deepseek' => 'api.deepseek.com', 'google' => 'generativelanguage.googleapis.com');
+        $endpoint = (string)($endpoints[$provider] ?? 'unknown');
+        $thinking = sanitize_key((string)($settings['deepseek_thinking_mode'] ?? 'disabled'));
+        if (!in_array($thinking, array('disabled', 'enabled'), true)) $thinking = 'disabled';
+
+        $log = static function (string $message, string $level = 'INFO'): void {
+            if (function_exists('cbia_log')) cbia_log($message, $level);
+            elseif (function_exists('cbia_log_message')) cbia_log_message('[' . $level . '] ' . $message);
         };
 
-        $log('[INFO] TEST: Starting configuration test.');
+        $log('TEST text: provider=' . $provider . ' model=' . $model . ' endpoint=' . $endpoint . ' api_key_configured=' . ($key_configured ? 'yes' : 'no') . ' fallback_allowed=no attempt=1/1 thinking=' . ($provider === 'deepseek' ? $thinking : 'n/a') . ' timeout=30');
+        $log('TEST images: provider=' . $image_provider . ' model=' . $image_model . ' api_key_configured=' . ($image_key_configured ? 'yes' : 'no') . ' result=local_configuration_only paid_generation=no');
 
-        $api_key = function_exists('cbia_openai_api_key') ? cbia_openai_api_key() : '';
-        if (trim((string)$api_key) === '') {
-            $log('[ERROR] TEST: Missing OpenAI API key.');
-            return ['ok' => false, 'error' => 'missing_api_key'];
+        $allowed_providers = array('openai', 'deepseek', 'google');
+        $allowed_models = function_exists('cbia_providers_get_text_model_list') ? (array)cbia_providers_get_text_model_list($provider) : array();
+        $error_type = '';
+        if (!in_array($provider, $allowed_providers, true)) $error_type = 'unsupported_provider';
+        elseif ($model === '') $error_type = 'missing_model';
+        elseif (!empty($allowed_models) && !in_array($model, $allowed_models, true)) $error_type = 'invalid_model';
+        elseif (!$key_configured) $error_type = 'missing_api_key';
+        elseif (!function_exists('cbia_openai_responses_call')) $error_type = 'client_unavailable';
+
+        if ($error_type !== '') {
+            $message = $error_type === 'missing_api_key'
+                ? sprintf(__('Missing %s API key.', 'cbiastudio-blogflow-ai'), ucfirst($provider))
+                : __('The selected text configuration is not valid.', 'cbiastudio-blogflow-ai');
+            $saved = function_exists('cbia_costes_record_usage') ? (bool)cbia_costes_record_usage(0, array(
+                'type' => 'text', 'provider' => $provider, 'model' => $model, 'model_requested' => $model, 'model_effective' => $model,
+                'phase' => 'configuration_test', 'context' => 'configuration_test', 'ok' => 0, 'status' => 'blocked_local', 'result_status' => 'blocked_local',
+                'error' => $message, 'error_type' => $error_type, 'request_sent' => 0, 'billable' => 0, 'cost_micro_usd' => 0,
+                'cost_status' => 'exact', 'cost_source' => 'local_preflight', 'attempt_id' => 'configuration-test-' . substr(hash('sha256', microtime(true) . '|' . wp_generate_uuid4()), 0, 24),
+            )) : false;
+            $stop_after = cbia_is_stop_requested();
+            $log('TEST text blocked: provider=' . $provider . ' model=' . $model . ' request_sent=no billable=no error_type=' . $error_type . ' usage_event_saved=' . ($saved ? 'yes' : 'no') . ' stop_flag_changed=' . ($stop_before !== $stop_after ? 'yes' : 'no'), 'ERROR');
+            return array('ok' => false, 'error' => $error_type, 'message' => $message, 'text' => array('provider' => $provider, 'model' => $model), 'image' => array('provider' => $image_provider, 'model' => $image_model, 'key_configured' => $image_key_configured), 'stop_flag_changed' => $stop_before !== $stop_after);
         }
 
-        if (function_exists('cbia_openai_consent_ok') && !cbia_openai_consent_ok()) {
-            $log('[ERROR] TEST: OpenAI consent not accepted.');
-            return ['ok' => false, 'error' => 'missing_consent'];
+        $context = array(
+            'phase' => 'configuration_test', 'context' => 'configuration_test', 'provider' => $provider, 'model' => $model,
+            'allow_fallback' => false, 'ignore_stop' => true, 'defer_usage_recording' => true, 'post_id' => 0,
+            'temporary_context_id' => 'configuration-test-' . substr(hash('sha256', microtime(true) . '|' . wp_generate_uuid4()), 0, 24),
+        );
+        $res = cbia_openai_responses_call(__('Reply only with OK.', 'cbiastudio-blogflow-ai'), 'configuration_test', 1, 16, $context);
+        $ok = is_array($res) && !empty($res[0]);
+        $usage = is_array($res) ? (array)($res[2] ?? array()) : array();
+        $model_effective = is_array($res) ? sanitize_text_field((string)($res[3] ?? $model)) : $model;
+        $error = is_array($res) ? sanitize_text_field((string)($res[4] ?? '')) : 'unknown_error';
+        $raw = is_array($res) && is_array($res[5] ?? null) ? $res[5] : array();
+        $meta = is_array($raw['_cbia_request_meta'] ?? null) ? $raw['_cbia_request_meta'] : array();
+        if (empty($meta) && !empty($raw['_cbia_attempts']) && is_array($raw['_cbia_attempts'])) {
+            $attempt_rows = $raw['_cbia_attempts'];
+            $meta = (array)end($attempt_rows);
         }
-
-        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
-        $model = '';
-        if (function_exists('cbia_pick_model')) {
-            $model = (string)cbia_pick_model();
-        }
-        if ($model === '' && isset($settings['openai_model'])) {
-            $model = (string)$settings['openai_model'];
-        }
-
-        if ($model !== '') {
-            $log("[INFO] TEST: Current text model: {$model}");
-        }
-
-        if (!function_exists('cbia_openai_responses_call')) {
-            $log('[WARN] TEST: cbia_openai_responses_call not available. Test limited to settings validation.');
-            return ['ok' => true, 'error' => 'limited_check'];
-        }
-
-        $prompt = 'Devuelve SOLO la palabra OK.';
-        $res = cbia_openai_responses_call($prompt, 'test_config', 1);
-        $ok = is_array($res) ? (bool)($res[0] ?? false) : false;
-        $usage = is_array($res) ? (array)($res[2] ?? []) : [];
-        $model_used = is_array($res) ? (string)($res[3] ?? '') : '';
-        $err = is_array($res) ? (string)($res[4] ?? '') : 'unknown_error';
+        $http_code = max(0, (int)($meta['http_code'] ?? 0));
+        $elapsed_ms = max(0, (int)($meta['elapsed_ms'] ?? 0));
+        $request_sent = $http_code > 0 || $elapsed_ms > 0 || !empty($meta['request_id']);
+        $is_timeout = !empty($meta['timeout']) || stripos($error, 'timeout') !== false || stripos($error, 'timed out') !== false;
+        $result_status = $ok ? 'success' : ($is_timeout ? 'timeout_unknown' : 'error');
+        $error_type = $ok ? '' : ($http_code === 401 || $http_code === 403 ? 'authentication' : ($http_code === 402 ? 'billing' : ($is_timeout ? 'timeout' : ($http_code === 429 ? 'rate_limit' : 'provider_error'))));
+        $usage_saved = function_exists('cbia_costes_record_usage') ? (bool)cbia_costes_record_usage(0, array_merge($usage, $meta, array(
+            'type' => 'text', 'provider' => $provider, 'model' => $model_effective, 'model_requested' => $model, 'model_effective' => $model_effective,
+            'phase' => 'configuration_test', 'context' => 'configuration_test', 'ok' => $ok ? 1 : 0, 'status' => $result_status, 'result_status' => $result_status,
+            'error' => $ok ? '' : $error, 'error_type' => $error_type, 'request_sent' => $request_sent ? 1 : 0, 'billable' => $request_sent ? 1 : 0,
+            'cost_status' => $is_timeout ? 'unknown' : 'estimated', 'cost_source' => $is_timeout ? 'provider_response_unknown' : 'plugin_catalog',
+            'attempt_id' => $context['temporary_context_id'] . '-a1', 'elapsed_ms' => $elapsed_ms, 'http_code' => $http_code,
+        ))) : false;
+        $stop_after = cbia_is_stop_requested();
+        $changed = $stop_before !== $stop_after;
 
         if ($ok) {
-            $log("[INFO] TEST: OK. modelo={$model_used} tokens_in=" . (int)($usage['input_tokens'] ?? 0) . " tokens_out=" . (int)($usage['output_tokens'] ?? 0));
-            return ['ok' => true, 'model' => $model_used, 'usage' => $usage];
+            $message = sprintf(__('%1$s configured correctly. Model tested: %2$s.', 'cbiastudio-blogflow-ai'), ucfirst($provider), $model_effective);
+            $log('TEST text OK: provider=' . $provider . ' model_requested=' . $model . ' model_effective=' . $model_effective . ' HTTP=' . $http_code . ' request_id=' . sanitize_text_field((string)($meta['request_id'] ?? '')) . ' tokens_input=' . (int)($usage['input_tokens'] ?? 0) . ' tokens_output=' . (int)($usage['output_tokens'] ?? 0) . ' elapsed_ms=' . $elapsed_ms . ' usage_event_saved=' . ($usage_saved ? 'yes' : 'no') . ' stop_flag_changed=' . ($changed ? 'yes' : 'no'));
+        } else {
+            $message = $error_type === 'authentication'
+                ? sprintf(__('%s rejected the API key.', 'cbiastudio-blogflow-ai'), ucfirst($provider))
+                : sprintf(__('Could not validate %s.', 'cbiastudio-blogflow-ai'), ucfirst($provider));
+            $log('TEST text failed: provider=' . $provider . ' model=' . $model . ' HTTP=' . $http_code . ' error_type=' . $error_type . ' message=' . $error . ' usage_event_saved=' . ($usage_saved ? 'yes' : 'no') . ' stop_flag_changed=' . ($changed ? 'yes' : 'no'), 'ERROR');
         }
 
-        $log("[ERROR] TEST: test call failed. " . ($err !== '' ? $err : 'error'));
-        return ['ok' => false, 'error' => $err ?: 'test_call_failed'];
+        return array('ok' => $ok, 'error' => $ok ? '' : $error_type, 'message' => $message, 'http_code' => $http_code, 'usage_saved' => $usage_saved, 'text' => array('provider' => $provider, 'model' => $model_effective, 'usage' => $usage), 'image' => array('provider' => $image_provider, 'model' => $image_model, 'key_configured' => $image_key_configured, 'paid_generation' => false), 'stop_flag_changed' => $changed);
     }
 }
 

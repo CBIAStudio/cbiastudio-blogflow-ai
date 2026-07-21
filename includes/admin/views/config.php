@@ -95,7 +95,6 @@ $yoast_log = $yoast_service && method_exists($yoast_service, 'get_log')
     : (function_exists('cbia_yoast_log_get') ? (string)cbia_yoast_log_get() : '');
 
 $api_key = (string)($s['openai_api_key'] ?? '');
-$api_masked = $api_key !== '' ? (substr($api_key, 0, 4) . 'â€¦' . substr($api_key, -4)) : '';
 $diag_info = array(
     'Plugin version' => defined('CBIA_VERSION') ? CBIA_VERSION : 'n/a',
     'WordPress' => get_bloginfo('version'),
@@ -106,7 +105,9 @@ $diag_info = array(
     'WP_DEBUG_LOG' => (defined('WP_DEBUG_LOG') && WP_DEBUG_LOG) ? 'true' : 'false',
     'DISABLE_WP_CRON' => (defined('DISABLE_WP_CRON') && DISABLE_WP_CRON) ? 'true' : 'false',
     'Timezone' => (string)wp_timezone_string(),
-    'OpenAI API key' => $api_key !== '' ? ('Yes (' . $api_masked . ')') : 'No',
+    'OpenAI API key' => function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key('openai') ? 'Yes' : 'No',
+    'DeepSeek API key' => function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key('deepseek') ? 'Yes' : 'No',
+    'Google API key' => function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key('google') ? 'Yes' : 'No',
     'Plugin dir writable' => wp_is_writable(CBIA_PLUGIN_DIR) ? 'Yes' : 'No',
     'WP content writable' => defined('WP_CONTENT_DIR') && wp_is_writable(WP_CONTENT_DIR) ? 'Yes' : 'No',
 );

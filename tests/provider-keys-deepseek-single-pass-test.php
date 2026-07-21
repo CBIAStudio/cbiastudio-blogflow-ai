@@ -59,6 +59,15 @@ $GLOBALS['test_options']['cbia_provider_settings'] = array(
 assert_case(cbia_get_provider_api_key('openai') === 'openai-project-key', 'OpenAI key resolves independently');
 assert_case(cbia_get_provider_api_key('deepseek') === 'deepseek-provider-key', 'DeepSeek key resolves independently');
 assert_case(cbia_has_provider_api_key('openai') && cbia_has_provider_api_key('deepseek'), 'DeepSeek text and OpenAI images coexist');
+$saved_deepseek_key = $GLOBALS['test_options']['cbia_settings']['deepseek_api_key'];
+$saved_nested_deepseek_key = $GLOBALS['test_options']['cbia_provider_settings']['providers']['deepseek']['api_key'];
+$GLOBALS['test_options']['cbia_settings']['deepseek_api_key'] = '';
+$GLOBALS['test_options']['cbia_provider_settings']['providers']['deepseek']['api_key'] = '';
+$GLOBALS['test_options']['cbia_settings']['api_key'] = 'legacy-openai-only';
+assert_case(cbia_get_provider_api_key('deepseek') === '', 'legacy generic key never crosses into DeepSeek');
+$GLOBALS['test_options']['cbia_settings']['deepseek_api_key'] = $saved_deepseek_key;
+$GLOBALS['test_options']['cbia_provider_settings']['providers']['deepseek']['api_key'] = $saved_nested_deepseek_key;
+unset($GLOBALS['test_options']['cbia_settings']['api_key']);
 assert_case(cbia_is_masked_api_key_value('************'), 'asterisk mask detected');
 assert_case(cbia_is_masked_api_key_value('••••••••'), 'bullet mask detected');
 assert_case(cbia_normalize_submitted_api_key('********') === '', 'mask is never accepted as a key');

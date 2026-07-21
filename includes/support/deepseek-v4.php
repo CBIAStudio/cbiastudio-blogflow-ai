@@ -58,11 +58,11 @@ if ( ! function_exists( 'cbia_deepseek_get_runtime_config' ) ) {
 }
 
 if ( ! function_exists( 'cbia_deepseek_build_payload' ) ) {
-	function cbia_deepseek_build_payload( array $config, array $messages, $max_tokens, $temperature = 0.5 ) {
+	function cbia_deepseek_build_payload( array $config, array $messages, $max_tokens, $temperature = 0.5, $minimum_tokens = 256 ) {
 		$payload = array(
 			'model'      => (string) $config['model_effective'],
 			'messages'   => $messages,
-			'max_tokens' => max( 256, (int) $max_tokens ),
+			'max_tokens' => max( max( 16, (int) $minimum_tokens ), (int) $max_tokens ),
 			'stream'     => false,
 			'thinking'   => array( 'type' => (string) $config['thinking'] ),
 		);

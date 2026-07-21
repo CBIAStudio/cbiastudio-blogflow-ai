@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: CBIAStudio BlogFlow with AI 2.1.5\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-07-21 10:17+0200\n"
+"POT-Creation-Date: 2026-07-21 11:22+0200\n"
 "PO-Revision-Date: 2026-07-14 15:15+0200\n"
 "Last-Translator: CBIAStudio\n"
 "Language-Team: Spanish\n"
@@ -37,7 +37,7 @@ msgstr "Titulo"
 msgid "Configuration"
 msgstr "Configuracion"
 
-#: includes/admin/admin-router.php:188 includes/admin/views/blog.php:631
+#: includes/admin/admin-router.php:188 includes/admin/views/blog.php:638
 msgid "Queue and status"
 msgstr ""
 
@@ -180,484 +180,493 @@ msgstr "Ajustes de coste"
 msgid "Blog settings saved with warnings."
 msgstr ""
 
-#: includes/admin/views/blog.php:189
-msgid "Test executed. Check the log."
-msgstr ""
+#: includes/admin/views/blog.php:191
+msgid "Configuration test finished. Check the log for details."
+msgstr "Prueba de configuración finalizada. Revisa el registro para ver los detalles."
 
-#: includes/admin/views/blog.php:191 includes/engine/oldposts.php:2046
+#: includes/admin/views/blog.php:194
+#, php-format
+msgid ""
+"Images: %1$s / %2$s. Local configuration checked; no paid image was "
+"generated."
+msgstr ""
+"Imágenes: %1$s / %2$s. Configuración local comprobada; no se generó ninguna "
+"imagen de pago."
+
+#: includes/admin/views/blog.php:198 includes/engine/oldposts.php:2046
 #: includes/services/oldposts-service.php:317
 msgid "Stop enabled."
 msgstr ""
 
-#: includes/admin/views/blog.php:193
+#: includes/admin/views/blog.php:200
 msgid "Fill pending executed. Check the log."
 msgstr ""
 
-#: includes/admin/views/blog.php:195
+#: includes/admin/views/blog.php:202
 msgid "Checkpoint cleared and schedule reset."
 msgstr ""
 
-#: includes/admin/views/blog.php:197 includes/admin/views/costs.php:200
+#: includes/admin/views/blog.php:204 includes/admin/views/costs.php:200
 #: includes/engine/oldposts.php:2052 includes/integrations/yoast-legacy.php:560
 #: includes/services/oldposts-service.php:323
 msgid "Log cleared."
 msgstr ""
 
-#: includes/admin/views/blog.php:206
+#: includes/admin/views/blog.php:213
 msgid "Blog Operations Center"
 msgstr ""
 
-#: includes/admin/views/blog.php:207
+#: includes/admin/views/blog.php:214
 msgid ""
 "Use this tab to generate by titles, schedule batches, and monitor the queue. "
 "For single-post work, the main flow is in <strong>Posts &gt; Create with AI</"
 "strong>."
 msgstr ""
 
-#: includes/admin/views/blog.php:208
+#: includes/admin/views/blog.php:215
 msgid "Use this tab only for batch execution and queue monitoring."
 msgstr ""
 
-#: includes/admin/views/blog.php:212
+#: includes/admin/views/blog.php:219
 msgid "Generation by titles"
 msgstr ""
 
-#: includes/admin/views/blog.php:220
+#: includes/admin/views/blog.php:227
 msgid "Mode"
 msgstr ""
 
-#: includes/admin/views/blog.php:223
+#: includes/admin/views/blog.php:230
 msgid "Manual"
 msgstr ""
 
-#: includes/admin/views/blog.php:229
+#: includes/admin/views/blog.php:236
 msgid "Manual titles"
 msgstr ""
 
-#: includes/admin/views/blog.php:232
+#: includes/admin/views/blog.php:239
 msgid "One title per line"
 msgstr ""
 
-#: includes/admin/views/blog.php:233
+#: includes/admin/views/blog.php:240
 msgid "Save and then click \"Create Blogs (with resume)\"."
 msgstr ""
 
-#: includes/admin/views/blog.php:235
+#: includes/admin/views/blog.php:242
 #, fuzzy
 msgid "Single title"
 msgstr "Titulo IA"
 
-#: includes/admin/views/blog.php:236
+#: includes/admin/views/blog.php:243
 #, fuzzy
 msgid "Base mode:"
 msgstr "Modelo imagen"
 
-#: includes/admin/views/blog.php:236
+#: includes/admin/views/blog.php:243
 msgid ""
 "manual mode accepts one title only. Batch queue and scheduling are available "
 "in Pro."
 msgstr ""
 
-#: includes/admin/views/blog.php:240 includes/admin/views/blog.php:262
-#: includes/admin/views/blog.php:569 includes/admin/views/blog.php:616
+#: includes/admin/views/blog.php:247 includes/admin/views/blog.php:269
+#: includes/admin/views/blog.php:576 includes/admin/views/blog.php:623
 msgid "Save"
 msgstr ""
 
-#: includes/admin/views/blog.php:245
+#: includes/admin/views/blog.php:252
 msgid "CSV URL"
 msgstr ""
 
-#: includes/admin/views/blog.php:250
+#: includes/admin/views/blog.php:257
 msgid "Use a CSV with one title per row (single column)."
 msgstr ""
 
-#: includes/admin/views/blog.php:253
+#: includes/admin/views/blog.php:260
 msgid "Download sample CSV"
 msgstr ""
 
-#: includes/admin/views/blog.php:256
+#: includes/admin/views/blog.php:263
 msgid "How to use CSV"
 msgstr ""
 
-#: includes/admin/views/blog.php:259
+#: includes/admin/views/blog.php:266
 msgid ""
 "Google Drive /file/d/... links are automatically converted to direct "
 "download format."
 msgstr ""
 
-#: includes/admin/views/blog.php:263
+#: includes/admin/views/blog.php:270
 msgid "Test CSV now"
 msgstr ""
 
-#: includes/admin/views/blog.php:270
+#: includes/admin/views/blog.php:277
 msgid "Could not read CSV:"
 msgstr ""
 
-#: includes/admin/views/blog.php:275
+#: includes/admin/views/blog.php:282
 msgid "Detected titles in CSV:"
 msgstr ""
 
-#: includes/admin/views/blog.php:286
+#: includes/admin/views/blog.php:293
 msgid "Showing first titles only."
 msgstr ""
 
-#: includes/admin/views/blog.php:290
+#: includes/admin/views/blog.php:297
 msgid ""
 "No titles found. Check CSV format: first column \"title\", one row per title."
 msgstr ""
 
-#: includes/admin/views/blog.php:298
+#: includes/admin/views/blog.php:305
 msgid "Blog content prompt"
 msgstr ""
 
-#: includes/admin/views/blog.php:301
+#: includes/admin/views/blog.php:308
 msgid ""
 "Editorial prompt optimized for Google Discover and image marker insertion. "
 "You can adjust style, but fixed rules prevent truncation and keep "
 "compatibility."
 msgstr ""
 
-#: includes/admin/views/blog.php:302
+#: includes/admin/views/blog.php:309
 msgid ""
 "Language is automatically applied from the language selector and is not "
 "edited in this prompt."
 msgstr ""
 
-#: includes/admin/views/blog.php:308
+#: includes/admin/views/blog.php:315
 msgid "Recommended prompts"
 msgstr ""
 
-#: includes/admin/views/blog.php:310
+#: includes/admin/views/blog.php:317
 msgid ""
 "Structured profiles for the normal workflow. Best balance between quality, "
 "stability and SEO control."
 msgstr ""
 
-#: includes/admin/views/blog.php:316
+#: includes/admin/views/blog.php:323
 msgid "Advanced / Legacy"
 msgstr ""
 
-#: includes/admin/views/blog.php:318
+#: includes/admin/views/blog.php:325
 msgid ""
 "Full manual control of the historical prompt. Use only when you need to "
 "override the protected recommended flow."
 msgstr ""
 
-#: includes/admin/views/blog.php:327
+#: includes/admin/views/blog.php:334
 msgid ""
 "This site is still using the historical recommended block. Saving this panel "
 "will migrate recommended mode to profile-based prompts while keeping the "
 "current runtime safe."
 msgstr ""
 
-#: includes/admin/views/blog.php:338 includes/admin/views/blog.php:1090
+#: includes/admin/views/blog.php:345 includes/admin/views/blog.php:1098
 msgid "FAQ On"
 msgstr ""
 
-#: includes/admin/views/blog.php:338 includes/admin/views/blog.php:1091
+#: includes/admin/views/blog.php:345 includes/admin/views/blog.php:1099
 msgid "FAQ Off"
 msgstr ""
 
-#: includes/admin/views/blog.php:339 includes/admin/views/blog.php:1092
+#: includes/admin/views/blog.php:346 includes/admin/views/blog.php:1100
 msgid "Examples On"
 msgstr ""
 
-#: includes/admin/views/blog.php:339 includes/admin/views/blog.php:1093
+#: includes/admin/views/blog.php:346 includes/admin/views/blog.php:1101
 msgid "Examples Off"
 msgstr ""
 
-#: includes/admin/views/blog.php:342 includes/admin/views/blog.php:390
-#: includes/admin/views/blog.php:1095
+#: includes/admin/views/blog.php:349 includes/admin/views/blog.php:397
+#: includes/admin/views/blog.php:1103
 msgid "Soft"
 msgstr ""
 
-#: includes/admin/views/blog.php:343 includes/admin/views/blog.php:391
-#: includes/admin/views/blog.php:1096
+#: includes/admin/views/blog.php:350 includes/admin/views/blog.php:398
+#: includes/admin/views/blog.php:1104
 msgid "Balanced"
 msgstr ""
 
-#: includes/admin/views/blog.php:344 includes/admin/views/blog.php:392
-#: includes/admin/views/blog.php:1097
+#: includes/admin/views/blog.php:351 includes/admin/views/blog.php:399
+#: includes/admin/views/blog.php:1105
 msgid "Strong"
 msgstr ""
 
-#: includes/admin/views/blog.php:349
+#: includes/admin/views/blog.php:356
 #, php-format
 msgid "Preset: %1$s | %2$s | Intent %3$s"
 msgstr ""
 
-#: includes/admin/views/blog.php:362
+#: includes/admin/views/blog.php:369
 #, fuzzy
 msgid "Loading profile preset status..."
 msgstr "Cargando datos reales de uso..."
 
-#: includes/admin/views/blog.php:363
+#: includes/admin/views/blog.php:370
 msgid "Use recommended preset"
 msgstr ""
 
-#: includes/admin/views/blog.php:371
+#: includes/admin/views/blog.php:378
 msgid "Text + FAQ"
 msgstr ""
 
-#: includes/admin/views/blog.php:372
+#: includes/admin/views/blog.php:379
 msgid "Keeps the FAQ block in the generated article."
 msgstr ""
 
-#: includes/admin/views/blog.php:379
+#: includes/admin/views/blog.php:386
 msgid "Practical examples"
 msgstr ""
 
-#: includes/admin/views/blog.php:380
+#: includes/admin/views/blog.php:387
 msgid "Adds scenarios, examples and practical angles when useful."
 msgstr ""
 
-#: includes/admin/views/blog.php:386
+#: includes/admin/views/blog.php:393
 msgid "Search intent strength"
 msgstr ""
 
-#: includes/admin/views/blog.php:387
+#: includes/admin/views/blog.php:394
 msgid ""
 "Controls how strongly the prompt prioritizes direct search answers vs "
 "editorial flow."
 msgstr ""
 
-#: includes/admin/views/blog.php:400
+#: includes/admin/views/blog.php:407
 #, fuzzy
 msgid "Editable prompt block"
 msgstr "Editar prompt"
 
-#: includes/admin/views/blog.php:401
+#: includes/admin/views/blog.php:408
 msgid "Expand to review and edit the exact editorial block sent to the model."
 msgstr ""
 
-#: includes/admin/views/blog.php:408
+#: includes/admin/views/blog.php:415
 msgid ""
 "This is the editorial block sent inside the protected prompt template. You "
 "can adjust it without touching the fixed rules, HTML safeguards or image "
 "marker format."
 msgstr ""
 
-#: includes/admin/views/blog.php:410
+#: includes/admin/views/blog.php:417
 msgid "Reset to selected profile"
 msgstr ""
 
-#: includes/admin/views/blog.php:412
+#: includes/admin/views/blog.php:419
 msgid "The generated editorial block will appear here."
 msgstr ""
 
-#: includes/admin/views/blog.php:417
+#: includes/admin/views/blog.php:424
 msgid ""
 "Warning: legacy mode lets you replace the full prompt and can break "
 "structure, language or image markers if edited carelessly."
 msgstr ""
 
-#: includes/admin/views/blog.php:418
+#: includes/admin/views/blog.php:425
 msgid "Full legacy prompt"
 msgstr ""
 
-#: includes/admin/views/blog.php:419
+#: includes/admin/views/blog.php:426
 msgid "Advanced mode: uses the full historical prompt for compatibility."
 msgstr ""
 
-#: includes/admin/views/blog.php:423
+#: includes/admin/views/blog.php:430
 msgid "Save prompt settings"
 msgstr ""
 
-#: includes/admin/views/blog.php:434 includes/admin/views/config.php:419
+#: includes/admin/views/blog.php:441 includes/admin/views/config.php:420
 msgid "Close"
 msgstr "Cerrar"
 
-#: includes/admin/views/blog.php:435
+#: includes/admin/views/blog.php:442
 msgid "CSV usage guide"
 msgstr ""
 
-#: includes/admin/views/blog.php:437
+#: includes/admin/views/blog.php:444
 msgid "Download the sample CSV and keep the first header as: title"
 msgstr ""
 
-#: includes/admin/views/blog.php:438
+#: includes/admin/views/blog.php:445
 msgid "Add one post title per row in the first column."
 msgstr ""
 
-#: includes/admin/views/blog.php:439
+#: includes/admin/views/blog.php:446
 msgid ""
 "Upload the CSV to a public URL (Google Drive, Dropbox, your site, etc.)."
 msgstr ""
 
-#: includes/admin/views/blog.php:440
+#: includes/admin/views/blog.php:447
 msgid "Paste a direct-download URL in CSV URL (not a preview page)."
 msgstr ""
 
-#: includes/admin/views/blog.php:442
+#: includes/admin/views/blog.php:449
 msgid "Google Drive direct URL"
 msgstr ""
 
-#: includes/admin/views/blog.php:444
+#: includes/admin/views/blog.php:451
 msgid ""
 "If your link looks like /file/d/FILE_ID/view, convert it to the direct URL "
 "format above."
 msgstr ""
 
-#: includes/admin/views/blog.php:461
+#: includes/admin/views/blog.php:468
 msgid "Editorial configuration and scheduling"
 msgstr ""
 
-#: includes/admin/views/blog.php:461
+#: includes/admin/views/blog.php:468
 #, fuzzy
 msgid "Editorial configuration"
 msgstr "Configuracion"
 
-#: includes/admin/views/blog.php:491
+#: includes/admin/views/blog.php:498
 #, fuzzy
 msgid "Post language"
 msgstr "Longitud de post"
 
-#: includes/admin/views/blog.php:495 includes/core/hooks.php:2818
+#: includes/admin/views/blog.php:502 includes/core/hooks.php:2818
 msgid "Spanish"
 msgstr ""
 
-#: includes/admin/views/blog.php:496 includes/core/hooks.php:2819
+#: includes/admin/views/blog.php:503 includes/core/hooks.php:2819
 msgid "Portuguese"
 msgstr ""
 
-#: includes/admin/views/blog.php:497 includes/core/hooks.php:2820
+#: includes/admin/views/blog.php:504 includes/core/hooks.php:2820
 msgid "English"
 msgstr ""
 
-#: includes/admin/views/blog.php:498 includes/core/hooks.php:2821
+#: includes/admin/views/blog.php:505 includes/core/hooks.php:2821
 msgid "French"
 msgstr ""
 
-#: includes/admin/views/blog.php:499 includes/core/hooks.php:2822
+#: includes/admin/views/blog.php:506 includes/core/hooks.php:2822
 msgid "Italian"
 msgstr ""
 
-#: includes/admin/views/blog.php:500 includes/core/hooks.php:2823
+#: includes/admin/views/blog.php:507 includes/core/hooks.php:2823
 msgid "German"
 msgstr ""
 
-#: includes/admin/views/blog.php:501 includes/core/hooks.php:2824
+#: includes/admin/views/blog.php:508 includes/core/hooks.php:2824
 msgid "Dutch"
 msgstr ""
 
-#: includes/admin/views/blog.php:502 includes/core/hooks.php:2825
+#: includes/admin/views/blog.php:509 includes/core/hooks.php:2825
 msgid "Swedish"
 msgstr ""
 
-#: includes/admin/views/blog.php:503 includes/core/hooks.php:2826
+#: includes/admin/views/blog.php:510 includes/core/hooks.php:2826
 msgid "Danish"
 msgstr ""
 
-#: includes/admin/views/blog.php:504 includes/core/hooks.php:2827
+#: includes/admin/views/blog.php:511 includes/core/hooks.php:2827
 msgid "Norwegian"
 msgstr ""
 
-#: includes/admin/views/blog.php:505 includes/core/hooks.php:2828
+#: includes/admin/views/blog.php:512 includes/core/hooks.php:2828
 msgid "Finnish"
 msgstr ""
 
-#: includes/admin/views/blog.php:506 includes/core/hooks.php:2829
+#: includes/admin/views/blog.php:513 includes/core/hooks.php:2829
 msgid "Polish"
 msgstr ""
 
-#: includes/admin/views/blog.php:507 includes/core/hooks.php:2830
+#: includes/admin/views/blog.php:514 includes/core/hooks.php:2830
 msgid "Czech"
 msgstr ""
 
-#: includes/admin/views/blog.php:508 includes/core/hooks.php:2831
+#: includes/admin/views/blog.php:515 includes/core/hooks.php:2831
 msgid "Slovak"
 msgstr ""
 
-#: includes/admin/views/blog.php:509 includes/core/hooks.php:2832
+#: includes/admin/views/blog.php:516 includes/core/hooks.php:2832
 msgid "Hungarian"
 msgstr ""
 
-#: includes/admin/views/blog.php:510 includes/core/hooks.php:2833
+#: includes/admin/views/blog.php:517 includes/core/hooks.php:2833
 msgid "Romanian"
 msgstr ""
 
-#: includes/admin/views/blog.php:511 includes/core/hooks.php:2834
+#: includes/admin/views/blog.php:518 includes/core/hooks.php:2834
 msgid "Bulgarian"
 msgstr ""
 
-#: includes/admin/views/blog.php:512 includes/core/hooks.php:2835
+#: includes/admin/views/blog.php:519 includes/core/hooks.php:2835
 msgid "Greek"
 msgstr ""
 
-#: includes/admin/views/blog.php:513 includes/core/hooks.php:2836
+#: includes/admin/views/blog.php:520 includes/core/hooks.php:2836
 msgid "Croatian"
 msgstr ""
 
-#: includes/admin/views/blog.php:514 includes/core/hooks.php:2837
+#: includes/admin/views/blog.php:521 includes/core/hooks.php:2837
 msgid "Slovenian"
 msgstr ""
 
-#: includes/admin/views/blog.php:515 includes/core/hooks.php:2838
+#: includes/admin/views/blog.php:522 includes/core/hooks.php:2838
 msgid "Estonian"
 msgstr ""
 
-#: includes/admin/views/blog.php:516 includes/core/hooks.php:2839
+#: includes/admin/views/blog.php:523 includes/core/hooks.php:2839
 msgid "Latvian"
 msgstr ""
 
-#: includes/admin/views/blog.php:517 includes/core/hooks.php:2840
+#: includes/admin/views/blog.php:524 includes/core/hooks.php:2840
 msgid "Lithuanian"
 msgstr ""
 
-#: includes/admin/views/blog.php:518 includes/core/hooks.php:2841
+#: includes/admin/views/blog.php:525 includes/core/hooks.php:2841
 msgid "Irish"
 msgstr ""
 
-#: includes/admin/views/blog.php:519 includes/core/hooks.php:2842
+#: includes/admin/views/blog.php:526 includes/core/hooks.php:2842
 msgid "Maltese"
 msgstr ""
 
-#: includes/admin/views/blog.php:520 includes/core/hooks.php:2843
+#: includes/admin/views/blog.php:527 includes/core/hooks.php:2843
 msgid "Romansh"
 msgstr ""
 
-#: includes/admin/views/blog.php:544
+#: includes/admin/views/blog.php:551
 msgid ""
 "Used for {POST_LANGUAGE} and to normalize the \"Frequently asked questions\" "
 "heading."
 msgstr ""
 
-#: includes/admin/views/blog.php:548
+#: includes/admin/views/blog.php:555
 #, fuzzy
 msgid "Default category"
 msgstr "Recalculo de categorias"
 
-#: includes/admin/views/blog.php:554
+#: includes/admin/views/blog.php:561
 #, fuzzy
 msgid "Rules: keywords -> categories"
 msgstr "Recalculo de categorias"
 
-#: includes/admin/views/blog.php:557
+#: includes/admin/views/blog.php:564
 msgid ""
 "Line format: <code>Category: kw1, kw2, kw3</code>. Compared against (title + "
 "content)."
 msgstr ""
 
-#: includes/admin/views/blog.php:561
+#: includes/admin/views/blog.php:568
 msgid "Allowed tags"
 msgstr ""
 
-#: includes/admin/views/blog.php:564
+#: includes/admin/views/blog.php:571
 msgid ""
 "Comma-separated. The engine can only use tags from this list (max 7 per "
 "post)."
 msgstr ""
 
-#: includes/admin/views/blog.php:574
+#: includes/admin/views/blog.php:581
 #, fuzzy
 msgid "Scheduling"
 msgstr "Programacion"
 
-#: includes/admin/views/blog.php:581
+#: includes/admin/views/blog.php:588
 msgid "First date/time"
 msgstr "Primera fecha/hora"
 
-#: includes/admin/views/blog.php:584
+#: includes/admin/views/blog.php:591
 msgid ""
 "If left empty, generation starts immediately. If you set a date/time, the "
 "first post is scheduled and the next ones follow the interval."
@@ -665,7 +674,7 @@ msgstr ""
 "Si lo dejas vacio, la generacion empieza inmediatamente. Si indicas fecha/"
 "hora, la primera entrada se programa y las siguientes respetan el intervalo."
 
-#: includes/admin/views/blog.php:585
+#: includes/admin/views/blog.php:592
 msgid ""
 "Past dates are allowed: WordPress will publish immediately using the "
 "selected historical date."
@@ -673,126 +682,134 @@ msgstr ""
 "Se permiten fechas anteriores: WordPress publicará inmediatamente "
 "conservando la fecha histórica seleccionada."
 
-#: includes/admin/views/blog.php:589
+#: includes/admin/views/blog.php:596
 msgid "Interval between publications (days)"
 msgstr "Intervalo entre publicaciones (dias)"
 
-#: includes/admin/views/blog.php:595
+#: includes/admin/views/blog.php:602
 msgid "Posts per background chunk"
 msgstr ""
 
-#: includes/admin/views/blog.php:602
+#: includes/admin/views/blog.php:609
 msgid ""
 "Controls how many posts are generated before the checkpoint resumes. Higher "
 "values reduce resumes but increase timeout risk; use 1 on shared hosting and "
 "2-3 on stable servers."
 msgstr ""
 
-#: includes/admin/views/blog.php:607
+#: includes/admin/views/blog.php:614
 msgid "CRON: fill pending"
 msgstr ""
 
-#: includes/admin/views/blog.php:610
+#: includes/admin/views/blog.php:617
 msgid "Enable CRON for pending images"
 msgstr ""
 
-#: includes/admin/views/blog.php:610
+#: includes/admin/views/blog.php:617
 msgid "Runs hourly pending-image filling."
 msgstr ""
 
-#: includes/admin/views/blog.php:621
+#: includes/admin/views/blog.php:628
 msgid "Scheduling and queue checkpoint"
 msgstr ""
 
-#: includes/admin/views/blog.php:621
+#: includes/admin/views/blog.php:628
 msgid ""
 "Automatic scheduling, interval chaining and checkpoint status are available "
 "in Pro only."
 msgstr ""
 
-#: includes/admin/views/blog.php:632
+#: includes/admin/views/blog.php:639
 msgid ""
 "Use this block to control batch execution, checkpoint state, and process log."
 msgstr ""
 
-#: includes/admin/views/blog.php:633
+#: includes/admin/views/blog.php:640
 msgid ""
 "This is the operations center to generate, stop, resume, and review batch "
 "status."
 msgstr ""
 
-#: includes/admin/views/blog.php:638
+#: includes/admin/views/blog.php:645
 msgid "Checkpoint status"
 msgstr ""
 
-#: includes/admin/views/blog.php:640
+#: includes/admin/views/blog.php:647
 msgid "Last scheduled/published:"
 msgstr ""
 
-#: includes/admin/views/blog.php:644
+#: includes/admin/views/blog.php:651
 msgid "Recent results"
 msgstr ""
 
-#: includes/admin/views/blog.php:645
+#: includes/admin/views/blog.php:652
 #, fuzzy
 msgid "Latest posts"
 msgstr "todos los posts"
 
-#: includes/admin/views/blog.php:654 includes/admin/views/oldposts.php:214
+#: includes/admin/views/blog.php:661 includes/admin/views/oldposts.php:214
 msgid "(Untitled)"
 msgstr ""
 
-#: includes/admin/views/blog.php:672
+#: includes/admin/views/blog.php:679
 msgid "Edit"
 msgstr ""
 
-#: includes/admin/views/blog.php:675
+#: includes/admin/views/blog.php:682
 msgid "View"
 msgstr ""
 
-#: includes/admin/views/blog.php:682
+#: includes/admin/views/blog.php:689
 #, fuzzy
 msgid "There are no recent posts to display yet."
 msgstr "No hay posts para mostrar."
 
-#: includes/admin/views/blog.php:691
+#: includes/admin/views/blog.php:698
 #, fuzzy
 msgid "Batch actions"
 msgstr "sin acciones IA"
 
-#: includes/admin/views/blog.php:698
+#: includes/admin/views/blog.php:705
 #, fuzzy
 msgid "Test configuration"
 msgstr "Configuracion"
 
-#: includes/admin/views/blog.php:700
+#: includes/admin/views/blog.php:706
+msgid ""
+"Uses the saved text provider, model and API key. Save Settings first. Images "
+"are checked locally without a paid generation."
+msgstr ""
+"Usa el proveedor, el modelo y la clave API de texto guardados. Guarda primero "
+"los ajustes. Las imágenes se comprueban localmente sin generar una imagen de pago."
+
+#: includes/admin/views/blog.php:708
 msgid "Run batch (with resume)"
 msgstr ""
 
-#: includes/admin/views/blog.php:702
+#: includes/admin/views/blog.php:710
 msgid "Stop (STOP)"
 msgstr ""
 
-#: includes/admin/views/blog.php:703
+#: includes/admin/views/blog.php:711
 #, fuzzy
 msgid "Fill pending"
 msgstr "Pendientes"
 
-#: includes/admin/views/blog.php:705
+#: includes/admin/views/blog.php:713
 #, fuzzy
 msgid "Clear checkpoint"
 msgstr "Limpiar seleccion"
 
-#: includes/admin/views/blog.php:707 includes/admin/views/costs.php:556
+#: includes/admin/views/blog.php:715 includes/admin/views/costs.php:556
 #: includes/admin/views/oldposts.php:621
 msgid "Clear log"
 msgstr ""
 
-#: includes/admin/views/blog.php:713
+#: includes/admin/views/blog.php:721
 msgid "Operational log"
 msgstr ""
 
-#: includes/admin/views/blog.php:992
+#: includes/admin/views/blog.php:1000
 msgid ""
 "The selected first publication date is in the past. The post will be "
 "published immediately but keep that historical date. Continue?"
@@ -800,169 +817,169 @@ msgstr ""
 "La primera fecha de publicación seleccionada está en el pasado. La entrada "
 "se publicará inmediatamente, pero conservará esa fecha histórica. ¿Continuar?"
 
-#: includes/admin/views/blog.php:998
+#: includes/admin/views/blog.php:1006
 #, fuzzy
 msgid "Starting..."
 msgstr "Preparando vista de detalle..."
 
-#: includes/admin/views/blog.php:1007
+#: includes/admin/views/blog.php:1015
 msgid "Running (check log)..."
 msgstr ""
 
-#: includes/admin/views/blog.php:1023
+#: includes/admin/views/blog.php:1031
 msgid "network error or invalid response."
 msgstr ""
 
-#: includes/admin/views/blog.php:1094
+#: includes/admin/views/blog.php:1102
 #, fuzzy
 msgid "Intent"
 msgstr "Contenido IA"
 
-#: includes/admin/views/blog.php:1098
+#: includes/admin/views/blog.php:1106
 msgid "Recommended preset"
 msgstr ""
 
-#: includes/admin/views/blog.php:1099
+#: includes/admin/views/blog.php:1107
 msgid "Preset active. You can still customize the options below."
 msgstr ""
 
-#: includes/admin/views/blog.php:1100
+#: includes/admin/views/blog.php:1108
 msgid ""
 "Customized options active. Prompt profile stays selected, but your overrides "
 "are being used."
 msgstr ""
 
-#: includes/admin/views/config.php:118
+#: includes/admin/views/config.php:119
 msgid "Settings saved successfully."
 msgstr "Configuracion guardada correctamente."
 
-#: includes/admin/views/config.php:121
+#: includes/admin/views/config.php:122
 msgid "API keys saved successfully."
 msgstr "Claves API guardadas correctamente."
 
-#: includes/admin/views/config.php:135
+#: includes/admin/views/config.php:136
 msgid "Provider and model"
 msgstr "Proveedor y modelo"
 
-#: includes/admin/views/config.php:136
+#: includes/admin/views/config.php:137
 msgid "Configure the AI engines used for text and images."
 msgstr "Configura los motores de IA usados para texto e imagenes."
 
-#: includes/admin/views/config.php:162
+#: includes/admin/views/config.php:163
 msgid "Provider (text)"
 msgstr "Proveedor (texto)"
 
-#: includes/admin/views/config.php:197
+#: includes/admin/views/config.php:198
 msgid "Provider (image)"
 msgstr "Proveedor (imagen)"
 
-#: includes/admin/views/config.php:240
+#: includes/admin/views/config.php:241
 msgid "Model (text)"
 msgstr "Modelo (texto)"
 
-#: includes/admin/views/config.php:246
+#: includes/admin/views/config.php:247
 msgid "DeepSeek V4 Flash — Recommended"
 msgstr "DeepSeek V4 Flash — recomendado"
 
-#: includes/admin/views/config.php:247
+#: includes/admin/views/config.php:248
 msgid "DeepSeek V4 Pro — Maximum capability"
 msgstr "DeepSeek V4 Pro — máxima capacidad"
 
-#: includes/admin/views/config.php:262
+#: includes/admin/views/config.php:263
 msgid "Model (image)"
 msgstr "Modelo (imagen)"
 
-#: includes/admin/views/config.php:265
+#: includes/admin/views/config.php:266
 msgid "Not available"
 msgstr "No disponible"
 
-#: includes/admin/views/config.php:269
+#: includes/admin/views/config.php:270
 msgid "GPT Image 2 — Recommended"
 msgstr "GPT Image 2 — recomendado"
 
-#: includes/admin/views/config.php:270
+#: includes/admin/views/config.php:271
 msgid "GPT Image 1"
 msgstr "GPT Image 1"
 
-#: includes/admin/views/config.php:271
+#: includes/admin/views/config.php:272
 msgid "GPT Image 1 Mini"
 msgstr "GPT Image 1 Mini"
 
-#: includes/admin/views/config.php:285 includes/admin/views/usage.php:15
+#: includes/admin/views/config.php:286 includes/admin/views/usage.php:15
 msgid "Automatic"
 msgstr "Automática"
 
-#: includes/admin/views/config.php:285 includes/admin/views/usage.php:15
+#: includes/admin/views/config.php:286 includes/admin/views/usage.php:15
 msgid "Low"
 msgstr "Baja"
 
-#: includes/admin/views/config.php:285 includes/admin/views/usage.php:15
+#: includes/admin/views/config.php:286 includes/admin/views/usage.php:15
 #: includes/core/hooks.php:3270
 msgid "Medium"
 msgstr "Media"
 
-#: includes/admin/views/config.php:285 includes/admin/views/config.php:306
+#: includes/admin/views/config.php:286 includes/admin/views/config.php:307
 #: includes/admin/views/usage.php:15
 msgid "High"
 msgstr "Alto"
 
-#: includes/admin/views/config.php:286 includes/support/image-pricing.php:27
+#: includes/admin/views/config.php:287 includes/support/image-pricing.php:27
 msgid "Use default quality"
 msgstr "Usar calidad predeterminada"
 
-#: includes/admin/views/config.php:288
+#: includes/admin/views/config.php:289
 msgid "Default image quality"
 msgstr "Calidad predeterminada de las imágenes"
 
-#: includes/admin/views/config.php:288
+#: includes/admin/views/config.php:289
 msgid "This quality is used by default for images without a specific setting."
 msgstr ""
 "Esta calidad se utilizará como valor predeterminado para las imágenes que no "
 "tengan una configuración específica."
 
-#: includes/admin/views/config.php:289
+#: includes/admin/views/config.php:290
 msgid "Featured image quality"
 msgstr "Calidad de la imagen destacada"
 
-#: includes/admin/views/config.php:289
+#: includes/admin/views/config.php:290
 msgid "Allows a different quality for the article featured image."
 msgstr ""
 "Permite utilizar una calidad diferente para la imagen destacada del artículo."
 
-#: includes/admin/views/config.php:290
+#: includes/admin/views/config.php:291
 msgid "Content image quality"
 msgstr "Calidad de las imágenes interiores"
 
-#: includes/admin/views/config.php:290
+#: includes/admin/views/config.php:291
 msgid "Applied to images inserted inside the article content."
 msgstr ""
 "Se aplicará a las imágenes insertadas dentro del contenido del artículo."
 
-#: includes/admin/views/config.php:298 includes/admin/views/usage.php:842
+#: includes/admin/views/config.php:299 includes/admin/views/usage.php:842
 msgid "Reasoning mode"
 msgstr "Modo de razonamiento"
 
-#: includes/admin/views/config.php:300
+#: includes/admin/views/config.php:301
 msgid "Disabled — faster and lower cost"
 msgstr "Desactivado — más rápido y económico"
 
-#: includes/admin/views/config.php:301
+#: includes/admin/views/config.php:302
 msgid "Enabled — deeper reasoning"
 msgstr "Activado — razonamiento más profundo"
 
-#: includes/admin/views/config.php:304 includes/admin/views/usage.php:843
+#: includes/admin/views/config.php:305 includes/admin/views/usage.php:843
 msgid "Reasoning effort"
 msgstr "Esfuerzo de razonamiento"
 
-#: includes/admin/views/config.php:307
+#: includes/admin/views/config.php:308
 msgid "Maximum"
 msgstr "Máximo"
 
-#: includes/admin/views/config.php:310
+#: includes/admin/views/config.php:311
 msgid "Indicative pricing"
 msgstr "Precios orientativos"
 
-#: includes/admin/views/config.php:311
+#: includes/admin/views/config.php:312
 msgid ""
 "Flash: cache hit $0.0028, cache miss $0.14, output $0.28 per 1M tokens. Pro: "
 "cache hit $0.003625, cache miss $0.435, output $0.87 per 1M tokens. Verified "
@@ -972,23 +989,23 @@ msgstr ""
 "de tokens. Pro: caché usada $0.003625, caché no usada $0.435 y salida $0.87 "
 "por 1 millón de tokens. Verificado el 14 de julio de 2026."
 
-#: includes/admin/views/config.php:316
+#: includes/admin/views/config.php:317
 msgid "API key (text)"
 msgstr "API key (texto)"
 
-#: includes/admin/views/config.php:332 includes/admin/views/config.php:357
+#: includes/admin/views/config.php:333 includes/admin/views/config.php:358
 msgid "Get API key"
 msgstr "Obtener API key"
 
-#: includes/admin/views/config.php:341
+#: includes/admin/views/config.php:342
 msgid "API key (image)"
 msgstr "API key (imagen)"
 
-#: includes/admin/views/config.php:365
+#: includes/admin/views/config.php:366
 msgid "Save API keys"
 msgstr "Guardar claves API"
 
-#: includes/admin/views/config.php:366
+#: includes/admin/views/config.php:367
 msgid ""
 "Saves provider keys without changing prompts, lengths, categories or other "
 "generation settings."
@@ -996,7 +1013,7 @@ msgstr ""
 "Guarda las claves de proveedores sin cambiar prompts, longitudes, categorias "
 "ni otros ajustes de generacion."
 
-#: includes/admin/views/config.php:369
+#: includes/admin/views/config.php:370
 msgid ""
 "You can use different providers for text and image generation. DeepSeek is "
 "available only for text."
@@ -1004,110 +1021,110 @@ msgstr ""
 "Puedes usar proveedores diferentes para generar texto e imágenes. DeepSeek "
 "solo está disponible para texto."
 
-#: includes/admin/views/config.php:375
+#: includes/admin/views/config.php:376
 msgid "Preferences"
 msgstr "Preferencias"
 
-#: includes/admin/views/config.php:378
+#: includes/admin/views/config.php:379
 msgid "Temperature"
 msgstr "Temperatura"
 
-#: includes/admin/views/config.php:380
+#: includes/admin/views/config.php:381
 msgid "Recommended range: 0.0 to 1.0 (max 2.0)."
 msgstr "Rango recomendado: 0.0 a 1.0 (max 2.0)."
 
-#: includes/admin/views/config.php:383
+#: includes/admin/views/config.php:384
 msgid "Max output tokens"
 msgstr "Max tokens de salida"
 
-#: includes/admin/views/config.php:385
+#: includes/admin/views/config.php:386
 msgid ""
 "Increase this value if the generated text is cut off. Recommended: 6000-8000."
 msgstr ""
 
-#: includes/admin/views/config.php:388
+#: includes/admin/views/config.php:389
 msgid "Post length"
 msgstr "Longitud de post"
 
-#: includes/admin/views/config.php:390
+#: includes/admin/views/config.php:391
 msgid "Short (~1000 words)"
 msgstr "Corto (~1000 palabras)"
 
-#: includes/admin/views/config.php:391
+#: includes/admin/views/config.php:392
 msgid "Medium (~1800-2000 words)"
 msgstr "Medio (~1800-2000 palabras)"
 
-#: includes/admin/views/config.php:392
+#: includes/admin/views/config.php:393
 msgid "Long (~2000-2200 words)"
 msgstr "Largo (~2000-2200 palabras)"
 
-#: includes/admin/views/config.php:404
+#: includes/admin/views/config.php:405
 msgid "Featured image prompt"
 msgstr "Prompt imagen destacada"
 
-#: includes/admin/views/config.php:405
+#: includes/admin/views/config.php:406
 msgid ""
 "The base prompt is already optimized. It is automatically combined with "
 "[IMAGE: ...] and the post title. You only need to edit it if you want to "
 "change the style."
 msgstr ""
 
-#: includes/admin/views/config.php:406
+#: includes/admin/views/config.php:407
 msgid "Available placeholders: {title}, {desc}, {format}."
 msgstr "Marcadores disponibles: {title}, {desc}, {format}."
 
-#: includes/admin/views/config.php:410
+#: includes/admin/views/config.php:411
 msgid "Edit featured prompt"
 msgstr "Editar prompt destacada"
 
-#: includes/admin/views/config.php:412
+#: includes/admin/views/config.php:413
 msgid "The post title is inserted automatically into {title}."
 msgstr "El titulo del post se inserta automaticamente en {title}."
 
-#: includes/admin/views/config.php:418
+#: includes/admin/views/config.php:419
 msgid "Edit prompt"
 msgstr "Editar prompt"
 
-#: includes/admin/views/config.php:423
+#: includes/admin/views/config.php:424
 msgid "Save base prompt"
 msgstr "Guardar prompt base"
 
-#: includes/admin/views/config.php:432
+#: includes/admin/views/config.php:433
 msgid "Image quality"
 msgstr "Calidad de las imágenes"
 
-#: includes/admin/views/config.php:443
+#: includes/admin/views/config.php:444
 #, fuzzy
 msgid "Internal images (Pro)"
 msgstr "Imagenes internas"
 
-#: includes/admin/views/config.php:445
+#: includes/admin/views/config.php:446
 msgid "0 internal images (featured only)"
 msgstr "0 internas (solo destacada)"
 
-#: includes/admin/views/config.php:446
+#: includes/admin/views/config.php:447
 msgid "1 internal image"
 msgstr "1 interna"
 
-#: includes/admin/views/config.php:447
+#: includes/admin/views/config.php:448
 msgid "2 internal images"
 msgstr "2 internas"
 
-#: includes/admin/views/config.php:448
+#: includes/admin/views/config.php:449
 msgid "3 internal images"
 msgstr "3 internas"
 
-#: includes/admin/views/config.php:457
+#: includes/admin/views/config.php:458
 msgid ""
 "The featured image is always generated. This selector controls only internal "
 "images."
 msgstr ""
 
-#: includes/admin/views/config.php:460
+#: includes/admin/views/config.php:461
 msgid "Estimated image output cost:"
 msgstr "Coste estimado de salida de imágenes:"
 
-#: includes/admin/views/config.php:462
+#: includes/admin/views/config.php:463
 msgid ""
 "Indicative estimate based on OpenAI output prices verified on July 10, 2026. "
 "Actual cost may also include prompt tokens and, for edits, input images. "
@@ -1118,222 +1135,222 @@ msgstr ""
 "prompt y, en las ediciones, las imágenes de entrada. OpenAI puede modificar "
 "sus precios."
 
-#: includes/admin/views/config.php:466
+#: includes/admin/views/config.php:467
 #, fuzzy
 msgid "Pro feature:"
 msgstr "Destacada"
 
-#: includes/admin/views/config.php:466
+#: includes/admin/views/config.php:467
 #, fuzzy
 msgid "internal images are available in Pro only."
 msgstr "0 internas (solo destacada)"
 
-#: includes/admin/views/config.php:467
+#: includes/admin/views/config.php:468
 msgid ""
 "This module generates and styles internal article images (up to 3 slots) "
 "with independent prompts and formats."
 msgstr ""
 
-#: includes/admin/views/config.php:482
+#: includes/admin/views/config.php:483
 #, php-format
 msgid "Internal image %d format"
 msgstr ""
 
-#: includes/admin/views/config.php:491
+#: includes/admin/views/config.php:492
 #, php-format
 msgid "Edit internal prompt %d"
 msgstr ""
 
-#: includes/admin/views/config.php:494
+#: includes/admin/views/config.php:495
 #, php-format
 msgid ""
 "This format applies only to internal image %d. The base prompt is already "
 "optimized."
 msgstr ""
 
-#: includes/admin/views/config.php:498
+#: includes/admin/views/config.php:499
 msgid "Internal banner CSS"
 msgstr "CSS banner internas"
 
-#: includes/admin/views/config.php:500
+#: includes/admin/views/config.php:501
 msgid ""
 "Applied to img.cbia-banner. You can adjust it for your theme without "
 "touching plugin code."
 msgstr ""
 
-#: includes/admin/views/config.php:503
+#: includes/admin/views/config.php:504
 #, fuzzy
 msgid "Internal image slots (Pro)"
 msgstr "Selector de imagenes internas"
 
-#: includes/admin/views/config.php:504
+#: includes/admin/views/config.php:505
 msgid ""
 "Slot formats, per-slot prompts and internal image CSS are available in Pro "
 "only."
 msgstr ""
 
-#: includes/admin/views/config.php:505
+#: includes/admin/views/config.php:506
 msgid ""
 "Activate CBIAStudio BlogFlow Pro to configure internal image 1/2/3 and their "
 "prompt templates."
 msgstr ""
 
-#: includes/admin/views/config.php:509
+#: includes/admin/views/config.php:510
 msgid "If an image model fails"
 msgstr "Si falla un modelo de imagen"
 
-#: includes/admin/views/config.php:512
+#: includes/admin/views/config.php:513
 msgid "Continue with the next model"
 msgstr "Continuar con el siguiente modelo"
 
-#: includes/admin/views/config.php:513
+#: includes/admin/views/config.php:514
 msgid "Stop post creation"
 msgstr "Detener creacion de la entrada"
 
-#: includes/admin/views/config.php:515
+#: includes/admin/views/config.php:516
 msgid "By default, the next model is tried if there is an error."
 msgstr "Por defecto se intenta el siguiente modelo si hay error."
 
-#: includes/admin/views/config.php:522
+#: includes/admin/views/config.php:523
 msgid "Integrations"
 msgstr "Integraciones"
 
-#: includes/admin/views/config.php:526 includes/admin/views/config.php:528
-#: includes/admin/views/config.php:630 includes/admin/views/config.php:632
+#: includes/admin/views/config.php:527 includes/admin/views/config.php:529
+#: includes/admin/views/config.php:631 includes/admin/views/config.php:633
 msgid "Yoast SEO:"
 msgstr ""
 
-#: includes/admin/views/config.php:526
+#: includes/admin/views/config.php:527
 msgid ""
 "not detected. If you install it, the plugin can automatically update the "
 "meta description, keyphrase and SEO/readability scores when each post is "
 "created."
 msgstr ""
 
-#: includes/admin/views/config.php:528
+#: includes/admin/views/config.php:529
 msgid ""
 "detected. The meta description, keyphrase and SEO/readability scores are "
 "updated automatically when each post is created."
 msgstr ""
 
-#: includes/admin/views/config.php:533
+#: includes/admin/views/config.php:534
 msgid "Save settings"
 msgstr "Guardar configuracion"
 
-#: includes/admin/views/config.php:549
+#: includes/admin/views/config.php:550
 msgid "Price varies: OpenAI will select the quality automatically."
 msgstr "Precio variable: OpenAI seleccionará automáticamente la calidad."
 
-#: includes/admin/views/config.php:550
+#: includes/admin/views/config.php:551
 msgid "Price is not available for this custom size."
 msgstr "Precio no disponible para este tamaño personalizado."
 
-#: includes/admin/views/config.php:551
+#: includes/admin/views/config.php:552
 #, php-format
 msgid "%s per article"
 msgstr "%s por artículo"
 
-#: includes/admin/views/config.php:552
+#: includes/admin/views/config.php:553
 #, php-format
 msgid "Featured: %1$s (%2$s). Content: %3$d × %4$s (%5$s)."
 msgstr "Destacada: %1$s (%2$s). Interiores: %3$d × %4$s (%5$s)."
 
-#: includes/admin/views/config.php:622
+#: includes/admin/views/config.php:623
 msgid "Support and advanced tools"
 msgstr "Soporte y herramientas avanzadas"
 
-#: includes/admin/views/config.php:623
+#: includes/admin/views/config.php:624
 msgid ""
 "Maintenance and support tools. They no longer need their own tabs because "
 "the normal plugin flow covers most daily work."
 msgstr ""
 
-#: includes/admin/views/config.php:627
+#: includes/admin/views/config.php:628
 msgid "Yoast legacy"
 msgstr ""
 
-#: includes/admin/views/config.php:627
+#: includes/admin/views/config.php:628
 msgid "Occasional maintenance"
 msgstr "Mantenimiento puntual"
 
-#: includes/admin/views/config.php:630
+#: includes/admin/views/config.php:631
 msgid ""
 "not detected. These actions only make sense if Yoast is installed and active."
 msgstr ""
 
-#: includes/admin/views/config.php:632
+#: includes/admin/views/config.php:633
 msgid ""
 "detected. Use these actions only for legacy maintenance, one-off "
 "recalculations or old content migrations."
 msgstr ""
 
-#: includes/admin/views/config.php:637
+#: includes/admin/views/config.php:638
 msgid "Batch"
 msgstr "Lote"
 
-#: includes/admin/views/config.php:638
+#: includes/admin/views/config.php:639
 msgid "Offset"
 msgstr "Offset"
 
-#: includes/admin/views/config.php:641
+#: includes/admin/views/config.php:642
 msgid "Force (overwrite metas/scores even if they already exist)"
 msgstr "Forzar (reescribe metas/scores aunque existan)"
 
-#: includes/admin/views/config.php:642
+#: includes/admin/views/config.php:643
 msgid "Include non-CBIA posts"
 msgstr "Incluir posts no-CBIA"
 
-#: includes/admin/views/config.php:645
+#: includes/admin/views/config.php:646
 msgid "Recalculate metas"
 msgstr "Recalcular metas"
 
-#: includes/admin/views/config.php:646
+#: includes/admin/views/config.php:647
 msgid "Refresh traffic lights"
 msgstr "Actualizar semaforo"
 
-#: includes/admin/views/config.php:647
+#: includes/admin/views/config.php:648
 msgid "Metas + traffic lights"
 msgstr "Metas + Semaforo"
 
-#: includes/admin/views/config.php:648
+#: includes/admin/views/config.php:649
 msgid "Clear Yoast log"
 msgstr "Limpiar log Yoast"
 
-#: includes/admin/views/config.php:651 includes/admin/views/config.php:660
+#: includes/admin/views/config.php:652 includes/admin/views/config.php:661
 msgid "Mark older posts as CBIA"
 msgstr "Marcar antiguos como CBIA"
 
-#: includes/admin/views/config.php:653
+#: includes/admin/views/config.php:654
 msgid "From (optional)"
 msgstr "Desde (opcional)"
 
-#: includes/admin/views/config.php:654
+#: includes/admin/views/config.php:655
 msgid "To (optional)"
 msgstr "Hasta (opcional)"
 
-#: includes/admin/views/config.php:657
+#: includes/admin/views/config.php:658
 msgid "Mark only if CBIA signals are detected"
 msgstr "Marcar solo si detecta senales CBIA"
 
-#: includes/admin/views/config.php:662
+#: includes/admin/views/config.php:663
 msgid "CBIA signals: FAQ/JSON-LD, pending markers or content markers."
 msgstr "Senales CBIA: FAQ/JSON-LD, pendientes o marcadores en contenido."
 
-#: includes/admin/views/config.php:669
+#: includes/admin/views/config.php:670
 msgid "Environment diagnostics"
 msgstr "Diagnostico del entorno"
 
-#: includes/admin/views/config.php:669
+#: includes/admin/views/config.php:670
 msgid "Support"
 msgstr "Soporte"
 
-#: includes/admin/views/config.php:671
+#: includes/admin/views/config.php:672
 msgid ""
 "Quick environment summary for support and debugging. It no longer needs its "
 "own tab."
 msgstr ""
 
-#: includes/admin/views/config.php:680 includes/admin/views/diagnostics.php:54
+#: includes/admin/views/config.php:681 includes/admin/views/diagnostics.php:54
 msgid "Latest log lines"
 msgstr "Ultimas lineas de log"
 
@@ -3107,6 +3124,34 @@ msgstr ""
 msgid "REAL calibration: insufficient data to calculate."
 msgstr ""
 
+#: includes/engine/base.php:502
+#, fuzzy, php-format
+msgid "Missing %s API key."
+msgstr "Falta la clave API de %s."
+
+#: includes/engine/base.php:503
+msgid "The selected text configuration is not valid."
+msgstr "La configuración de texto seleccionada no es válida."
+
+#: includes/engine/base.php:520
+msgid "Reply only with OK."
+msgstr "Responde únicamente con OK."
+
+#: includes/engine/base.php:548
+#, php-format
+msgid "%1$s configured correctly. Model tested: %2$s."
+msgstr "%1$s se ha configurado correctamente. Modelo probado: %2$s."
+
+#: includes/engine/base.php:552
+#, php-format
+msgid "%s rejected the API key."
+msgstr "%s rechazó la clave API."
+
+#: includes/engine/base.php:553
+#, fuzzy, php-format
+msgid "Could not validate %s."
+msgstr "No se pudo validar %s."
+
 #: includes/engine/oldposts.php:456
 #, fuzzy
 msgid "Updated on"
@@ -3440,7 +3485,7 @@ msgid "Missing Google API key for image generation (Gemini)."
 msgstr ""
 
 #: includes/engine/openai.php:116 includes/engine/openai.php:206
-#: includes/engine/openai.php:1139
+#: includes/engine/openai.php:1149
 #, fuzzy
 msgid "No API key (Google)"
 msgstr "API key (imagen)"
@@ -3453,118 +3498,118 @@ msgstr ""
 msgid "Could not generate image (Google)."
 msgstr ""
 
-#: includes/engine/openai.php:363 includes/engine/openai.php:577
-#: includes/engine/openai.php:804 includes/engine/openai.php:961
+#: includes/engine/openai.php:367 includes/engine/openai.php:586
+#: includes/engine/openai.php:813 includes/engine/openai.php:970
 #, fuzzy
 msgid "OpenAI consent not accepted"
 msgstr "Contenido IA (sin imagenes)"
 
-#: includes/engine/openai.php:379
+#: includes/engine/openai.php:386
 msgid "Could not get a streaming response."
 msgstr ""
 
-#: includes/engine/openai.php:380 includes/engine/openai.php:395
-#: includes/engine/openai.php:1244 includes/engine/openai.php:1283
+#: includes/engine/openai.php:387 includes/engine/openai.php:402
+#: includes/engine/openai.php:1261 includes/engine/openai.php:1303
 msgid "Could not get a response."
 msgstr ""
 
-#: includes/engine/openai.php:431 includes/engine/openai.php:590
+#: includes/engine/openai.php:438 includes/engine/openai.php:599
 #, fuzzy
 msgid "Missing OpenAI API key for text generation."
 msgstr "Falta API key para:"
 
-#: includes/engine/openai.php:432 includes/engine/openai.php:591
-#: includes/engine/openai.php:800 includes/engine/openai.php:957
+#: includes/engine/openai.php:439 includes/engine/openai.php:600
+#: includes/engine/openai.php:809 includes/engine/openai.php:966
 #, fuzzy
 msgid "No API key"
 msgstr "Obtener API key"
 
-#: includes/engine/openai.php:443 includes/engine/openai.php:604
-#: includes/engine/openai.php:806 includes/engine/openai.php:836
-#: includes/engine/openai.php:962 includes/engine/openai.php:989
-#: includes/engine/openai.php:1177 includes/engine/openai.php:1287
+#: includes/engine/openai.php:450 includes/engine/openai.php:613
+#: includes/engine/openai.php:815 includes/engine/openai.php:845
+#: includes/engine/openai.php:971 includes/engine/openai.php:998
+#: includes/engine/openai.php:1190 includes/engine/openai.php:1307
 msgid "Stop enabled"
 msgstr ""
 
-#: includes/engine/openai.php:794
+#: includes/engine/openai.php:803
 #, php-format
 msgid "Image provider \"%s\" is not supported."
 msgstr ""
 
-#: includes/engine/openai.php:795
+#: includes/engine/openai.php:804
 #, fuzzy
 msgid "Unsupported image provider"
 msgstr "Proveedor imagen"
 
-#: includes/engine/openai.php:859 includes/engine/openai.php:1012
+#: includes/engine/openai.php:868 includes/engine/openai.php:1021
 msgid "AI image HTTP error: "
 msgstr ""
 
-#: includes/engine/openai.php:875 includes/engine/openai.php:1028
+#: includes/engine/openai.php:884 includes/engine/openai.php:1037
 #, php-format
 msgid "AI image HTTP %d error"
 msgstr ""
 
-#: includes/engine/openai.php:885 includes/engine/openai.php:1038
+#: includes/engine/openai.php:894 includes/engine/openai.php:1047
 msgid "AI image payload error: "
 msgstr ""
 
-#: includes/engine/openai.php:905 includes/engine/openai.php:1058
+#: includes/engine/openai.php:914 includes/engine/openai.php:1067
 #, php-format
 msgid "AI image: response without bytes (model=%s)"
 msgstr ""
 
-#: includes/engine/openai.php:906 includes/engine/openai.php:1059
+#: includes/engine/openai.php:915 includes/engine/openai.php:1068
 msgid "Response without bytes"
 msgstr ""
 
-#: includes/engine/openai.php:913 includes/engine/openai.php:1066
+#: includes/engine/openai.php:922 includes/engine/openai.php:1075
 #, php-format
 msgid "AI image: upload to Media Library failed: %s"
 msgstr ""
 
-#: includes/engine/openai.php:928 includes/engine/openai.php:1081
+#: includes/engine/openai.php:937 includes/engine/openai.php:1090
 #, php-format
 msgid "AI image: model=%s failed; process stopped by configuration."
 msgstr ""
 
-#: includes/engine/openai.php:929 includes/engine/openai.php:1082
+#: includes/engine/openai.php:938 includes/engine/openai.php:1091
 msgid "Stopped by failover configuration"
 msgstr ""
 
-#: includes/engine/openai.php:933 includes/engine/openai.php:1086
+#: includes/engine/openai.php:942 includes/engine/openai.php:1095
 msgid "Image generation failed after retries"
 msgstr ""
 
-#: includes/engine/openai.php:951
+#: includes/engine/openai.php:960
 #, php-format
 msgid ""
 "Image provider \"%s\" not supported for this flow; using OpenAI fallback."
 msgstr ""
 
-#: includes/engine/openai.php:1138
+#: includes/engine/openai.php:1148
 #, fuzzy
 msgid "Missing Google API key for text generation."
 msgstr "Falta API key para:"
 
-#: includes/engine/openai.php:1181
+#: includes/engine/openai.php:1194
 #, php-format
 msgid "Google Gemini: model=%1$s attempt %2$d/%3$d"
 msgstr ""
 
-#: includes/engine/openai.php:1258
+#: includes/engine/openai.php:1276
 msgid "Missing DeepSeek API key for text generation."
 msgstr "Falta la clave API de DeepSeek para generar texto."
 
-#: includes/engine/openai.php:1259
+#: includes/engine/openai.php:1277
 msgid "No API key (DeepSeek)"
 msgstr "Sin clave API (DeepSeek)"
 
-#: includes/engine/openai.php:1329
+#: includes/engine/openai.php:1349
 msgid "DeepSeek returned invalid JSON."
 msgstr "DeepSeek devolvió un JSON no válido."
 
-#: includes/engine/openai.php:1338
+#: includes/engine/openai.php:1358
 msgid "DeepSeek returned an empty content response."
 msgstr "DeepSeek devolvió una respuesta sin contenido."
 

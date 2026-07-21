@@ -186,7 +186,14 @@ if ($saved_notice === 'saved' || $saved_notice === 'guardado') {
     }
     echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html($msg) . '</p></div>';
 } elseif ($saved_notice === 'test') {
-    echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__('Test executed. Check the log.', 'cbiastudio-blogflow-ai') . '</p></div>';
+    $test_result = is_array($GLOBALS['cbia_configuration_test_result'] ?? null) ? $GLOBALS['cbia_configuration_test_result'] : array();
+    $notice_class = !empty($test_result['ok']) ? 'notice-success' : 'notice-error';
+    $test_message = sanitize_text_field((string)($test_result['message'] ?? __('Configuration test finished. Check the log for details.', 'cbiastudio-blogflow-ai')));
+    echo '<div class="notice ' . esc_attr($notice_class) . ' is-dismissible"><p>' . esc_html($test_message) . '</p>';
+    if (!empty($test_result['image']) && is_array($test_result['image'])) {
+        printf('<p>%s</p>', esc_html(sprintf(__('Images: %1$s / %2$s. Local configuration checked; no paid image was generated.', 'cbiastudio-blogflow-ai'), ucfirst((string)($test_result['image']['provider'] ?? '')), (string)($test_result['image']['model'] ?? ''))));
+    }
+    echo '</div>';
 } elseif ($saved_notice === 'stop') {
     echo '<div class="notice notice-warning is-dismissible"><p>' . esc_html__('Stop enabled.', 'cbiastudio-blogflow-ai') . '</p></div>';
 } elseif ($saved_notice === 'pending') {
@@ -696,6 +703,7 @@ echo '</select>';
 
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
 <button type="submit" class="button" name="cbia_action" value="test_config"><?php echo esc_html__('Test configuration', 'cbiastudio-blogflow-ai'); ?></button>
+<span class="description"><?php echo esc_html__('Uses the saved text provider, model and API key. Save Settings first. Images are checked locally without a paid generation.', 'cbiastudio-blogflow-ai'); ?></span>
 
 <button type="button" class="button button-primary" id="cbia_btn_generate"><?php echo esc_html__('Run batch (with resume)', 'cbiastudio-blogflow-ai'); ?></button>
 

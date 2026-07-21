@@ -285,7 +285,7 @@ if (!function_exists('cbia_blog_handle_post')) {
             $action = sanitize_text_field((string)($post_unslashed['cbia_action'] ?? ''));
 
             if ($action === 'test_config') {
-                if (function_exists('cbia_run_test_configuration')) cbia_run_test_configuration();
+                if (function_exists('cbia_run_test_configuration')) $GLOBALS['cbia_configuration_test_result'] = cbia_run_test_configuration();
                 else cbia_log_message('[WARN] Missing cbia_run_test_configuration().');
                 $saved_notice = 'test';
 

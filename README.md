@@ -11,6 +11,9 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 
 ## What's New in 2.1.5
 
+- Configuration Test uses the exact saved provider/model/key, performs one text attempt without cross-provider fallback, and checks image configuration locally without a paid image request.
+- The test preserves the global STOP flag and records its authorized text attempt once in Usage V2, including local blocks and unknown sent timeouts.
+- Saving API keys updates only explicitly entered credentials and never changes provider/model selections or exposes key fragments.
 - Usage V2 persists every OpenAI text attempt immediately and moves temporary events to the final post idempotently.
 - Initial generation uses at most the selected model and one safe fallback for temporary failures.
 - Completed and incomplete Responses are distinguished; partial text can use one guarded expansion.

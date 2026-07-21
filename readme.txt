@@ -157,6 +157,9 @@ This plugin can connect to third-party AI services only when the site administra
 == Changelog ==
 
 = 2.1.5 =
+* Configuration Test now uses the exact saved text provider, provider-specific model and API key with one attempt and no cross-provider fallback.
+* Configuration Test reports text and local-only image checks separately, preserves STOP, and records its single text attempt in Usage V2.
+* The API-key-only save action updates only explicitly entered keys; empty, absent and masked fields preserve existing provider credentials.
 * OpenAI text attempts are recorded immediately in Usage V2, including failed, timed-out, incomplete, preview, and pre-publication requests.
 * Initial OpenAI generation is limited to the selected model plus one safe fallback for temporary errors only.
 * OpenAI text uses 120-second initial and 150-second expansion timeouts, with request IDs and idempotent attempt tracking.

@@ -114,37 +114,33 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 
 		$save_api_keys_only = isset($_POST['cbia_config_save_api_keys']);
 		if ($save_api_keys_only) {
-			$partial_keys = [
-				'openai_api_key'   => $api_key,
-				'google_api_key'   => $google_api_key,
-				'deepseek_api_key' => $deepseek_api_key,
-				'text_provider'    => $text_provider,
-				'image_provider'   => $image_provider,
-				'openai_consent'   => 1,
-			];
-			cbia_update_settings_merge($partial_keys);
+			$partial_keys = [];
+			$posted_keys = [];
+			foreach (array_keys($providers_list) as $pkey) {
+				$posted_key = $first_non_empty(
+					sanitize_text_field((string)($provider_api_key_text_post[$pkey] ?? '')),
+					sanitize_text_field((string)($provider_api_key_image_post[$pkey] ?? '')),
+					sanitize_text_field((string)($provider_api_key_post[$pkey] ?? ''))
+				);
+				if ($posted_key !== '') $posted_keys[$pkey] = $posted_key;
+			}
+			if (isset($posted_keys['openai'])) $partial_keys['openai_api_key'] = $posted_keys['openai'];
+			if (isset($posted_keys['google'])) $partial_keys['google_api_key'] = $posted_keys['google'];
+			if (isset($posted_keys['deepseek'])) $partial_keys['deepseek_api_key'] = $posted_keys['deepseek'];
+			if (!empty($partial_keys)) cbia_update_settings_merge($partial_keys);
 
 			if (function_exists('cbia_providers_save_settings')) {
 				$providers_new = is_array($provider_settings_existing['providers'] ?? null) ? $provider_settings_existing['providers'] : [];
 				foreach ($providers_list as $pkey => $pdef) {
 					if (!isset($providers_new[$pkey]) || !is_array($providers_new[$pkey])) $providers_new[$pkey] = [];
-					$posted_key = $first_non_empty(
-						sanitize_text_field((string)($provider_api_key_text_post[$pkey] ?? '')),
-						sanitize_text_field((string)($provider_api_key_image_post[$pkey] ?? '')),
-						sanitize_text_field((string)($provider_api_key_post[$pkey] ?? ''))
-					);
+					$posted_key = (string)($posted_keys[$pkey] ?? '');
 					if ($posted_key !== '') {
 						$providers_new[$pkey]['api_key'] = $posted_key;
 					} elseif (!empty($providers_new[$pkey]['api_key'])) {
 						$providers_new[$pkey]['api_key'] = sanitize_text_field((string)$providers_new[$pkey]['api_key']);
 					}
 				}
-				if (isset($providers_new['openai']) && $api_key !== '') $providers_new['openai']['api_key'] = $api_key;
-				if (isset($providers_new['google']) && $google_api_key !== '') $providers_new['google']['api_key'] = $google_api_key;
-				if (isset($providers_new['deepseek']) && $deepseek_api_key !== '') $providers_new['deepseek']['api_key'] = $deepseek_api_key;
 				cbia_providers_save_settings([
-					'provider' => $text_provider,
-					'current_provider' => $text_provider,
 					'providers' => $providers_new,
 				]);
 			}

@@ -42,7 +42,7 @@ function cbia_get_provider_config( $provider ) { return array( 'base_url' => 'ht
 function cbia_get_provider_api_key( $provider ) { return 'test-key'; }
 function cbia_get_text_model_for_provider( $provider, $default ) { return (string) ( $GLOBALS['test_model'] ?? $default ); }
 function cbia_get_provider_model( $provider, $default ) { return $default; }
-function cbia_is_stop_requested() { return false; }
+function cbia_is_stop_requested() { return !empty($GLOBALS['test_stop']); }
 function cbia_log( $message, $level = 'INFO' ) { $GLOBALS['test_logs'][] = array( $level, $message ); }
 function cbia_mask_sensitive_log_text( $message ) { return str_replace( 'test-key', '[REDACTED]', (string) $message ); }
 
@@ -104,6 +104,16 @@ test_assert( ! isset( $result[5]['choices'][0]['message']['reasoning_content'] )
 test_assert( $GLOBALS['test_last_url'] === 'https://api.deepseek.com/chat/completions', 'DeepSeek endpoint is invalid' );
 $sent_payload = json_decode( $GLOBALS['test_last_args']['body'], true );
 test_assert( $sent_payload['thinking']['type'] === 'disabled' && ! isset( $sent_payload['reasoning_effort'] ), 'runtime disabled payload is invalid' );
+
+$GLOBALS['test_stop'] = true;
+$GLOBALS['test_http_calls'] = 0;
+$GLOBALS['test_http_queue'] = array( mock_response( 200, array( 'choices' => array( array( 'message' => array( 'content' => 'OK' ) ) ), 'usage' => array( 'prompt_tokens' => 2, 'completion_tokens' => 1 ) ) ) );
+$result = cbia_deepseek_chat_call( 'Reply only with OK.', '', 1, 16, array( 'phase' => 'configuration_test', 'model' => 'deepseek-v4-flash', 'ignore_stop' => true ) );
+$sent_payload = json_decode( $GLOBALS['test_last_args']['body'], true );
+test_assert( $result[0] === true && $GLOBALS['test_http_calls'] === 1, 'configuration test must bypass STOP without changing it' );
+test_assert( $GLOBALS['test_stop'] === true, 'configuration test changed the STOP flag' );
+test_assert( $sent_payload['model'] === 'deepseek-v4-flash' && $sent_payload['max_tokens'] === 16, 'configuration test did not use the exact model and token limit' );
+$GLOBALS['test_stop'] = false;
 
 foreach ( array( 400, 401, 402, 403 ) as $permanent_code ) {
 	$GLOBALS['test_http_calls'] = 0;
