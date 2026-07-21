@@ -225,6 +225,16 @@ if (!function_exists('cbia_costes_calculate_row')) {
         );
         if (!is_array($row)) return $result;
 
+        $request_sent_known = array_key_exists('request_sent', $row);
+        $blocked_locally = sanitize_key((string)($row['result_status'] ?? ($row['status'] ?? ''))) === 'blocked_local';
+        if (($request_sent_known && empty($row['request_sent'])) || $blocked_locally) {
+            $result['cost_micro_usd'] = 0;
+            $result['cost_status'] = 'exact';
+            $result['cost_source'] = 'local_preflight';
+            $result['cost_reason'] = sanitize_key((string)($row['error_type'] ?? 'request_not_sent')) ?: 'request_not_sent';
+            return $result;
+        }
+
         if (($row['cost_status'] ?? '') === 'official_reconciled' && isset($row['cost_micro_usd']) && is_numeric($row['cost_micro_usd'])) {
             $result['cost_micro_usd'] = max(0, (int)$row['cost_micro_usd']);
             $result['cost_status'] = 'official_reconciled';
@@ -582,6 +592,12 @@ if (!function_exists('cbia_costes_record_usage')) {
         }
         foreach (array('request_id', 'batch_id', 'fallback_from', 'attempt_id', 'temporary_context_id') as $text_key) {
             if (isset($usage[$text_key]) && (string)$usage[$text_key] !== '') $row[$text_key] = sanitize_text_field((string)$usage[$text_key]);
+        }
+        foreach (array('request_sent', 'billable', 'first_pass_success', 'first_pass_words', 'expansion_used', 'expansion_required', 'final_words_before_expansion', 'words_missing', 'faq_enabled') as $metric_key) {
+            if (isset($usage[$metric_key])) $row[$metric_key] = max(0, (int)$usage[$metric_key]);
+        }
+        foreach (array('result_status', 'error_type', 'expansion_reason') as $metric_key) {
+            if (isset($usage[$metric_key])) $row[$metric_key] = sanitize_key((string)$usage[$metric_key]);
         }
         if (empty($row['attempt_id'])) {
             $row['attempt_id'] = 'local-' . substr(hash('sha256', implode('|', array($row['ts'], $type, $model, $attempt, (string)($row['request_id'] ?? ''), wp_generate_uuid4()))), 0, 24);
@@ -974,6 +990,12 @@ if (!function_exists('cbia_costes_record_failed_attempts')) {
                 'cost_source' => 'unavailable',
                 'status_reason' => sanitize_text_field((string)($args['status_reason'] ?? 'request_failed')),
             );
+            foreach (array('request_sent', 'billable') as $flag_key) {
+                if (array_key_exists($flag_key, $attempt)) $row[$flag_key] = !empty($attempt[$flag_key]) ? 1 : 0;
+            }
+            foreach (array('result_status', 'error_type') as $status_key) {
+                if (isset($attempt[$status_key])) $row[$status_key] = sanitize_key((string)$attempt[$status_key]);
+            }
             foreach (array('section', 'context', 'title', 'batch_id', 'fallback_from', 'request_id', 'attempt_id', 'temporary_context_id') as $key) {
                 $value = $attempt[$key] ?? ($args[$key] ?? '');
                 if ((string)$value !== '') $row[$key] = (string)$value;

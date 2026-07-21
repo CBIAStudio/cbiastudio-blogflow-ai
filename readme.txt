@@ -162,6 +162,10 @@ This plugin can connect to third-party AI services only when the site administra
 * OpenAI text uses 120-second initial and 150-second expansion timeouts, with request IDs and idempotent attempt tracking.
 * Medium prompts target 1900-2100 words internally while enforcing the selected 1800-word minimum consistently in Blog and Preview.
 * A single guarded expansion is allowed; insufficient text is kept as a draft and no images are generated.
+* Provider API keys remain isolated and preserved when switching or saving text/image providers.
+* Blog and Preview preflight text and image credentials separately; requests blocked locally are stored with exact zero cost.
+* DeepSeek V4 Flash Medium without FAQ uses a 5200-token output budget and records first-pass and expansion metrics.
+* Usage displays independent text and image provider/model/key status.
 
 = 2.1.4 =
 * Added DeepSeek V4 Flash and DeepSeek V4 Pro with explicit optional reasoning controls.

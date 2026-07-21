@@ -16,6 +16,10 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - Completed and incomplete Responses are distinguished; partial text can use one guarded expansion.
 - Blog and Preview share the selected minimum, and rejected short drafts do not generate images.
 - OpenAI text timeouts are 120 seconds initially and 150 seconds for the single expansion.
+- Provider API keys are preserved independently; DeepSeek text and OpenAI images can run together without one settings save hiding the other key.
+- Blog and Preview now run provider-specific preflight before generation, and locally blocked calls are recorded as exact zero-cost events.
+- DeepSeek V4 Flash uses a 5200-token Medium/no-FAQ budget, explicit visible-body targets, and first-pass/expansion metrics.
+- Usage shows separate text and image provider/model/key contexts.
 
 ## Comparative: 2.1.5 vs 2.1.4
 

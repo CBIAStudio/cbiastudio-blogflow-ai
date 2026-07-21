@@ -132,7 +132,7 @@ if (!function_exists('cbia_pick_length_target_words')) {
 }
 
 if (!function_exists('cbia_estimate_output_tokens_for_length_target')) {
-	function cbia_estimate_output_tokens_for_length_target($min_words, $max_words, $language = '', $include_faq = false, $include_examples = false): int {
+	function cbia_estimate_output_tokens_for_length_target($min_words, $max_words, $language = '', $include_faq = false, $include_examples = false, $provider = '', $model = '', $thinking = ''): int {
 		$max_words = max((int)$max_words, (int)$min_words, 1);
 		$is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish((string)$language);
 		$ratio = $is_spanish ? 2.1 : 1.9;
@@ -141,6 +141,14 @@ if (!function_exists('cbia_estimate_output_tokens_for_length_target')) {
 		if ($include_faq) $padding += 220;
 		if ($include_examples) $padding += 180;
 		$estimate = $base + $padding;
+		$provider = sanitize_key((string)($provider !== '' ? $provider : (function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : 'openai')));
+		$model = sanitize_text_field((string)($model !== '' ? $model : (function_exists('cbia_get_text_model_for_provider') ? cbia_get_text_model_for_provider($provider, '') : '')));
+		if ($thinking === '' && $provider === 'deepseek' && function_exists('cbia_deepseek_get_runtime_config')) {
+			$thinking = (string)cbia_deepseek_get_runtime_config($model)['thinking'];
+		}
+		if ($provider === 'deepseek' && $model === 'deepseek-v4-flash' && $thinking === 'disabled' && !$include_faq && (int)$min_words === 1800 && (int)$max_words === 2000) {
+			$estimate = max($estimate, 5200);
+		}
 		if ($estimate < 1500) $estimate = 1500;
 		if ($estimate > 12000) $estimate = 12000;
 		return $estimate;
@@ -739,9 +747,19 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		$text_html = cbia_fix_bracket_headings($text_html);
 		// Normaliza el título de FAQ según idioma/config
 		$faq_enabled = function_exists('cbia_runtime_include_faq_enabled') ? cbia_runtime_include_faq_enabled($s) : true;
+		$words_before_faq_cleanup = cbia_count_words_from_html($text_html);
 		if (!$faq_enabled && function_exists('cbia_strip_faq_section')) {
+			$before_faq_html = $text_html;
 			$text_html = cbia_strip_faq_section($text_html);
-				cbia_log("FAQ removed by settings (include_faq=0).", 'INFO');
+			$words_after_faq_cleanup = cbia_count_words_from_html($text_html);
+			$faq_was_removed = trim((string)$before_faq_html) !== trim((string)$text_html);
+			cbia_log(sprintf(
+				'FAQ cleanup by settings: detected=%s words_before=%d words_after=%d words_removed=%d.',
+				$faq_was_removed ? 'yes' : 'no',
+				(int)$words_before_faq_cleanup,
+				(int)$words_after_faq_cleanup,
+				max(0, (int)$words_before_faq_cleanup - (int)$words_after_faq_cleanup)
+			), 'INFO');
 		} else {
 			$text_html = cbia_normalize_faq_heading($text_html);
 		// Si Yoast FAQ Block está disponible, convierte FAQs a bloque
@@ -759,10 +777,17 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		}
 
 		$current_words = cbia_count_words_from_html($text_html);
+		$first_pass_words = (int)$current_words;
+		$first_pass_success = $first_pass_words >= (int)$min_words;
+		$expansion_used = false;
+		$expansion_required = !$first_pass_success;
+		$words_missing = max(0, (int)$min_words - $first_pass_words);
+		$expansion_reason = $first_pass_success ? 'not_needed' : 'below_minimum';
 		$effective_min_words = function_exists('cbia_get_effective_length_floor_words')
 			? cbia_get_effective_length_floor_words((int)$min_words, (array)$s)
 			: (function_exists('cbia_get_soft_length_floor_words') ? cbia_get_soft_length_floor_words((int)$min_words) : (int)$min_words);
 		if ($current_words < $effective_min_words) {
+			$expansion_used = true;
 			cbia_log(sprintf(
 				"Length below target on '%s': %d words (min=%d, effective_min=%d). Expanding content...",
 				(string)$title,
@@ -772,6 +797,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			), 'WARN');
 			$expansion_status = array();
 			$text_html = cbia_expand_text_to_length_target($title, $text_html, $s, (int)$min_words, (int)$max_words, $expansion_calls, $expansion_status);
+			$expansion_reason = sanitize_key((string)($expansion_status['reason'] ?? $expansion_reason));
 			if (!empty($s['include_practical_examples'])) {
 				$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);
 			}
@@ -783,6 +809,28 @@ if (!function_exists('cbia_create_single_blog_post')) {
 				(int)$min_words
 			), 'INFO');
 		}
+		$text_provider = function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : 'openai';
+		cbia_log(sprintf(
+			'Text length result: provider=%s model=%s faq_enabled=%s first_pass_words=%d minimum_words=%d first_pass_success=%s expansion_used=%s.',
+			(string)$text_provider,
+			(string)$model_used,
+			$faq_enabled ? 'yes' : 'no',
+			(int)$first_pass_words,
+			(int)$min_words,
+			$first_pass_success ? 'yes' : 'no',
+			$expansion_used ? 'yes' : 'no'
+		), 'INFO');
+		$text_call['meta'] = array_merge((array)($text_call['meta'] ?? array()), array(
+			'provider' => sanitize_key((string)$text_provider),
+			'first_pass_success' => $first_pass_success ? 1 : 0,
+			'first_pass_words' => (int)$first_pass_words,
+			'expansion_used' => $expansion_used ? 1 : 0,
+			'expansion_required' => $expansion_required ? 1 : 0,
+			'final_words_before_expansion' => (int)$first_pass_words,
+			'words_missing' => (int)$words_missing,
+			'expansion_reason' => $expansion_reason,
+			'faq_enabled' => $faq_enabled ? 1 : 0,
+		));
 		$text_html = cbia_enforce_length_ceiling_html($text_html, (int)$max_words, !empty($s['include_faq']));
 		if (!empty($s['include_practical_examples'])) {
 			$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);

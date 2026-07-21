@@ -749,12 +749,19 @@ $model_options = array();
 
 $provider_settings = function_exists('cbia_providers_get_settings') ? cbia_providers_get_settings() : array();
 $providers_all = function_exists('cbia_providers_get_all') ? cbia_providers_get_all() : array();
-$provider_key = function_exists('cbia_providers_get_current_provider') ? cbia_providers_get_current_provider() : 'openai';
-$provider = $providers_all[$provider_key] ?? ($providers_all['openai'] ?? array('label' => 'OpenAI', 'models' => array('gpt-5-mini')));
-$provider_label = (string) ($provider['label'] ?? $provider_key);
-$provider_logo = plugins_url('assets/images/providers/' . $provider_key . '.svg', CBIA_PRO_PLUGIN_FILE);
-$provider_cfg = function_exists('cbia_providers_get_provider') ? cbia_providers_get_provider($provider_key) : array();
-$current_model = (string) ($provider_cfg['model'] ?? ($provider['models'][0] ?? 'gpt-5-mini'));
+$provider_catalog = is_array($providers_all['providers'] ?? null) ? $providers_all['providers'] : $providers_all;
+$text_provider_key = function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : 'openai';
+$image_provider_key = function_exists('cbia_get_image_provider') ? cbia_get_image_provider() : 'openai';
+$text_provider = (array)($provider_catalog[$text_provider_key] ?? array('label' => ucfirst($text_provider_key)));
+$image_provider = (array)($provider_catalog[$image_provider_key] ?? array('label' => ucfirst($image_provider_key)));
+$text_provider_label = (string)($text_provider['label'] ?? ucfirst($text_provider_key));
+$image_provider_label = (string)($image_provider['label'] ?? ucfirst($image_provider_key));
+$text_provider_logo = plugins_url('assets/images/providers/' . $text_provider_key . '.svg', CBIA_PRO_PLUGIN_FILE);
+$image_provider_logo = plugins_url('assets/images/providers/' . $image_provider_key . '.svg', CBIA_PRO_PLUGIN_FILE);
+$text_model = function_exists('cbia_get_text_model_for_provider') ? cbia_get_text_model_for_provider($text_provider_key, '') : '';
+$image_model = function_exists('cbia_get_image_model_for_provider') ? cbia_get_image_model_for_provider($image_provider_key, '') : '';
+$text_key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($text_provider_key);
+$image_key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($image_provider_key);
 
 $export_url = wp_nonce_url(
     admin_url('admin-post.php?action=cbia_usage_export&usage_days=' . (int) $days . '&usage_model=' . rawurlencode((string) $requested_model)),
@@ -910,12 +917,16 @@ $dashboard_payload['i18n'] = array(
         <?php endif; ?>
         <div class="cbia-usage-current-context">
             <div class="cbia-usage-context-pill">
-                <img src="<?php echo esc_url($provider_logo); ?>" alt="<?php echo esc_attr($provider_label); ?>" />
-                <span><strong><?php echo esc_html($provider_label); ?></strong> <?php echo esc_html__('active', 'cbiastudio-blogflow-ai'); ?></span>
+                <img src="<?php echo esc_url($text_provider_logo); ?>" alt="<?php echo esc_attr($text_provider_label); ?>" />
+                <span><?php echo esc_html__('Text', 'cbiastudio-blogflow-ai'); ?>: <strong><?php echo esc_html($text_provider_label); ?></strong></span>
+                <code><?php echo esc_html($text_model); ?></code>
+                <span><?php echo esc_html__('API key', 'cbiastudio-blogflow-ai'); ?>: <strong><?php echo esc_html($text_key_configured ? __('Configured', 'cbiastudio-blogflow-ai') : __('Missing', 'cbiastudio-blogflow-ai')); ?></strong></span>
             </div>
             <div class="cbia-usage-context-pill">
-                <span><?php echo esc_html__('Current model', 'cbiastudio-blogflow-ai'); ?></span>
-                <code><?php echo esc_html($current_model); ?></code>
+                <img src="<?php echo esc_url($image_provider_logo); ?>" alt="<?php echo esc_attr($image_provider_label); ?>" />
+                <span><?php echo esc_html__('Image', 'cbiastudio-blogflow-ai'); ?>: <strong><?php echo esc_html($image_provider_label); ?></strong></span>
+                <code><?php echo esc_html($image_model); ?></code>
+                <span><?php echo esc_html__('API key', 'cbiastudio-blogflow-ai'); ?>: <strong><?php echo esc_html($image_key_configured ? __('Configured', 'cbiastudio-blogflow-ai') : __('Missing', 'cbiastudio-blogflow-ai')); ?></strong></span>
             </div>
             <div class="cbia-usage-context-pill">
                 <span><?php echo esc_html__('Period', 'cbiastudio-blogflow-ai'); ?></span>

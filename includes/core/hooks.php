@@ -5245,30 +5245,41 @@ if (!function_exists('cbia_ajax_start_generation')) {
             $settings['blog_prompt_legacy_enabled'] = ($settings['blog_prompt_mode'] === 'legacy') ? 1 : 0;
         }
         if ($settings_updated) {
-            $stored_settings = get_option('cbia_settings', array());
-            $stored_settings = is_array($stored_settings) ? $stored_settings : array();
-            foreach (array('openai_api_key', 'google_api_key', 'deepseek_api_key', 'google_service_account_json') as $secret_key) {
-                if (trim((string)($settings[$secret_key] ?? '')) === '' && !empty($stored_settings[$secret_key])) {
-                    $settings[$secret_key] = (string)$stored_settings[$secret_key];
-                }
-            }
-            if (function_exists('cbia_providers_get_settings')) {
-                $provider_settings = cbia_providers_get_settings();
-                $provider_map = array('openai' => 'openai_api_key', 'google' => 'google_api_key', 'deepseek' => 'deepseek_api_key');
-                foreach ($provider_map as $provider_key => $settings_key) {
-                    $provider_api_key = trim((string)($provider_settings['providers'][$provider_key]['api_key'] ?? ''));
-                    if (trim((string)($settings[$settings_key] ?? '')) === '' && $provider_api_key !== '') {
-                        $settings[$settings_key] = $provider_api_key;
-                    }
-                }
-            }
+            $runtime_keys = array_fill_keys(array_merge(
+                array(
+                    'title_input_mode', 'manual_titles', 'csv_url', 'first_publication_datetime',
+                    'publication_interval', 'blog_posts_per_event', 'include_faq',
+                    'include_practical_examples', 'blog_prompt_legacy_enabled',
+                ),
+                array_keys($simple_runtime_fields)
+            ), true);
+            $runtime_keys['blog_prompt_mode'] = true;
+            unset($runtime_keys['blog_prompt_mode_ui'], $runtime_keys['blog_prompt_mode_state']);
+            $runtime_settings = array_intersect_key($settings, $runtime_keys);
             if (function_exists('cbia_update_settings_merge')) {
-                cbia_update_settings_merge($settings);
+                cbia_update_settings_merge($runtime_settings);
             } else {
-                update_option('cbia_settings', $settings, false);
+                $stored_settings = get_option('cbia_settings', array());
+                $stored_settings = is_array($stored_settings) ? $stored_settings : array();
+                update_option('cbia_settings', array_replace($stored_settings, $runtime_settings), false);
             }
+            $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : array_replace((array)$settings_before_start, $runtime_settings);
             if (function_exists('cbia_log_message')) {
                 cbia_log_message('[INFO] START AJAX: runtime settings synced from current Blog form values.');
+            }
+        }
+        // Blog always generates a featured image; images_limit only controls the total count.
+        $images_requested = true;
+        if (function_exists('cbia_generation_preflight')) {
+            $preflight = cbia_generation_preflight((array)$settings, $images_requested);
+            if (empty($preflight['ok'])) {
+                $error = (array)($preflight['errors'][0] ?? array('code' => 'local_validation', 'message' => 'Generation preflight failed.'));
+                if (function_exists('cbia_record_local_preflight_failure')) cbia_record_local_preflight_failure($error, $preflight, 'blog_start_preflight');
+                wp_send_json_error(array(
+                    'msg' => sanitize_text_field((string)($error['message'] ?? 'Generation preflight failed.')),
+                    'error_type' => sanitize_key((string)($error['code'] ?? 'local_validation')),
+                    'preflight' => $preflight,
+                ), 400);
             }
         }
         if (function_exists('cbia_checkpoint_get') && function_exists('cbia_checkpoint_clear')) {

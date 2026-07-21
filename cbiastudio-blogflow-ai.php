@@ -268,9 +268,10 @@ if (!function_exists('cbia_update_settings_merge')) {
 		$current = get_option(CBIA_OPTION_SETTINGS, []);
 		if (!is_array($current)) $current = [];
 		foreach (array('openai_api_key', 'google_api_key', 'deepseek_api_key', 'google_service_account_json') as $secret_key) {
-			if (array_key_exists($secret_key, $partial) && trim((string)$partial[$secret_key]) === '' && !empty($current[$secret_key])) {
-				unset($partial[$secret_key]);
-			}
+			if (!array_key_exists($secret_key, $partial)) continue;
+			$submitted_secret = trim((string)$partial[$secret_key]);
+			$is_mask = function_exists('cbia_is_masked_api_key_value') && cbia_is_masked_api_key_value($submitted_secret);
+			if (($submitted_secret === '' || $is_mask) && !empty($current[$secret_key])) unset($partial[$secret_key]);
 		}
 		$merged = array_replace_recursive($current, $partial);
 		update_option(CBIA_OPTION_SETTINGS, $merged, false);

@@ -55,14 +55,17 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 		$provider_settings_existing = function_exists('cbia_providers_get_settings') ? cbia_providers_get_settings() : [];
 		if (!is_array($provider_settings_existing)) $provider_settings_existing = [];
 		$provider_existing_key = function (string $provider) use ($provider_settings_existing): string {
-			return trim((string)($provider_settings_existing['providers'][$provider]['api_key'] ?? ''));
+			$value = trim((string)($provider_settings_existing['providers'][$provider]['api_key'] ?? ''));
+			return function_exists('cbia_is_masked_api_key_value') && cbia_is_masked_api_key_value($value) ? '' : $value;
 		};
 
 		// CAMBIO: API keys por proveedor (con fallback legacy)
 		$first_non_empty = function (...$vals) {
 			foreach ($vals as $val) {
 				if (!is_string($val)) continue;
-				$val = trim($val);
+				$val = function_exists('cbia_normalize_submitted_api_key')
+					? cbia_normalize_submitted_api_key($val)
+					: trim(sanitize_text_field($val));
 				if ($val !== '') return $val;
 			}
 			return '';

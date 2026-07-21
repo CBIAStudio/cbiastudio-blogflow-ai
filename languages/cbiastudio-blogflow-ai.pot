@@ -7,9 +7,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: CBIAStudio BlogFlow with AI 2.1.5\n"
-"Report-Msgid-Bugs-To: https://github.com/CBIAStudio/cbiastudio-blogflow-ai/"
-"issues\n"
-"POT-Creation-Date: 2026-07-14 15:11+0200\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-07-21 10:17+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -19,11 +18,11 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=INTEGER; plural=EXPRESSION;\n"
 
-#: cbiastudio-blogflow-ai.php:366 includes/admin/admin-router.php:133
+#: cbiastudio-blogflow-ai.php:367 includes/admin/admin-router.php:133
 msgid "You do not have permission to view this page."
 msgstr ""
 
-#: cbiastudio-blogflow-ai.php:389
+#: cbiastudio-blogflow-ai.php:390
 msgid "This tab could not be loaded."
 msgstr ""
 
@@ -67,7 +66,7 @@ msgstr ""
 msgid "Could not load Blog."
 msgstr ""
 
-#: includes/admin/config-admin.php:21 includes/admin/views/usage.php:876
+#: includes/admin/config-admin.php:21 includes/admin/views/usage.php:883
 msgid "Settings"
 msgstr ""
 
@@ -79,7 +78,7 @@ msgstr ""
 msgid "Costs"
 msgstr ""
 
-#: includes/admin/costs-admin.php:40 includes/domain/costs.php:1613
+#: includes/admin/costs-admin.php:40 includes/domain/costs.php:1663
 msgid "Could not load Costs."
 msgstr ""
 
@@ -98,7 +97,7 @@ msgid "Update older posts"
 msgstr ""
 
 #: includes/admin/oldposts-admin.php:37 includes/admin/oldposts-admin.php:53
-#: includes/admin/views/usage.php:901
+#: includes/admin/views/usage.php:908
 msgid "Upgrade to Pro"
 msgstr ""
 
@@ -905,7 +904,7 @@ msgstr ""
 msgid "Applied to images inserted inside the article content."
 msgstr ""
 
-#: includes/admin/views/config.php:298 includes/admin/views/usage.php:835
+#: includes/admin/views/config.php:298 includes/admin/views/usage.php:842
 msgid "Reasoning mode"
 msgstr ""
 
@@ -917,7 +916,7 @@ msgstr ""
 msgid "Enabled — deeper reasoning"
 msgstr ""
 
-#: includes/admin/views/config.php:304 includes/admin/views/usage.php:836
+#: includes/admin/views/config.php:304 includes/admin/views/usage.php:843
 msgid "Reasoning effort"
 msgstr ""
 
@@ -1399,7 +1398,6 @@ msgid ""
 msgstr ""
 
 #: includes/admin/views/costs.php:435
-#, php-format
 msgid "0.35 = applies 35% of fixed image price when an attempt fails."
 msgstr ""
 
@@ -1528,7 +1526,7 @@ msgid ""
 "troubleshooting."
 msgstr ""
 
-#: includes/admin/views/oldposts.php:390 includes/admin/views/usage.php:914
+#: includes/admin/views/oldposts.php:390
 msgid "active"
 msgstr ""
 
@@ -1752,7 +1750,7 @@ msgstr ""
 msgid "Older than"
 msgstr ""
 
-#: includes/admin/views/oldposts.php:477 includes/admin/views/usage.php:922
+#: includes/admin/views/oldposts.php:477 includes/admin/views/usage.php:933
 msgid "days"
 msgstr ""
 
@@ -1812,7 +1810,7 @@ msgstr ""
 msgid "Sort by"
 msgstr ""
 
-#: includes/admin/views/oldposts.php:511 includes/admin/views/usage.php:1150
+#: includes/admin/views/oldposts.php:511 includes/admin/views/usage.php:1161
 msgid "Date"
 msgstr ""
 
@@ -2097,9 +2095,10 @@ msgid "Featured"
 msgstr ""
 
 #: includes/admin/views/usage.php:275 includes/admin/views/usage.php:466
-#: includes/admin/views/usage.php:1024 includes/admin/views/usage.php:1049
-#: includes/admin/views/usage.php:1091 includes/core/hooks.php:595
-#: includes/core/hooks.php:1009 includes/core/hooks.php:1884
+#: includes/admin/views/usage.php:927 includes/admin/views/usage.php:1035
+#: includes/admin/views/usage.php:1060 includes/admin/views/usage.php:1102
+#: includes/core/hooks.php:595 includes/core/hooks.php:1009
+#: includes/core/hooks.php:1884
 msgid "Image"
 msgstr ""
 
@@ -2110,9 +2109,10 @@ msgid "SEO"
 msgstr ""
 
 #: includes/admin/views/usage.php:276 includes/admin/views/usage.php:467
-#: includes/admin/views/usage.php:1023 includes/admin/views/usage.php:1048
-#: includes/admin/views/usage.php:1090 includes/core/hooks.php:595
-#: includes/core/hooks.php:1009 includes/core/hooks.php:1884
+#: includes/admin/views/usage.php:921 includes/admin/views/usage.php:1034
+#: includes/admin/views/usage.php:1059 includes/admin/views/usage.php:1101
+#: includes/core/hooks.php:595 includes/core/hooks.php:1009
+#: includes/core/hooks.php:1884
 msgid "Text"
 msgstr ""
 
@@ -2142,394 +2142,402 @@ msgstr ""
 msgid "No post"
 msgstr ""
 
-#: includes/admin/views/usage.php:822 includes/admin/views/usage.php:936
+#: includes/admin/views/usage.php:829 includes/admin/views/usage.php:947
 msgid "Loading real usage data..."
 msgstr ""
 
-#: includes/admin/views/usage.php:823 includes/admin/views/usage.php:937
+#: includes/admin/views/usage.php:830 includes/admin/views/usage.php:948
 msgid "Charts and table will fill in automatically in a few seconds."
 msgstr ""
 
-#: includes/admin/views/usage.php:824 includes/admin/views/usage.php:1163
+#: includes/admin/views/usage.php:831 includes/admin/views/usage.php:1174
 msgid "Loading logs..."
 msgstr ""
 
-#: includes/admin/views/usage.php:825
+#: includes/admin/views/usage.php:832
 msgid "Preparing detail view..."
 msgstr ""
 
-#: includes/admin/views/usage.php:826
+#: includes/admin/views/usage.php:833
 msgid "Could not load usage data right now."
 msgstr ""
 
-#: includes/admin/views/usage.php:827 includes/admin/views/usage.php:828
+#: includes/admin/views/usage.php:834 includes/admin/views/usage.php:835
 msgid "Could not load usage data."
 msgstr ""
 
-#: includes/admin/views/usage.php:829
+#: includes/admin/views/usage.php:836
 msgid "Local cost coverage"
 msgstr ""
 
-#: includes/admin/views/usage.php:830
+#: includes/admin/views/usage.php:837
 msgid "Unknown cost events"
 msgstr ""
 
-#: includes/admin/views/usage.php:831
+#: includes/admin/views/usage.php:838
 msgid "Cost not determined"
 msgstr ""
 
-#: includes/admin/views/usage.php:832 includes/admin/views/usage.php:1095
+#: includes/admin/views/usage.php:839 includes/admin/views/usage.php:1106
 #: includes/core/hooks.php:3413
 msgid "Provider"
 msgstr ""
 
-#: includes/admin/views/usage.php:833
+#: includes/admin/views/usage.php:840
 msgid "Requested model"
 msgstr ""
 
-#: includes/admin/views/usage.php:834
+#: includes/admin/views/usage.php:841
 msgid "Effective model"
 msgstr ""
 
-#: includes/admin/views/usage.php:837
+#: includes/admin/views/usage.php:844
 msgid "Cache hit / miss tokens"
 msgstr ""
 
-#: includes/admin/views/usage.php:838
+#: includes/admin/views/usage.php:845
 msgid "Reasoning tokens"
 msgstr ""
 
-#: includes/admin/views/usage.php:839
+#: includes/admin/views/usage.php:846
 msgid "Requested quality"
 msgstr ""
 
-#: includes/admin/views/usage.php:840
+#: includes/admin/views/usage.php:847
 msgid "Effective quality"
 msgstr ""
 
-#: includes/admin/views/usage.php:841
+#: includes/admin/views/usage.php:848
 msgid "Requested size"
 msgstr ""
 
-#: includes/admin/views/usage.php:842
+#: includes/admin/views/usage.php:849
 msgid "Effective size"
 msgstr ""
 
-#: includes/admin/views/usage.php:843
+#: includes/admin/views/usage.php:850
 msgid "Output format"
 msgstr ""
 
-#: includes/admin/views/usage.php:844
+#: includes/admin/views/usage.php:851
 msgid "Background"
 msgstr ""
 
-#: includes/admin/views/usage.php:845
+#: includes/admin/views/usage.php:852
 msgid "Not returned"
 msgstr ""
 
-#: includes/admin/views/usage.php:846 includes/admin/views/usage.php:1099
+#: includes/admin/views/usage.php:853 includes/admin/views/usage.php:1110
 msgid "Cost status"
 msgstr ""
 
-#: includes/admin/views/usage.php:847
+#: includes/admin/views/usage.php:854
 msgid "Cost source"
 msgstr ""
 
-#: includes/admin/views/usage.php:848
+#: includes/admin/views/usage.php:855
 msgid "Cost reason"
 msgstr ""
 
-#: includes/admin/views/usage.php:849
+#: includes/admin/views/usage.php:856
 msgid ""
 "Cost not determined: OpenAI did not return the effective quality or "
 "sufficient usage data."
 msgstr ""
 
-#: includes/admin/views/usage.php:850
+#: includes/admin/views/usage.php:857
 msgid ""
 "Cost not determined: the local connection timed out before usage data was "
 "received."
 msgstr ""
 
-#: includes/admin/views/usage.php:851
+#: includes/admin/views/usage.php:858
 msgid "Output estimate only; this is not the total invoiced cost."
 msgstr ""
 
-#: includes/admin/views/usage.php:852
+#: includes/admin/views/usage.php:859
 msgid "Calculated from API usage and the local pricing catalog."
 msgstr ""
 
-#: includes/admin/views/usage.php:853
+#: includes/admin/views/usage.php:860
 msgid ""
 "Estimated conservatively because the API did not return the cache breakdown; "
 "all input was priced as cache miss."
 msgstr ""
 
-#: includes/admin/views/usage.php:854
+#: includes/admin/views/usage.php:861
 msgid "Officially reconciled cost."
 msgstr ""
 
-#: includes/admin/views/usage.php:855
+#: includes/admin/views/usage.php:862
 msgid "Insufficient usage data."
 msgstr ""
 
-#: includes/admin/views/usage.php:856
+#: includes/admin/views/usage.php:863
 msgid "The effective model has no local price."
 msgstr ""
 
-#: includes/admin/views/usage.php:857
+#: includes/admin/views/usage.php:864
 msgid "The response did not include sufficient token usage."
 msgstr ""
 
-#: includes/admin/views/usage.php:863
+#: includes/admin/views/usage.php:870
 msgid "Usage"
 msgstr ""
 
-#: includes/admin/views/usage.php:867
+#: includes/admin/views/usage.php:874
 msgid ""
 "Unified view of real usage and cost settings, with charts, per-call detail "
 "and economic KPIs."
 msgstr ""
 
-#: includes/admin/views/usage.php:868
+#: includes/admin/views/usage.php:875
 msgid ""
 "Base mode shows essential usage activity. Advanced analytics and cost "
 "intelligence are available in Pro."
 msgstr ""
 
-#: includes/admin/views/usage.php:878
+#: includes/admin/views/usage.php:885
 msgid "Cost settings (Pro)"
 msgstr ""
 
-#: includes/admin/views/usage.php:887
+#: includes/admin/views/usage.php:894
 msgid "Advanced Usage in Pro"
 msgstr ""
 
-#: includes/admin/views/usage.php:891
+#: includes/admin/views/usage.php:898
 msgid ""
 "Usage in base mode focuses on essential activity: calls, posts, users and "
 "operational events."
 msgstr ""
 
-#: includes/admin/views/usage.php:892
+#: includes/admin/views/usage.php:899
 msgid ""
 "Upgrade to Pro to unlock advanced analytics, full event detail and real cost "
 "intelligence."
 msgstr ""
 
-#: includes/admin/views/usage.php:895
+#: includes/admin/views/usage.php:902
 msgid "Advanced usage charts"
 msgstr ""
 
-#: includes/admin/views/usage.php:896
+#: includes/admin/views/usage.php:903
 msgid "Per-call deep detail"
 msgstr ""
 
-#: includes/admin/views/usage.php:897
+#: includes/admin/views/usage.php:904
 msgid "Cost tracking and KPIs"
 msgstr ""
 
-#: includes/admin/views/usage.php:908
+#: includes/admin/views/usage.php:915
 msgid ""
 "Cost panels and cost settings are locked in base mode and available only in "
 "Pro."
 msgstr ""
 
-#: includes/admin/views/usage.php:917
-msgid "Current model"
+#: includes/admin/views/usage.php:923 includes/admin/views/usage.php:929
+msgid "API key"
 msgstr ""
 
-#: includes/admin/views/usage.php:921 includes/admin/views/usage.php:1073
+#: includes/admin/views/usage.php:923 includes/admin/views/usage.php:929
+msgid "Configured"
+msgstr ""
+
+#: includes/admin/views/usage.php:923 includes/admin/views/usage.php:929
+msgid "Missing"
+msgstr ""
+
+#: includes/admin/views/usage.php:932 includes/admin/views/usage.php:1084
 msgid "Period"
 msgstr ""
 
-#: includes/admin/views/usage.php:945
+#: includes/admin/views/usage.php:956
 msgid "Calls"
 msgstr ""
 
-#: includes/admin/views/usage.php:952
+#: includes/admin/views/usage.php:963
 msgid "Posts"
 msgstr ""
 
-#: includes/admin/views/usage.php:959
+#: includes/admin/views/usage.php:970
 msgid "Unique users"
 msgstr ""
 
-#: includes/admin/views/usage.php:966
+#: includes/admin/views/usage.php:977
 msgid "Avg tokens / call"
 msgstr ""
 
-#: includes/admin/views/usage.php:974
+#: includes/admin/views/usage.php:985
 msgid "Local calculated / estimated cost"
 msgstr ""
 
-#: includes/admin/views/usage.php:981
+#: includes/admin/views/usage.php:992
 msgid "Local average known cost / blog"
 msgstr ""
 
-#: includes/admin/views/usage.php:990
+#: includes/admin/views/usage.php:1001
 msgid ""
 "Charts are built from usage events stored by the plugin on each post. Each "
 "panel measures a different thing: calls, split by type or cost."
 msgstr ""
 
-#: includes/admin/views/usage.php:991
+#: includes/admin/views/usage.php:1002
 msgid ""
 "Charts are built from usage events stored by the plugin on each post. This "
 "view focuses on calls and event activity in base mode."
 msgstr ""
 
-#: includes/admin/views/usage.php:999
+#: includes/admin/views/usage.php:1010
 msgid "Calls per day"
 msgstr ""
 
-#: includes/admin/views/usage.php:1000
+#: includes/admin/views/usage.php:1011
 msgid "Y axis: number of AI events recorded per day in the current filter."
 msgstr ""
 
-#: includes/admin/views/usage.php:1012 includes/admin/views/usage.php:1036
+#: includes/admin/views/usage.php:1023 includes/admin/views/usage.php:1047
 msgid "No data available."
 msgstr ""
 
-#: includes/admin/views/usage.php:1019
+#: includes/admin/views/usage.php:1030
 msgid "Events by type"
 msgstr ""
 
-#: includes/admin/views/usage.php:1020
+#: includes/admin/views/usage.php:1031
 msgid ""
 "Y axis: number of text and image calls in the current filter. Period: "
 "loading..."
 msgstr ""
 
-#: includes/admin/views/usage.php:1044
+#: includes/admin/views/usage.php:1055
 msgid "Local calculated / estimated cost by month"
 msgstr ""
 
-#: includes/admin/views/usage.php:1045
+#: includes/admin/views/usage.php:1056
 msgid ""
 "Y axis: dollars (USD). Full Jan-Dec timeline of the current year, including "
 "months with zero data."
 msgstr ""
 
-#: includes/admin/views/usage.php:1061
+#: includes/admin/views/usage.php:1072
 msgid "No monthly history available."
 msgstr ""
 
-#: includes/admin/views/usage.php:1076
+#: includes/admin/views/usage.php:1087
 #, php-format
 msgid "Last %d days"
 msgstr ""
 
-#: includes/admin/views/usage.php:1081 includes/admin/views/usage.php:1158
+#: includes/admin/views/usage.php:1092 includes/admin/views/usage.php:1169
 #: includes/core/hooks.php:3421
 msgid "Model"
 msgstr ""
 
-#: includes/admin/views/usage.php:1082
+#: includes/admin/views/usage.php:1093
 msgid "All models"
 msgstr ""
 
-#: includes/admin/views/usage.php:1088 includes/admin/views/usage.php:1153
+#: includes/admin/views/usage.php:1099 includes/admin/views/usage.php:1164
 msgid "Type"
 msgstr ""
 
-#: includes/admin/views/usage.php:1089
+#: includes/admin/views/usage.php:1100
 msgid "All types"
 msgstr ""
 
-#: includes/admin/views/usage.php:1096
+#: includes/admin/views/usage.php:1107
 msgid "All providers"
 msgstr ""
 
-#: includes/admin/views/usage.php:1100
+#: includes/admin/views/usage.php:1111
 msgid "All cost statuses"
 msgstr ""
 
-#: includes/admin/views/usage.php:1101
+#: includes/admin/views/usage.php:1112
 msgid "Exact"
 msgstr ""
 
-#: includes/admin/views/usage.php:1102
+#: includes/admin/views/usage.php:1113
 msgid "Estimated"
 msgstr ""
 
-#: includes/admin/views/usage.php:1103
+#: includes/admin/views/usage.php:1114
 msgid "Unknown"
 msgstr ""
 
-#: includes/admin/views/usage.php:1104
+#: includes/admin/views/usage.php:1115
 msgid "Officially reconciled"
 msgstr ""
 
-#: includes/admin/views/usage.php:1106
+#: includes/admin/views/usage.php:1117
 msgid "Request status"
 msgstr ""
 
-#: includes/admin/views/usage.php:1107
+#: includes/admin/views/usage.php:1118
 msgid "All request statuses"
 msgstr ""
 
-#: includes/admin/views/usage.php:1108
+#: includes/admin/views/usage.php:1119
 msgid "Success"
 msgstr ""
 
-#: includes/admin/views/usage.php:1109
+#: includes/admin/views/usage.php:1120
 msgid "Error"
 msgstr ""
 
-#: includes/admin/views/usage.php:1110
+#: includes/admin/views/usage.php:1121
 msgid "Timeout"
 msgstr ""
 
-#: includes/admin/views/usage.php:1112
+#: includes/admin/views/usage.php:1123
 msgid "From"
 msgstr ""
 
-#: includes/admin/views/usage.php:1113
+#: includes/admin/views/usage.php:1124
 msgid "To"
 msgstr ""
 
-#: includes/admin/views/usage.php:1120 includes/admin/views/usage.php:1121
+#: includes/admin/views/usage.php:1131 includes/admin/views/usage.php:1132
 msgid "Search logs"
 msgstr ""
 
-#: includes/admin/views/usage.php:1124
+#: includes/admin/views/usage.php:1135
 msgid "Export CSV"
 msgstr ""
 
-#: includes/admin/views/usage.php:1125
+#: includes/admin/views/usage.php:1136
 msgid "Simulate historical cost recalculation"
 msgstr ""
 
-#: includes/admin/views/usage.php:1126
+#: includes/admin/views/usage.php:1137
 msgid "Apply recalculation"
 msgstr ""
 
-#: includes/admin/views/usage.php:1133
+#: includes/admin/views/usage.php:1144
 msgid "Usage events"
 msgstr ""
 
-#: includes/admin/views/usage.php:1136
+#: includes/admin/views/usage.php:1147
 msgid "Loading the latest events sample for faster access..."
 msgstr ""
 
-#: includes/admin/views/usage.php:1151
+#: includes/admin/views/usage.php:1162
 msgid "User"
 msgstr ""
 
-#: includes/admin/views/usage.php:1154
+#: includes/admin/views/usage.php:1165
 msgid "Tokens"
 msgstr ""
 
-#: includes/admin/views/usage.php:1156
+#: includes/admin/views/usage.php:1167
 msgid "Cost"
 msgstr ""
 
-#: includes/admin/views/usage.php:1179
+#: includes/admin/views/usage.php:1190
 msgid "Select an event to see the detail."
 msgstr ""
 
-#: includes/admin/views/usage.php:1190
+#: includes/admin/views/usage.php:1201
 msgid "The costs section could not be loaded."
 msgstr ""
 
@@ -2767,13 +2775,13 @@ msgstr ""
 #: includes/core/hooks.php:4943 includes/core/hooks.php:4966
 #: includes/core/hooks.php:5004 includes/core/hooks.php:5016
 #: includes/core/hooks.php:5043 includes/core/hooks.php:5072
-#: includes/core/hooks.php:5149 includes/core/hooks.php:5348
-#: includes/core/hooks.php:5954 includes/core/hooks.php:6031
-#: includes/core/hooks.php:6094 includes/core/hooks.php:6111
-#: includes/core/hooks.php:6156 includes/core/hooks.php:6196
-#: includes/core/hooks.php:6220 includes/core/hooks.php:6274
-#: includes/core/hooks.php:6320 includes/core/hooks.php:6485
-#: includes/core/hooks.php:6524
+#: includes/core/hooks.php:5149 includes/core/hooks.php:5359
+#: includes/core/hooks.php:5965 includes/core/hooks.php:6042
+#: includes/core/hooks.php:6105 includes/core/hooks.php:6122
+#: includes/core/hooks.php:6167 includes/core/hooks.php:6207
+#: includes/core/hooks.php:6231 includes/core/hooks.php:6285
+#: includes/core/hooks.php:6331 includes/core/hooks.php:6496
+#: includes/core/hooks.php:6535
 msgid "Unauthorized"
 msgstr ""
 
@@ -2855,11 +2863,11 @@ msgstr ""
 msgid "cbia_set_stop_flag unavailable"
 msgstr ""
 
-#: includes/core/hooks.php:5311
+#: includes/core/hooks.php:5322
 msgid "cbia_run_generate_blogs unavailable"
 msgstr ""
 
-#: includes/core/hooks.php:5571
+#: includes/core/hooks.php:5582
 #, php-format
 msgid ""
 "START v3 AJAX | batch=%1$d | scope=%2$s | filter=%3$s | older_than_days=%4$d "
@@ -2867,7 +2875,7 @@ msgid ""
 "author=%10$d | dry_run=%11$s"
 msgstr ""
 
-#: includes/core/hooks.php:5588 includes/engine/oldposts.php:1394
+#: includes/core/hooks.php:5599 includes/engine/oldposts.php:1394
 #, php-format
 msgid ""
 "ACTIONS | note=%1$s(force=%2$s) | "
@@ -2880,91 +2888,91 @@ msgid ""
 "categories=%22$s(force=%23$s) | tags=%24$s(force=%25$s)"
 msgstr ""
 
-#: includes/core/hooks.php:5617 includes/engine/oldposts.php:1424
+#: includes/core/hooks.php:5628 includes/engine/oldposts.php:1424
 msgid ""
 "NOTE: specific IDs were provided. Date/category/author filters are ignored."
 msgstr ""
 
-#: includes/core/hooks.php:5875 includes/core/hooks.php:6062
+#: includes/core/hooks.php:5886 includes/core/hooks.php:6073
 #, php-format
 msgid "TRAMO AJAX | ids=%1$s | size=%2$d"
 msgstr ""
 
-#: includes/core/hooks.php:5893 includes/core/hooks.php:6068
+#: includes/core/hooks.php:5904 includes/core/hooks.php:6079
 #, php-format
 msgid ""
 "FIN TRAMO AJAX | ids=%1$s | processed=%2$d | ok=%3$d | skip=%4$d | fail=%5$d"
 msgstr ""
 
-#: includes/core/hooks.php:5961
+#: includes/core/hooks.php:5972
 msgid "Unsupported action"
 msgstr ""
 
-#: includes/core/hooks.php:5967
+#: includes/core/hooks.php:5978
 msgid ""
 "There is already an old posts batch running. Wait for it to finish or stop "
 "it first."
 msgstr ""
 
-#: includes/core/hooks.php:6033
+#: includes/core/hooks.php:6044
 msgid "Old posts runner unavailable"
 msgstr ""
 
-#: includes/core/hooks.php:6053
+#: includes/core/hooks.php:6064
 msgid "Chunk without valid IDs"
 msgstr ""
 
-#: includes/core/hooks.php:6494
+#: includes/core/hooks.php:6505
 msgid "Invalid provider"
 msgstr ""
 
-#: includes/core/hooks.php:6525
+#: includes/core/hooks.php:6536
 msgid "Recalculation unavailable."
 msgstr ""
 
-#: includes/core/hooks.php:6527
+#: includes/core/hooks.php:6538
 msgid "Explicit confirmation is required."
 msgstr ""
 
-#: includes/domain/costs.php:1485 includes/services/oldposts-service.php:141
+#: includes/domain/costs.php:1535 includes/services/oldposts-service.php:141
 msgid "Settings saved."
 msgstr ""
 
-#: includes/domain/costs.php:1493 includes/engine/oldposts.php:2051
+#: includes/domain/costs.php:1543 includes/engine/oldposts.php:2051
 #: includes/services/oldposts-service.php:322
 msgid "Log cleared manually."
 msgstr ""
 
-#: includes/domain/costs.php:1509
+#: includes/domain/costs.php:1559
 #, php-format
 msgid ""
 "Last %1$d calculation: posts=%2$d real=%3$d est=%4$d real_calls=%5$d "
 "real_fails=%6$d tokens_in=%7$d tokens_out=%8$d total EUR=%9$s"
 msgstr ""
 
-#: includes/domain/costs.php:1523
+#: includes/domain/costs.php:1573
 #, php-format
 msgid "Last %d calculation: no results."
 msgstr ""
 
-#: includes/domain/costs.php:1537
+#: includes/domain/costs.php:1587
 #, php-format
 msgid ""
 "REAL-only last %1$d calculation: posts=%2$d real=%3$d real_calls=%4$d "
 "real_fails=%5$d tokens_in=%6$d tokens_out=%7$d total EUR=%8$s"
 msgstr ""
 
-#: includes/domain/costs.php:1550
+#: includes/domain/costs.php:1600
 #, php-format
 msgid "REAL-only last %d calculation: no results."
 msgstr ""
 
-#: includes/domain/costs.php:1581
+#: includes/domain/costs.php:1631
 #, php-format
 msgid "REAL calibration applied: billing=%1$s EUR real_calc=%2$s EUR mult=%3$s"
 msgstr ""
 
-#: includes/domain/costs.php:1589
+#: includes/domain/costs.php:1639
 msgid "REAL calibration: insufficient data to calculate."
 msgstr ""
 
@@ -3278,130 +3286,130 @@ msgstr ""
 msgid "Quick action executed. Check the log."
 msgstr ""
 
-#: includes/engine/openai.php:90
+#: includes/engine/openai.php:115
 msgid "Missing Google API key for image generation (Gemini)."
 msgstr ""
 
-#: includes/engine/openai.php:91 includes/engine/openai.php:181
-#: includes/engine/openai.php:1040
+#: includes/engine/openai.php:116 includes/engine/openai.php:206
+#: includes/engine/openai.php:1139
 msgid "No API key (Google)"
 msgstr ""
 
-#: includes/engine/openai.php:180
+#: includes/engine/openai.php:205
 msgid "Missing Google API key for image generation (Imagen)."
 msgstr ""
 
-#: includes/engine/openai.php:278
+#: includes/engine/openai.php:303
 msgid "Could not generate image (Google)."
 msgstr ""
 
-#: includes/engine/openai.php:304 includes/engine/openai.php:486
-#: includes/engine/openai.php:709 includes/engine/openai.php:862
+#: includes/engine/openai.php:363 includes/engine/openai.php:577
+#: includes/engine/openai.php:804 includes/engine/openai.php:961
 msgid "OpenAI consent not accepted"
 msgstr ""
 
-#: includes/engine/openai.php:318
+#: includes/engine/openai.php:379
 msgid "Could not get a streaming response."
 msgstr ""
 
-#: includes/engine/openai.php:319 includes/engine/openai.php:334
-#: includes/engine/openai.php:1145 includes/engine/openai.php:1179
+#: includes/engine/openai.php:380 includes/engine/openai.php:395
+#: includes/engine/openai.php:1244 includes/engine/openai.php:1283
 msgid "Could not get a response."
 msgstr ""
 
-#: includes/engine/openai.php:370 includes/engine/openai.php:499
+#: includes/engine/openai.php:431 includes/engine/openai.php:590
 msgid "Missing OpenAI API key for text generation."
 msgstr ""
 
-#: includes/engine/openai.php:371 includes/engine/openai.php:500
-#: includes/engine/openai.php:708 includes/engine/openai.php:861
+#: includes/engine/openai.php:432 includes/engine/openai.php:591
+#: includes/engine/openai.php:800 includes/engine/openai.php:957
 msgid "No API key"
 msgstr ""
 
-#: includes/engine/openai.php:379 includes/engine/openai.php:513
-#: includes/engine/openai.php:711 includes/engine/openai.php:741
-#: includes/engine/openai.php:863 includes/engine/openai.php:890
-#: includes/engine/openai.php:1078 includes/engine/openai.php:1183
+#: includes/engine/openai.php:443 includes/engine/openai.php:604
+#: includes/engine/openai.php:806 includes/engine/openai.php:836
+#: includes/engine/openai.php:962 includes/engine/openai.php:989
+#: includes/engine/openai.php:1177 includes/engine/openai.php:1287
 msgid "Stop enabled"
 msgstr ""
 
-#: includes/engine/openai.php:703
+#: includes/engine/openai.php:794
 #, php-format
 msgid "Image provider \"%s\" is not supported."
 msgstr ""
 
-#: includes/engine/openai.php:704
+#: includes/engine/openai.php:795
 msgid "Unsupported image provider"
 msgstr ""
 
-#: includes/engine/openai.php:764 includes/engine/openai.php:913
+#: includes/engine/openai.php:859 includes/engine/openai.php:1012
 msgid "AI image HTTP error: "
 msgstr ""
 
-#: includes/engine/openai.php:780 includes/engine/openai.php:929
+#: includes/engine/openai.php:875 includes/engine/openai.php:1028
 #, php-format
 msgid "AI image HTTP %d error"
 msgstr ""
 
-#: includes/engine/openai.php:790 includes/engine/openai.php:939
+#: includes/engine/openai.php:885 includes/engine/openai.php:1038
 msgid "AI image payload error: "
 msgstr ""
 
-#: includes/engine/openai.php:810 includes/engine/openai.php:959
+#: includes/engine/openai.php:905 includes/engine/openai.php:1058
 #, php-format
 msgid "AI image: response without bytes (model=%s)"
 msgstr ""
 
-#: includes/engine/openai.php:811 includes/engine/openai.php:960
+#: includes/engine/openai.php:906 includes/engine/openai.php:1059
 msgid "Response without bytes"
 msgstr ""
 
-#: includes/engine/openai.php:818 includes/engine/openai.php:967
+#: includes/engine/openai.php:913 includes/engine/openai.php:1066
 #, php-format
 msgid "AI image: upload to Media Library failed: %s"
 msgstr ""
 
-#: includes/engine/openai.php:833 includes/engine/openai.php:982
+#: includes/engine/openai.php:928 includes/engine/openai.php:1081
 #, php-format
 msgid "AI image: model=%s failed; process stopped by configuration."
 msgstr ""
 
-#: includes/engine/openai.php:834 includes/engine/openai.php:983
+#: includes/engine/openai.php:929 includes/engine/openai.php:1082
 msgid "Stopped by failover configuration"
 msgstr ""
 
-#: includes/engine/openai.php:838 includes/engine/openai.php:987
+#: includes/engine/openai.php:933 includes/engine/openai.php:1086
 msgid "Image generation failed after retries"
 msgstr ""
 
-#: includes/engine/openai.php:856
+#: includes/engine/openai.php:951
 #, php-format
 msgid ""
 "Image provider \"%s\" not supported for this flow; using OpenAI fallback."
 msgstr ""
 
-#: includes/engine/openai.php:1039
+#: includes/engine/openai.php:1138
 msgid "Missing Google API key for text generation."
 msgstr ""
 
-#: includes/engine/openai.php:1082
+#: includes/engine/openai.php:1181
 #, php-format
 msgid "Google Gemini: model=%1$s attempt %2$d/%3$d"
 msgstr ""
 
-#: includes/engine/openai.php:1159
+#: includes/engine/openai.php:1258
 msgid "Missing DeepSeek API key for text generation."
 msgstr ""
 
-#: includes/engine/openai.php:1160
+#: includes/engine/openai.php:1259
 msgid "No API key (DeepSeek)"
 msgstr ""
 
-#: includes/engine/openai.php:1225
+#: includes/engine/openai.php:1329
 msgid "DeepSeek returned invalid JSON."
 msgstr ""
 
-#: includes/engine/openai.php:1234
+#: includes/engine/openai.php:1338
 msgid "DeepSeek returned an empty content response."
 msgstr ""
 

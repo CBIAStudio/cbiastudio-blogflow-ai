@@ -625,7 +625,7 @@ if (!function_exists('cbia_prompt_length_shape')) {
 
         return $faq
             ? array('target' => '1900-2100', 'min' => 1800, 'opening' => '230-270', 'blocks' => 4, 'block' => '280-320', 'faq' => '70-85', 'closing' => '130-160')
-            : array('target' => '1900-2100', 'min' => 1800, 'opening' => '230-270', 'blocks' => 5, 'block' => '280-320', 'faq' => '0', 'closing' => '160-200');
+            : array('target' => '1900-2100', 'min' => 1800, 'opening' => '150-220', 'blocks' => 7, 'block' => '210-230', 'faq' => '0', 'closing' => '150-220');
     }
 }
 
@@ -643,8 +643,8 @@ if (!function_exists('cbia_prompt_build_length_policy_block')) {
         }
 
         return $is_spanish
-            ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: {$shape['target']} palabras reales (minimo {$shape['min']}).\n- Distribucion obligatoria: apertura {$shape['opening']}; {$blocks} bloques principales de {$shape['block']} palabras; cierre {$shape['closing']}.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
-            : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: {$shape['target']} real words (minimum {$shape['min']}).\n- Mandatory distribution: opening {$shape['opening']}; {$blocks} main blocks of {$shape['block']} words; closing {$shape['closing']}.\n- This policy overrides any previous range in this prompt.";
+            ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- El articulo, sin FAQ porque esta desactivada, debe contener {$shape['target']} palabras visibles antes del ajuste final. Minimo obligatorio del cuerpo: {$shape['min']} palabras visibles.\n- Guia flexible: apertura {$shape['opening']}; entre 7 y 10 apartados cuando el tema lo permita, con desarrollo real; cuerpo principal aproximadamente 1500-1700 palabras; cierre {$shape['closing']}.\n- No incluyas preguntas frecuentes ni reserves palabras para FAQ. Alcanza la extension desarrollando las secciones principales, sin relleno ni repeticiones.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+            : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- The article, excluding FAQ because it is disabled, must contain {$shape['target']} visible words before final adjustment. Mandatory body minimum: {$shape['min']} visible words.\n- Flexible guide: opening {$shape['opening']}; 7 to 10 sections when appropriate, each with real development; main body about 1500-1700 words; closing {$shape['closing']}.\n- Do not include frequently asked questions or reserve words for FAQ. Reach the target through substantive main sections, without padding or repetition.\n- This policy overrides any previous range in this prompt.";
     }
 }
 

@@ -66,6 +66,21 @@ if (!function_exists('cbia_is_likely_openai_key')) {
     }
 }
 
+if (!function_exists('cbia_is_masked_api_key_value')) {
+    function cbia_is_masked_api_key_value($value): bool {
+        $value = trim((string)$value);
+        if ($value === '') return false;
+        return (bool)preg_match('/^(?:[*?xX\x{2022}\x{25CF}\x{2026}\s]|\\xE2\\x80\\xA2)+$/u', $value);
+    }
+}
+
+if (!function_exists('cbia_normalize_submitted_api_key')) {
+    function cbia_normalize_submitted_api_key($value): string {
+        $value = trim(sanitize_text_field((string)$value));
+        return cbia_is_masked_api_key_value($value) ? '' : $value;
+    }
+}
+
 if (!function_exists('cbia_log')) {
     function cbia_log($message, $level = 'INFO') {
         if (function_exists('cbia_fix_mojibake')) {
@@ -226,25 +241,92 @@ if (!function_exists('cbia_get_provider_api_key')) {
             }
         }
 
-        // Para OpenAI, preferir la clave que tenga formato válido si hay conflicto.
-        if ($provider === 'openai') {
-            $main_valid = cbia_is_likely_openai_key($main_key);
-            $prov_valid = cbia_is_likely_openai_key($provider_key);
-            if ($main_valid) return $main_key;
-            if ($prov_valid) return $provider_key;
-            $legacy = cbia_get_legacy_api_key();
-            if (cbia_is_likely_openai_key($legacy)) return $legacy;
-            return '';
-        }
-
-        if ($provider_key !== '') return $provider_key;
-        if ($main_key !== '') return $main_key;
+        if ($main_key !== '' && !cbia_is_masked_api_key_value($main_key)) return $main_key;
+        if ($provider_key !== '' && !cbia_is_masked_api_key_value($provider_key)) return $provider_key;
 
         // Fallback legacy: api_key unico
         $legacy = cbia_get_legacy_api_key();
-        if ($legacy !== '') return $legacy;
+        if ($legacy !== '' && !cbia_is_masked_api_key_value($legacy)) return $legacy;
 
         return '';
+    }
+}
+
+if (!function_exists('cbia_has_provider_api_key')) {
+    function cbia_has_provider_api_key(string $provider): bool {
+        return trim(cbia_get_provider_api_key($provider)) !== '';
+    }
+}
+
+if (!function_exists('cbia_generation_preflight')) {
+    function cbia_generation_preflight(array $settings, bool $images_requested = true): array {
+        $text_provider = sanitize_key((string)($settings['text_provider'] ?? 'openai'));
+        $image_provider = sanitize_key((string)($settings['image_provider'] ?? 'openai'));
+        $text_model = function_exists('cbia_get_text_model_for_provider')
+            ? cbia_get_text_model_for_provider($text_provider, '')
+            : sanitize_text_field((string)($settings['text_model'] ?? ''));
+        $image_model = function_exists('cbia_get_image_model_for_provider')
+            ? cbia_get_image_model_for_provider($image_provider, '')
+            : sanitize_text_field((string)($settings['image_model'] ?? ''));
+        $errors = array();
+
+        if ($text_provider === '' || !cbia_has_provider_api_key($text_provider)) {
+            $errors[] = array(
+                'code' => 'missing_text_api_key',
+                'provider' => $text_provider ?: 'unknown',
+                'message' => sprintf('Missing %s API key for text generation.', ucfirst($text_provider ?: 'selected provider')),
+            );
+        } elseif ($text_model === '') {
+            $errors[] = array('code' => 'missing_text_model', 'provider' => $text_provider, 'message' => 'The selected text model is empty.');
+        }
+
+        if ($images_requested) {
+            $supports_images = !function_exists('cbia_providers_supports_image') || cbia_providers_supports_image($image_provider);
+            if (!$supports_images) {
+                $errors[] = array('code' => 'unsupported_image_provider', 'provider' => $image_provider, 'message' => 'The selected provider does not support image generation.');
+            } elseif ($image_provider === '' || !cbia_has_provider_api_key($image_provider)) {
+                $errors[] = array(
+                    'code' => 'missing_image_api_key',
+                    'provider' => $image_provider ?: 'unknown',
+                    'message' => sprintf('Missing %s API key for image generation.', ucfirst($image_provider ?: 'selected provider')),
+                );
+            } elseif ($image_model === '') {
+                $errors[] = array('code' => 'missing_image_model', 'provider' => $image_provider, 'message' => 'The selected image model is empty.');
+            }
+        }
+
+        return array(
+            'ok' => empty($errors),
+            'errors' => $errors,
+            'text' => array('provider' => $text_provider, 'model' => $text_model, 'key_configured' => cbia_has_provider_api_key($text_provider)),
+            'image' => array('provider' => $image_provider, 'model' => $image_model, 'key_configured' => cbia_has_provider_api_key($image_provider), 'requested' => $images_requested),
+        );
+    }
+}
+
+if (!function_exists('cbia_record_local_preflight_failure')) {
+    function cbia_record_local_preflight_failure(array $error, array $preflight, string $context = 'generation_preflight'): bool {
+        if (!function_exists('cbia_costes_record_usage')) return false;
+        $code = sanitize_key((string)($error['code'] ?? 'local_validation'));
+        $is_image = strpos($code, 'image') !== false;
+        $scope = $is_image ? (array)($preflight['image'] ?? array()) : (array)($preflight['text'] ?? array());
+        return (bool)cbia_costes_record_usage(0, array(
+            'type' => $is_image ? 'image' : 'text',
+            'provider' => sanitize_key((string)($scope['provider'] ?? ($error['provider'] ?? 'unknown'))),
+            'model' => sanitize_text_field((string)($scope['model'] ?? '')),
+            'ok' => 0,
+            'status' => 'blocked_local',
+            'result_status' => 'blocked_local',
+            'error' => sanitize_text_field((string)($error['message'] ?? 'Local preflight blocked the request.')),
+            'error_type' => strpos($code, 'api_key') !== false ? 'missing_api_key' : $code,
+            'request_sent' => 0,
+            'billable' => 0,
+            'cost_micro_usd' => 0,
+            'cost_status' => 'exact',
+            'cost_source' => 'local_preflight',
+            'context' => $context,
+            'attempt_id' => 'preflight-' . substr(hash('sha256', $context . '|' . $code . '|' . microtime(true) . '|' . wp_generate_uuid4()), 0, 24),
+        ));
     }
 }
 

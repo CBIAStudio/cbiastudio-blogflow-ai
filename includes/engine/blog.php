@@ -642,6 +642,19 @@ if (!function_exists('cbia_run_generate_blogs')) {
         cbia_log_message("[DEBUG] cbia_run_generate_blogs called.");
         cbia_log_message("[INFO] Starting blog generation (checkpoint)...");
 
+        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
+        // Blog always generates a featured image; images_limit only controls the total count.
+        $images_requested = true;
+        if (function_exists('cbia_generation_preflight')) {
+            $preflight = cbia_generation_preflight((array)$settings, $images_requested);
+            if (empty($preflight['ok'])) {
+                $error = (array)($preflight['errors'][0] ?? array('code' => 'local_validation', 'message' => 'Generation preflight failed.'));
+                if (function_exists('cbia_record_local_preflight_failure')) cbia_record_local_preflight_failure($error, $preflight, 'blog_preflight');
+                cbia_log_message('[ERROR] Blog preflight blocked before generation: ' . sanitize_text_field((string)($error['message'] ?? 'unknown')));
+                return array('done' => true, 'processed' => 0, 'blocked' => true, 'error' => sanitize_key((string)($error['code'] ?? 'local_validation')));
+            }
+        }
+
         $max_per_run = function_exists('cbia_blog_get_posts_per_event')
             ? cbia_blog_get_posts_per_event(array('blog_posts_per_event' => $max_per_run))
             : max(1, min(5, (int)$max_per_run));
