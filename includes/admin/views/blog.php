@@ -703,7 +703,7 @@ echo '</select>';
 
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
 <button type="submit" class="button" name="cbia_action" value="test_config"><?php echo esc_html__('Test configuration', 'cbiastudio-blogflow-ai'); ?></button>
-<span class="description"><?php echo esc_html__('Uses the saved text provider, model and API key. Save Settings first. Images are checked locally without a paid generation.', 'cbiastudio-blogflow-ai'); ?></span>
+<span class="description"><?php echo esc_html__('Tests the saved configuration.', 'cbiastudio-blogflow-ai'); ?></span>
 
 <button type="button" class="button button-primary" id="cbia_btn_generate"><?php echo esc_html__('Run batch (with resume)', 'cbiastudio-blogflow-ai'); ?></button>
 

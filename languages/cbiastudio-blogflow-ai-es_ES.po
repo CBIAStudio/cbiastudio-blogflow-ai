@@ -775,12 +775,8 @@ msgid "Test configuration"
 msgstr "Configuracion"
 
 #: includes/admin/views/blog.php:706
-msgid ""
-"Uses the saved text provider, model and API key. Save Settings first. Images "
-"are checked locally without a paid generation."
-msgstr ""
-"Usa el proveedor, el modelo y la clave API de texto guardados. Guarda primero "
-"los ajustes. Las imágenes se comprueban localmente sin generar una imagen de pago."
+msgid "Tests the saved configuration."
+msgstr "Prueba la configuración guardada."
 
 #: includes/admin/views/blog.php:708
 msgid "Run batch (with resume)"

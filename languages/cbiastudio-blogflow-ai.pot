@@ -749,9 +749,7 @@ msgid "Test configuration"
 msgstr ""
 
 #: includes/admin/views/blog.php:706
-msgid ""
-"Uses the saved text provider, model and API key. Save Settings first. Images "
-"are checked locally without a paid generation."
+msgid "Tests the saved configuration."
 msgstr ""
 
 #: includes/admin/views/blog.php:708
