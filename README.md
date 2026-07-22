@@ -11,6 +11,8 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 
 ## What's New in 2.1.5
 
+- API key fields now use the same bullet mask and show an explicit green configured or red missing status without exposing credentials.
+- Provider credentials now use a canonical provider-only store that model and provider selection saves cannot overwrite; legacy stores remain synchronized for compatibility.
 - Provider API keys are validated and stored independently without accepting masks, asterisks, whitespace or control characters; invalid submissions preserve the previous key.
 - Settings and diagnostics expose only configured booleans, never key values or prefix/suffix fragments.
 - OpenAI, DeepSeek and Google routes use the central provider resolver; authentication errors are sanitized and recorded as exact zero-cost rejected requests.

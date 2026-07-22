@@ -113,6 +113,53 @@ if (!function_exists('cbia_sanitize_provider_api_key')) {
     }
 }
 
+if (!function_exists('cbia_provider_api_keys_option_name')) {
+    function cbia_provider_api_keys_option_name(): string {
+        return 'cbia_provider_api_keys';
+    }
+}
+
+if (!function_exists('cbia_get_provider_api_keys_store')) {
+    function cbia_get_provider_api_keys_store(): array {
+        $stored = get_option(cbia_provider_api_keys_option_name(), array());
+        return is_array($stored) ? $stored : array();
+    }
+}
+
+if (!function_exists('cbia_store_provider_api_key')) {
+    /** Persist one provider credential without touching provider or model settings. */
+    function cbia_store_provider_api_key(string $provider, $candidate): array {
+        $provider = sanitize_key($provider);
+        if (!in_array($provider, array('openai', 'google', 'deepseek'), true)) {
+            return array('valid' => false, 'value' => '', 'code' => 'invalid_provider');
+        }
+
+        $result = cbia_sanitize_provider_api_key($provider, $candidate);
+        if (empty($result['valid'])) return $result;
+
+        $value = (string)$result['value'];
+        $vault = cbia_get_provider_api_keys_store();
+        $vault[$provider] = $value;
+        update_option(cbia_provider_api_keys_option_name(), $vault, false);
+
+        // Keep historical stores synchronized for one-way compatibility.
+        $settings_key = $provider . '_api_key';
+        $settings = get_option('cbia_settings', array());
+        $settings = is_array($settings) ? $settings : array();
+        $settings[$settings_key] = $value;
+        update_option('cbia_settings', $settings, false);
+
+        $provider_settings = get_option('cbia_provider_settings', array());
+        $provider_settings = is_array($provider_settings) ? $provider_settings : array();
+        if (!isset($provider_settings['providers']) || !is_array($provider_settings['providers'])) $provider_settings['providers'] = array();
+        if (!isset($provider_settings['providers'][$provider]) || !is_array($provider_settings['providers'][$provider])) $provider_settings['providers'][$provider] = array();
+        $provider_settings['providers'][$provider]['api_key'] = $value;
+        update_option('cbia_provider_settings', $provider_settings, false);
+
+        return $result;
+    }
+}
+
 if (!function_exists('cbia_provider_api_key_error_message')) {
     function cbia_provider_api_key_error_message(string $provider, string $code): string {
         if ($code === 'masked') return __('The visual mask was not saved as an API key. The previous key was preserved.', 'cbiastudio-blogflow-ai');
@@ -266,7 +313,11 @@ if (!function_exists('cbia_get_provider_api_key')) {
         $provider = sanitize_key($provider);
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : [];
 
-        // Leer ambas fuentes para priorizar la clave realmente activa por proveedor.
+        $vault = cbia_get_provider_api_keys_store();
+        $vault_result = cbia_sanitize_provider_api_key($provider, (string)($vault[$provider] ?? ''));
+        if (!empty($vault_result['valid'])) return (string)$vault_result['value'];
+
+        // Compatibility fallbacks for installations upgraded from older releases.
         $map = array(
             'openai'  => (string)($settings['openai_api_key'] ?? ''),
             'google'  => (string)($settings['google_api_key'] ?? ''),

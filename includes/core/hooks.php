@@ -1319,18 +1319,15 @@ if (!function_exists('cbia_repair_provider_api_keys_into_main_settings')) {
         $settings = get_option('cbia_settings', array());
         $settings = is_array($settings) ? $settings : array();
         $provider_settings = cbia_providers_get_settings();
+        $vault = function_exists('cbia_get_provider_api_keys_store') ? cbia_get_provider_api_keys_store() : array();
         $map = array('openai' => 'openai_api_key', 'google' => 'google_api_key', 'deepseek' => 'deepseek_api_key');
-        $changed = false;
         foreach ($map as $provider => $settings_key) {
+            $vault_result = cbia_sanitize_provider_api_key($provider, (string)($vault[$provider] ?? ''));
+            if (!empty($vault_result['valid'])) continue;
             $main_result = cbia_sanitize_provider_api_key($provider, (string)($settings[$settings_key] ?? ''));
             $provider_result = cbia_sanitize_provider_api_key($provider, (string)($provider_settings['providers'][$provider]['api_key'] ?? ''));
-            if (empty($main_result['valid']) && !empty($provider_result['valid'])) {
-                $settings[$settings_key] = (string)$provider_result['value'];
-                $changed = true;
-            }
-        }
-        if ($changed) {
-            update_option('cbia_settings', $settings, false);
+            $candidate = !empty($main_result['valid']) ? (string)$main_result['value'] : (!empty($provider_result['valid']) ? (string)$provider_result['value'] : '');
+            if ($candidate !== '' && function_exists('cbia_store_provider_api_key')) cbia_store_provider_api_key($provider, $candidate);
         }
     }
 }
@@ -3767,28 +3764,11 @@ if (!function_exists('cbia_ajax_ai_composer_save_api_key')) {
             wp_send_json_error(array('message' => __('API key cannot be empty.', 'cbiastudio-blogflow-ai')), 400);
         }
 
-        $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : (array)get_option('cbia_settings', array());
-        $map = array(
-            'openai' => 'openai_api_key',
-            'google' => 'google_api_key',
-            'deepseek' => 'deepseek_api_key',
-        );
-        $field = $map[$provider];
         if ($key !== '') {
-            $settings[$field] = $key;
+            $stored = cbia_store_provider_api_key($provider, $key);
+            if (empty($stored['valid'])) wp_send_json_error(array('message' => cbia_provider_api_key_error_message($provider, (string)$stored['code'])), 400);
         } elseif ($use_existing_key && cbia_get_provider_api_key($provider) === '') {
             wp_send_json_error(array('message' => __('That provider has no saved API key.', 'cbiastudio-blogflow-ai')), 400);
-        }
-        update_option('cbia_settings', $settings, false);
-
-        if (function_exists('cbia_providers_get_settings') && function_exists('cbia_providers_save_settings')) {
-            $ps = cbia_providers_get_settings();
-            if (!isset($ps['providers']) || !is_array($ps['providers'])) $ps['providers'] = array();
-            if (!isset($ps['providers'][$provider]) || !is_array($ps['providers'][$provider])) $ps['providers'][$provider] = array();
-            if ($key !== '') {
-                $ps['providers'][$provider]['api_key'] = $key;
-            }
-            cbia_providers_save_settings($ps);
         }
 
         $text_provider = function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : 'openai';

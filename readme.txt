@@ -157,6 +157,8 @@ This plugin can connect to third-party AI services only when the site administra
 == Changelog ==
 
 = 2.1.5 =
+* API key fields now use one consistent bullet mask and show a clear configured or missing status without exposing credentials.
+* Provider credentials now use a canonical provider-only store that model and provider selection saves cannot overwrite; legacy stores remain synchronized for compatibility.
 * Provider API keys are isolated by provider, reject masks/control characters, and preserve the previous valid value when a submission is invalid.
 * Diagnostics and settings expose configured state only; provider errors are sanitized before logs, AJAX and Usage storage.
 * Authentication rejections are exact zero-cost Usage events, and Oldposts v3 preflights credentials before destructive image operations.

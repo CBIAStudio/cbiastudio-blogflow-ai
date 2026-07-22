@@ -277,6 +277,13 @@ if (!function_exists('cbia_update_settings_merge')) {
 				continue;
 			}
 			$provider = str_replace('_api_key', '', $secret_key);
+			if (function_exists('cbia_store_provider_api_key')) {
+				cbia_store_provider_api_key($provider, $partial[$secret_key]);
+				unset($partial[$secret_key]);
+				$current = get_option(CBIA_OPTION_SETTINGS, []);
+				if (!is_array($current)) $current = [];
+				continue;
+			}
 			$result = function_exists('cbia_sanitize_provider_api_key') ? cbia_sanitize_provider_api_key($provider, $partial[$secret_key]) : array('valid' => trim((string)$partial[$secret_key]) !== '', 'value' => trim((string)$partial[$secret_key]));
 			if (empty($result['valid'])) unset($partial[$secret_key]);
 			else $partial[$secret_key] = (string)$result['value'];

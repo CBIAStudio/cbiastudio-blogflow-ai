@@ -63,6 +63,7 @@ if (!function_exists('cbia_providers_save_settings')) {
                     : array('valid' => $new_key !== '', 'value' => $new_key);
                 if (!empty($result['valid'])) {
                     $settings['providers'][$provider]['api_key'] = (string)$result['value'];
+					if (function_exists('cbia_store_provider_api_key')) cbia_store_provider_api_key((string)$provider, (string)$result['value']);
                 } elseif ($old_key !== '') {
                     $settings['providers'][$provider]['api_key'] = $old_key;
                 } else {
