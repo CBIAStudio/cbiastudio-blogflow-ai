@@ -107,7 +107,7 @@ if (!function_exists('cbia_set_last_scheduled_at')) {
    =================== HELPERS: CHECKPOINT =================
    ========================================================= */
 if (!function_exists('cbia_checkpoint_clear')) {
-    function cbia_checkpoint_clear(){ delete_option('cbia_checkpoint'); }
+    function cbia_checkpoint_clear(){ delete_option('cbia_checkpoint'); delete_option('cbia_image_batch_auth_guard'); }
 }
 if (!function_exists('cbia_checkpoint_get')) {
     function cbia_checkpoint_get(){
@@ -287,6 +287,10 @@ if (!function_exists('cbia_blog_handle_post')) {
             if ($action === 'test_config') {
                 if (function_exists('cbia_run_test_configuration')) $GLOBALS['cbia_configuration_test_result'] = cbia_run_test_configuration();
                 else cbia_log_message('[WARN] Missing cbia_run_test_configuration().');
+                $saved_notice = 'test';
+
+            } elseif ($action === 'test_config_advanced') {
+                if (function_exists('cbia_run_test_configuration')) $GLOBALS['cbia_configuration_test_result'] = cbia_run_test_configuration(true);
                 $saved_notice = 'test';
 
             } elseif ($action === 'stop_generation') {
@@ -516,6 +520,7 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
             $cp = array('queue'=>$queue,'idx'=>$idx,'created_total'=>0,'running'=>true,'last_scheduled_at'=>'');
             cbia_checkpoint_save($cp);
             cbia_log_message("[INFO] Checkpoint created. Starting batch... queue=".count($queue));
+            if (!empty($queue) && function_exists('cbia_image_batch_auth_guard_begin')) cbia_image_batch_auth_guard_begin();
         }
 
         if (empty($queue)) {
@@ -591,6 +596,12 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
             }
 
             $cp['idx'] = $i + 1;
+			if (!empty($result['efficiency']) && is_array($result['efficiency'])) {
+				if (empty($cp['efficiency']) || !is_array($cp['efficiency'])) $cp['efficiency'] = array('posts'=>0,'first_pass_success'=>0,'expansions'=>0,'failed_length'=>0,'first_words'=>0,'final_words'=>0,'reasoning_tokens'=>0,'token_limits'=>0,'thinking_modes'=>array());
+				$metric = $result['efficiency']; $cp['efficiency']['posts']++; $cp['efficiency']['first_words'] += (int)$metric['first_pass_words']; $cp['efficiency']['final_words'] += (int)$metric['final_words'];
+				$cp['efficiency']['expansions'] += (int)$metric['expansion_used']; $cp['efficiency']['first_pass_success'] += !empty($metric['first_pass_success']) ? 1 : 0; $cp['efficiency']['reasoning_tokens'] += (int)$metric['reasoning_tokens']; $cp['efficiency']['token_limits'] += (int)$metric['hit_token_limit'];
+				$mode = sanitize_key((string)($metric['thinking'] ?? 'n/a')); $cp['efficiency']['thinking_modes'][$mode] = (int)($cp['efficiency']['thinking_modes'][$mode] ?? 0) + 1;
+			}
             cbia_checkpoint_save($cp);
 
             $processed_this_run++;
@@ -613,6 +624,12 @@ if (!function_exists('cbia_create_all_posts_checkpointed')) {
 
         if ($queue_count > 0 && $idx_now >= $queue_count) {
             cbia_log_message("[INFO] Queue finished. Total created: ".intval($cp['created_total']));
+			$eff = is_array($cp['efficiency'] ?? null) ? $cp['efficiency'] : array(); $eff_posts = max(1, (int)($eff['posts'] ?? 0));
+			cbia_log_message('[INFO] Text generation efficiency: posts=' . (int)($eff['posts'] ?? 0) . ' first_pass_success=' . (int)($eff['first_pass_success'] ?? 0) . ' expansions=' . (int)($eff['expansions'] ?? 0) . ' failed_length=' . (int)($eff['failed_length'] ?? 0) . ' average_first_pass_words=' . (int)round(((int)($eff['first_words'] ?? 0)) / $eff_posts) . ' average_final_words=' . (int)round(((int)($eff['final_words'] ?? 0)) / $eff_posts) . ' average_reasoning_tokens=' . (int)round(((int)($eff['reasoning_tokens'] ?? 0)) / $eff_posts) . ' responses_hitting_token_limit=' . (int)($eff['token_limits'] ?? 0) . ' thinking_modes=' . wp_json_encode((array)($eff['thinking_modes'] ?? array())) . '.');
+			if (function_exists('cbia_image_batch_auth_guard_finish')) {
+				$image_guard = cbia_image_batch_auth_guard_finish();
+				cbia_log_message('[INFO] Image batch authentication guard: blocked=' . (!empty($image_guard['blocked']) ? 'yes' : 'no') . ' skipped_calls=' . (int)($image_guard['skipped'] ?? 0) . ' skipped_cost=0.');
+			}
             $cp['running'] = false;
             cbia_checkpoint_save($cp);
             cbia_checkpoint_clear();

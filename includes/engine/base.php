@@ -568,12 +568,38 @@ if (!function_exists('cbia_http_headers_openai')) {
     }
 }
 
+if (!function_exists('cbia_deepseek_test_models_connection')) {
+    function cbia_deepseek_test_models_connection($model): array {
+        $cfg = function_exists('cbia_get_provider_config') ? cbia_get_provider_config('deepseek') : array();
+        $key = function_exists('cbia_get_provider_api_key') ? cbia_get_provider_api_key('deepseek') : (string)($cfg['api_key'] ?? '');
+        if ($key === '') return array('ok'=>false,'status'=>'missing_api_key','http_code'=>0,'request_sent'=>0,'model_available'=>false,'request_id'=>'','elapsed_ms'=>0);
+        $base = rtrim((string)($cfg['base_url'] ?? 'https://api.deepseek.com'), '/');
+        $started = microtime(true);
+        $resp = wp_remote_get($base . '/models', array('timeout'=>30,'headers'=>array('Authorization'=>'Bearer ' . $key)));
+        $elapsed = max(0, (int)round((microtime(true) - $started) * 1000));
+        if (is_wp_error($resp)) {
+            $message = function_exists('cbia_mask_sensitive_log_text') ? cbia_mask_sensitive_log_text($resp->get_error_message()) : sanitize_text_field($resp->get_error_message());
+            $status = stripos($message, 'timeout') !== false || stripos($message, 'timed out') !== false || stripos($message, 'cURL error 28') !== false ? 'timeout' : 'transport_error';
+            return array('ok'=>false,'status'=>$status,'http_code'=>0,'request_sent'=>1,'model_available'=>false,'request_id'=>'','elapsed_ms'=>$elapsed,'error'=>$message);
+        }
+        $code = (int)wp_remote_retrieve_response_code($resp);
+        $request_id = sanitize_text_field((string)wp_remote_retrieve_header($resp, 'x-request-id'));
+        $data = json_decode((string)wp_remote_retrieve_body($resp), true);
+        $status = $code === 401 || $code === 403 ? 'authentication_failed' : ($code === 402 ? 'billing_failed' : ($code === 429 ? 'rate_limited' : ($code >= 500 ? 'provider_error' : 'invalid_response')));
+        if ($code < 200 || $code >= 300) return array('ok'=>false,'status'=>$status,'http_code'=>$code,'request_sent'=>1,'model_available'=>false,'request_id'=>$request_id,'elapsed_ms'=>$elapsed);
+        if (!is_array($data) || !is_array($data['data'] ?? null)) return array('ok'=>false,'status'=>'invalid_response','http_code'=>$code,'request_sent'=>1,'model_available'=>false,'request_id'=>$request_id,'elapsed_ms'=>$elapsed);
+        $ids = array();
+        foreach ($data['data'] as $row) if (is_array($row) && !empty($row['id'])) $ids[] = (string)$row['id'];
+        return array('ok'=>true,'status'=>'connection_ok','http_code'=>$code,'request_sent'=>1,'model_available'=>in_array((string)$model, $ids, true),'request_id'=>$request_id,'elapsed_ms'=>$elapsed);
+    }
+}
+
 if (!function_exists('cbia_run_test_configuration')) {
     /**
      * Basic configuration test: validates settings and (optionally) performs a lightweight API call.
      * Returns an array with ok/error details for future UI use.
      */
-    function cbia_run_test_configuration(): array {
+    function cbia_run_test_configuration(bool $advanced = false): array {
         $settings = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
         $provider = function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : sanitize_key((string)($settings['text_provider'] ?? 'openai'));
         $model = function_exists('cbia_get_text_model_for_provider') ? cbia_get_text_model_for_provider($provider, '') : sanitize_text_field((string)($settings['text_model'] ?? ''));
@@ -619,12 +645,26 @@ if (!function_exists('cbia_run_test_configuration')) {
             return array('ok' => false, 'error' => $error_type, 'message' => $message, 'text' => array('provider' => $provider, 'model' => $model), 'image' => array('provider' => $image_provider, 'model' => $image_model, 'key_configured' => $image_key_configured), 'stop_flag_changed' => $stop_before !== $stop_after);
         }
 
+        $connection = array();
+        if ($provider === 'deepseek') {
+            $connection = cbia_deepseek_test_models_connection($model);
+            $log('TEST DeepSeek connection: provider=deepseek model=' . $model . ' endpoint=api.deepseek.com HTTP=' . (int)($connection['http_code'] ?? 0) . ' selected_model_available=' . (!empty($connection['model_available']) ? 'yes' : 'no') . ' authentication_status=' . (!empty($connection['ok']) ? 'ok' : (string)($connection['status'] ?? 'unknown')) . ' request_id=' . (string)($connection['request_id'] ?? '') . ' elapsed_ms=' . (int)($connection['elapsed_ms'] ?? 0) . ' stop_flag_changed=no');
+            if (empty($connection['ok'])) {
+                $message = __('DeepSeek connection or authentication test failed.', 'cbiastudio-blogflow-ai');
+                return array('ok'=>false,'error'=>(string)($connection['status'] ?? 'connection_error'),'message'=>$message,'connection'=>$connection,'text'=>array('provider'=>$provider,'model'=>$model),'image'=>array('provider'=>$image_provider,'model'=>$image_model,'key_configured'=>$image_key_configured),'stop_flag_changed'=>false);
+            }
+			if (empty($connection['model_available'])) return array('ok'=>false,'connection_ok'=>true,'error'=>'model_unavailable','message'=>__('DeepSeek connection and authentication are valid, but the selected model is not available.', 'cbiastudio-blogflow-ai'),'connection'=>$connection,'text'=>array('provider'=>$provider,'model'=>$model),'image'=>array('provider'=>$image_provider,'model'=>$image_model,'key_configured'=>$image_key_configured),'stop_flag_changed'=>false);
+        }
+
         $context = array(
             'phase' => 'configuration_test', 'context' => 'configuration_test', 'provider' => $provider, 'model' => $model,
             'allow_fallback' => false, 'ignore_stop' => true, 'defer_usage_recording' => true, 'post_id' => 0,
+            'thinking_override' => ($provider === 'deepseek' && !$advanced) ? 'disabled' : $thinking,
+            'reasoning_effort_override' => $advanced ? sanitize_key((string)($settings['deepseek_reasoning_effort'] ?? 'high')) : '',
             'temporary_context_id' => 'configuration-test-' . substr(hash('sha256', microtime(true) . '|' . wp_generate_uuid4()), 0, 24),
         );
-        $res = cbia_openai_responses_call(__('Reply only with OK.', 'cbiastudio-blogflow-ai'), 'configuration_test', 1, 16, $context);
+        $test_max = $advanced ? max(256, min(12000, (int)($settings['responses_max_output_tokens'] ?? 6000))) : 32;
+        $res = cbia_openai_responses_call(__('Reply only with OK.', 'cbiastudio-blogflow-ai'), 'configuration_test', 1, $test_max, $context);
         $ok = is_array($res) && !empty($res[0]);
         $usage = is_array($res) ? (array)($res[2] ?? array()) : array();
         $model_effective = is_array($res) ? sanitize_text_field((string)($res[3] ?? $model)) : $model;
@@ -639,29 +679,38 @@ if (!function_exists('cbia_run_test_configuration')) {
         $elapsed_ms = max(0, (int)($meta['elapsed_ms'] ?? 0));
         $request_sent = $http_code > 0 || $elapsed_ms > 0 || !empty($meta['request_id']);
         $is_timeout = !empty($meta['timeout']) || stripos($error, 'timeout') !== false || stripos($error, 'timed out') !== false;
-        $result_status = $ok ? 'success' : ($is_timeout ? 'timeout_unknown' : 'error');
-        $error_type = $ok ? '' : ($http_code === 401 || $http_code === 403 ? 'authentication' : ($http_code === 402 ? 'billing' : ($is_timeout ? 'timeout' : ($http_code === 429 ? 'rate_limit' : 'provider_error'))));
+        $reasoning_present = !empty($meta['reasoning_content_present']);
+        $empty_status = sanitize_key((string)($meta['status'] ?? ''));
+        $result_status = $ok ? 'chat_ok' : ($reasoning_present && $http_code === 200 ? 'chat_incomplete' : ($empty_status === 'chat_empty_content' ? 'chat_empty_content' : ($is_timeout ? 'timeout' : 'provider_error')));
+        $error_type = $ok ? '' : (in_array($result_status, array('chat_incomplete', 'chat_empty_content'), true) ? $result_status : ($http_code === 401 || $http_code === 403 ? 'authentication' : ($http_code === 402 ? 'billing' : ($is_timeout ? 'timeout' : ($http_code === 429 ? 'rate_limit' : 'provider_error')))));
+        $provider_rejected = in_array($http_code, array(401, 402, 403), true);
         $usage_saved = function_exists('cbia_costes_record_usage') ? (bool)cbia_costes_record_usage(0, array_merge($usage, $meta, array(
             'type' => 'text', 'provider' => $provider, 'model' => $model_effective, 'model_requested' => $model, 'model_effective' => $model_effective,
             'phase' => 'configuration_test', 'context' => 'configuration_test', 'ok' => $ok ? 1 : 0, 'status' => $result_status, 'result_status' => $result_status,
-            'error' => $ok ? '' : $error, 'error_type' => $error_type, 'request_sent' => $request_sent ? 1 : 0, 'billable' => $request_sent ? 1 : 0,
-            'cost_status' => $is_timeout ? 'unknown' : 'estimated', 'cost_source' => $is_timeout ? 'provider_response_unknown' : 'plugin_catalog',
+            'error' => $ok ? '' : $error, 'error_type' => $error_type, 'request_sent' => $request_sent ? 1 : 0, 'billable' => $request_sent && !$provider_rejected ? 1 : 0,
+            'cost_micro_usd' => $provider_rejected ? 0 : (int)($meta['cost_micro_usd'] ?? 0),
+            'cost_status' => $provider_rejected ? 'exact' : ($is_timeout ? 'unknown' : 'estimated'), 'cost_source' => $provider_rejected ? 'provider_rejected_before_generation' : ($is_timeout ? 'provider_response_unknown' : 'plugin_catalog'),
             'attempt_id' => $context['temporary_context_id'] . '-a1', 'elapsed_ms' => $elapsed_ms, 'http_code' => $http_code,
         ))) : false;
         $stop_after = cbia_is_stop_requested();
         $changed = $stop_before !== $stop_after;
+        if ($provider === 'deepseek') {
+            $log('TEST DeepSeek chat: mode=' . ($advanced ? 'advanced' : 'basic') . ' thinking=' . (string)($context['thinking_override'] ?? $thinking) . ' effort=' . ($advanced ? (string)($context['reasoning_effort_override'] ?? '') : 'n/a') . ' attempt=1/1 fallback_allowed=no HTTP=' . $http_code . ' finish_reason=' . (string)($meta['finish_reason'] ?? '') . ' content_present=' . (!empty($meta['content_present']) ? 'yes' : 'no') . ' reasoning_content_present=' . ($reasoning_present ? 'yes' : 'no') . ' reasoning_tokens=' . (int)($usage['reasoning_tokens'] ?? 0) . ' result_status=' . $result_status . ' usage_event_saved=' . ($usage_saved ? 'yes' : 'no'));
+        }
 
         if ($ok) {
             $message = sprintf(__('%1$s configured correctly. Model tested: %2$s.', 'cbiastudio-blogflow-ai'), ucfirst($provider), $model_effective);
             $log('TEST text OK: provider=' . $provider . ' model_requested=' . $model . ' model_effective=' . $model_effective . ' HTTP=' . $http_code . ' request_id=' . sanitize_text_field((string)($meta['request_id'] ?? '')) . ' tokens_input=' . (int)($usage['input_tokens'] ?? 0) . ' tokens_output=' . (int)($usage['output_tokens'] ?? 0) . ' cost_status=' . ($is_timeout ? 'unknown' : 'estimated') . ' elapsed_ms=' . $elapsed_ms . ' usage_event_saved=' . ($usage_saved ? 'yes' : 'no') . ' stop_flag_after=' . ($stop_after ? 'enabled' : 'disabled') . ' stop_flag_changed=' . ($changed ? 'yes' : 'no'));
         } else {
-            $message = $error_type === 'authentication'
+            $message = $error_type === 'chat_incomplete'
+                ? __('DeepSeek responded correctly, but the reasoning test did not produce final content. The connection and API key are valid.', 'cbiastudio-blogflow-ai')
+                : ($error_type === 'authentication'
                 ? sprintf(__('%s rejected the API key.', 'cbiastudio-blogflow-ai'), ucfirst($provider))
-                : sprintf(__('Could not validate %s.', 'cbiastudio-blogflow-ai'), ucfirst($provider));
+                : sprintf(__('Could not validate %s.', 'cbiastudio-blogflow-ai'), ucfirst($provider)));
             $log('TEST text failed: provider=' . $provider . ' model=' . $model . ' HTTP=' . $http_code . ' error_type=' . $error_type . ' message=' . $error . ' usage_event_saved=' . ($usage_saved ? 'yes' : 'no') . ' stop_flag_after=' . ($stop_after ? 'enabled' : 'disabled') . ' stop_flag_changed=' . ($changed ? 'yes' : 'no'), 'ERROR');
         }
 
-        return array('ok' => $ok, 'error' => $ok ? '' : $error_type, 'message' => $message, 'http_code' => $http_code, 'usage_saved' => $usage_saved, 'text' => array('provider' => $provider, 'model' => $model_effective, 'usage' => $usage), 'image' => array('provider' => $image_provider, 'model' => $image_model, 'key_configured' => $image_key_configured, 'paid_generation' => false), 'stop_flag_changed' => $changed);
+        return array('ok' => $ok, 'connection_ok' => $provider === 'deepseek' ? !empty($connection['ok']) : $ok, 'chat_status' => $result_status, 'advanced' => $advanced, 'error' => $ok ? '' : $error_type, 'message' => $message, 'http_code' => $http_code, 'usage_saved' => $usage_saved, 'connection' => $connection, 'text' => array('provider' => $provider, 'model' => $model_effective, 'usage' => $usage, 'finish_reason'=>(string)($meta['finish_reason'] ?? '')), 'image' => array('provider' => $image_provider, 'model' => $image_model, 'key_configured' => $image_key_configured, 'paid_generation' => false), 'stop_flag_changed' => $changed);
     }
 }
 

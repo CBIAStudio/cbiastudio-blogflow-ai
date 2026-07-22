@@ -298,9 +298,12 @@ $deepseek_visible = $text_provider === 'deepseek';
 echo '<div class="abb-field abb-deepseek-settings"' . ($deepseek_visible ? '' : ' style="display:none;"') . '>';
 echo '<label for="cbia-deepseek-thinking">' . esc_html__('Reasoning mode', 'cbiastudio-blogflow-ai') . '</label>';
 echo '<select id="cbia-deepseek-thinking" name="deepseek_thinking_mode" class="abb-select">';
-echo '<option value="disabled" ' . selected($deepseek_config['thinking'], 'disabled', false) . '>' . esc_html__('Disabled — faster and lower cost', 'cbiastudio-blogflow-ai') . '</option>';
-echo '<option value="enabled" ' . selected($deepseek_config['thinking'], 'enabled', false) . '>' . esc_html__('Enabled — deeper reasoning', 'cbiastudio-blogflow-ai') . '</option>';
-echo '</select></div>';
+echo '<option value="disabled" ' . selected($deepseek_config['thinking'], 'disabled', false) . '>' . esc_html__('Disabled — recommended for articles', 'cbiastudio-blogflow-ai') . '</option>';
+echo '<option value="enabled" ' . selected($deepseek_config['thinking'], 'enabled', false) . '>' . esc_html__('Enabled — advanced reasoning', 'cbiastudio-blogflow-ai') . '</option>';
+echo '</select><p class="description">' . esc_html__('When enabled, reasoning tokens consume part of the output-token budget and can leave less room for visible article text.', 'cbiastudio-blogflow-ai') . '</p></div>';
+if ($deepseek_visible && $deepseek_config['thinking'] === 'enabled' && in_array(sanitize_key((string)($s['post_length_variant'] ?? 'medium')), array('medium', 'long'), true) && (int)($s['responses_max_output_tokens'] ?? 6000) < 6000) {
+    echo '<div class="notice notice-warning inline"><p>' . esc_html__('Thinking is enabled for a medium or long article with a low output-token limit. Increase the limit or disable thinking to reduce truncation and expansion.', 'cbiastudio-blogflow-ai') . '</p></div>';
+}
 echo '<div class="abb-field abb-deepseek-settings abb-deepseek-effort"' . ($deepseek_visible && $deepseek_config['thinking'] === 'enabled' ? '' : ' style="display:none;"') . '>';
 echo '<label for="cbia-deepseek-effort">' . esc_html__('Reasoning effort', 'cbiastudio-blogflow-ai') . '</label>';
 echo '<select id="cbia-deepseek-effort" name="deepseek_reasoning_effort" class="abb-select"' . disabled($deepseek_config['thinking'], 'disabled', false) . '>';

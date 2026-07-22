@@ -604,6 +604,21 @@ if (!function_exists('cbia_strip_faq_section')) {
     }
 }
 
+if (!function_exists('cbia_strip_practical_examples_section')) {
+    function cbia_strip_practical_examples_section($html) {
+        $html = (string)$html;
+        $heading = '/<h2[^>]*>\s*(Practical examples(?: applied)?|Applied practical examples|Practical scenarios|Case studies|Ejemplos pr[aá]cticos(?: aplicados)?|Ejemplos aplicados|Escenarios pr[aá]cticos|Casos pr[aá]cticos)\s*<\/h2>/iu';
+        while (preg_match($heading, $html, $match, PREG_OFFSET_CAPTURE)) {
+            $start = (int)$match[0][1];
+            $after = $start + strlen((string)$match[0][0]);
+            $end = strlen($html);
+            if (preg_match('/<h2[^>]*>/i', $html, $next, PREG_OFFSET_CAPTURE, $after)) $end = (int)$next[0][1];
+            $html = substr($html, 0, $start) . substr($html, $end);
+        }
+        return trim((string)preg_replace("/\n{3,}/", "\n\n", $html));
+    }
+}
+
 if (!function_exists('cbia_cleanup_post_html')) {
     /**
      * Limpieza final del HTML del post (artefactos, puntos sueltos, saltos).

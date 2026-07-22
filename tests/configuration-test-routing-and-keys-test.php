@@ -30,7 +30,7 @@ check_case(has($files['base'], "'paid_generation' => false"), 'image test is loc
 check_case(has($files['base'], 'stop_flag_changed='), 'test logs STOP changes');
 check_case(has($files['base'], "'request_sent' => 0"), 'missing key is local preflight');
 check_case(has($files['base'], "'cost_source' => 'local_preflight'"), 'local preflight cost source is exact');
-check_case(has($files['base'], "'configuration_test', 1, 16, \$context"), 'test uses one request with 16 output tokens');
+check_case(has($files['base'], "'configuration_test', 1, \$test_max, \$context") && has($files['base'], ': 32;'), 'test uses one request with 32 output tokens in basic mode');
 check_case(has($files['openai'], "if (!\$allow_fallback) return \$deepseek_result;"), 'DeepSeek cannot cross-fallback during test');
 check_case(has($files['openai'], "(\$disable_model_fallback || !\$allow_fallback)"), 'OpenAI model chain is disabled during test');
 check_case(has($files['openai'], "empty(\$context['ignore_stop']) && cbia_is_stop_requested()"), 'clients preserve normal STOP behavior outside test');
@@ -46,7 +46,7 @@ check_case(!has($key_block, "'image_provider'"), 'key-only save does not change 
 check_case(!has($key_block, "'current_provider'"), 'key-only save does not change provider registry selection');
 check_case(has($files['config'], "if (\$posted_key === '') continue;"), 'only explicitly posted keys are saved');
 check_case(has($files['config'], 'cbia_store_provider_api_key($pkey, $posted_key)'), 'canonical provider key store remains synchronized');
-check_case(has($files['config_view'], 'placeholder="' . "' . esc_attr(\$masked)"), 'key mask is a placeholder');
+check_case(has($files['config_view'], 'placeholder="' . "' . esc_attr(\$mask_placeholder)"), 'key mask is a placeholder');
 check_case(has($files['config_view'], 'value="" autocomplete="off"'), 'real keys are never rendered in HTML');
 check_case(!has($files['config_view'], 'substr($api_key'), 'diagnostics expose no key fragments');
 check_case(has($files['config_view'], "cbia_has_provider_api_key('deepseek')"), 'DeepSeek diagnostic is yes/no only');

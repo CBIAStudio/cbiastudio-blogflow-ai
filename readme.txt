@@ -157,6 +157,12 @@ This plugin can connect to third-party AI services only when the site administra
 == Changelog ==
 
 = 2.1.5 =
+* DeepSeek tests now separate the /models connection check, a basic 32-token chat with thinking disabled, and an optional advanced thinking test.
+* HTTP 200 with reasoning but no final content is classified as an incomplete chat while connection and authentication remain valid; reasoning content is discarded.
+* Text generation logs configured, calculated and effective token budgets and no longer silently reduces a configured 6000-token limit to 4620.
+* Blog and Preview retain finish reason, completion/reasoning/visible-token metrics and use at most one expansion after cleanup and word counting.
+* Disabled FAQ and practical-example modules are not requested by expansion prompts and are removed defensively if returned.
+* Batch logs summarize first-pass efficiency; the first OpenAI Images HTTP 401 skips later remote image calls in that batch with exact zero skipped cost.
 * API key fields now use one consistent bullet mask and show a clear configured or missing status without exposing credentials.
 * Provider credentials now use a canonical provider-only store that model and provider selection saves cannot overwrite; legacy stores remain synchronized for compatibility.
 * Provider API keys are isolated by provider, reject masks/control characters, and preserve the previous valid value when a submission is invalid.

@@ -704,6 +704,10 @@ echo '</select>';
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
 <button type="submit" class="button" name="cbia_action" value="test_config"><?php echo esc_html__('Test configuration', 'cbiastudio-blogflow-ai'); ?></button>
 <span class="description"><?php echo esc_html__('Tests the saved configuration.', 'cbiastudio-blogflow-ai'); ?></span>
+<?php if ((function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : '') === 'deepseek') : ?>
+<button type="submit" class="button" name="cbia_action" value="test_config_advanced"><?php echo esc_html__('Advanced thinking test', 'cbiastudio-blogflow-ai'); ?></button>
+<span class="description"><?php echo esc_html__('Optional: tests the saved DeepSeek thinking mode and may consume more tokens.', 'cbiastudio-blogflow-ai'); ?></span>
+<?php endif; ?>
 
 <button type="button" class="button button-primary" id="cbia_btn_generate"><?php echo esc_html__('Run batch (with resume)', 'cbiastudio-blogflow-ai'); ?></button>
 

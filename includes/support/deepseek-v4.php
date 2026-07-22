@@ -86,6 +86,7 @@ if ( ! function_exists( 'cbia_deepseek_parse_usage' ) ) {
 		$miss = $has_miss ? max( 0, (int) $usage['prompt_cache_miss_tokens'] ) : max( 0, $input - $hit );
 		$details = is_array( $usage['completion_tokens_details'] ?? null ) ? $usage['completion_tokens_details'] : array();
 		$reasoning = max( 0, (int) ( $usage['reasoning_tokens'] ?? ( $details['reasoning_tokens'] ?? 0 ) ) );
+		$reasoning = min( $output, $reasoning );
 		return array(
 			'input_tokens'              => $input,
 			'cached_input_tokens'       => min( $input, $hit ),
@@ -93,7 +94,9 @@ if ( ! function_exists( 'cbia_deepseek_parse_usage' ) ) {
 			'cache_miss_tokens'         => min( $input, $miss ),
 			'cache_breakdown_available' => ( $has_hit || $has_miss ) ? 1 : 0,
 			'output_tokens'             => $output,
-			'reasoning_tokens'          => min( $output, $reasoning ),
+			'completion_tokens'         => $output,
+			'reasoning_tokens'          => $reasoning,
+			'visible_output_tokens_estimated' => max( 0, $output - $reasoning ),
 			'total_tokens'              => max( 0, (int) ( $usage['total_tokens'] ?? ( $input + $output ) ) ),
 		);
 	}

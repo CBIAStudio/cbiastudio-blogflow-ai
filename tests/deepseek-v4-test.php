@@ -108,11 +108,11 @@ test_assert( $sent_payload['thinking']['type'] === 'disabled' && ! isset( $sent_
 $GLOBALS['test_stop'] = true;
 $GLOBALS['test_http_calls'] = 0;
 $GLOBALS['test_http_queue'] = array( mock_response( 200, array( 'choices' => array( array( 'message' => array( 'content' => 'OK' ) ) ), 'usage' => array( 'prompt_tokens' => 2, 'completion_tokens' => 1 ) ) ) );
-$result = cbia_deepseek_chat_call( 'Reply only with OK.', '', 1, 16, array( 'phase' => 'configuration_test', 'model' => 'deepseek-v4-flash', 'ignore_stop' => true ) );
+$result = cbia_deepseek_chat_call( 'Reply only with OK.', '', 1, 32, array( 'phase' => 'configuration_test', 'model' => 'deepseek-v4-flash', 'ignore_stop' => true, 'thinking_override' => 'disabled' ) );
 $sent_payload = json_decode( $GLOBALS['test_last_args']['body'], true );
 test_assert( $result[0] === true && $GLOBALS['test_http_calls'] === 1, 'configuration test must bypass STOP without changing it' );
 test_assert( $GLOBALS['test_stop'] === true, 'configuration test changed the STOP flag' );
-test_assert( $sent_payload['model'] === 'deepseek-v4-flash' && $sent_payload['max_tokens'] === 16, 'configuration test did not use the exact model and token limit' );
+test_assert( $sent_payload['model'] === 'deepseek-v4-flash' && $sent_payload['max_tokens'] === 32 && ($sent_payload['thinking']['type'] ?? '') === 'disabled', 'configuration test did not use the exact model, token limit, and thinking override' );
 $GLOBALS['test_stop'] = false;
 
 foreach ( array( 400, 401, 402, 403 ) as $permanent_code ) {

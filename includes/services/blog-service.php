@@ -273,6 +273,10 @@ if (!class_exists('CBIA_Pro_Blog_Service')) {
                     else if (function_exists('cbia_log_message')) cbia_log_message('[WARN] Missing cbia_run_test_configuration().');
                     $saved_notice = 'test';
 
+                } elseif ($action === 'test_config_advanced') {
+                    if (function_exists('cbia_run_test_configuration')) $GLOBALS['cbia_configuration_test_result'] = cbia_run_test_configuration(true);
+                    $saved_notice = 'test';
+
                 } elseif ($action === 'stop_generation') {
                     if (function_exists('cbia_set_stop_flag')) cbia_set_stop_flag(true);
                     if (function_exists('cbia_log_message')) cbia_log_message("[INFO] Stop enabled by user.");

@@ -11,6 +11,12 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 
 ## What's New in 2.1.5
 
+- DeepSeek configuration testing now separates a free `/models` connection/authentication check from the basic 32-token chat test, with an optional advanced thinking test.
+- HTTP 200 responses that contain reasoning but no final content are reported as incomplete while preserving valid connection/authentication status; reasoning content is never stored.
+- Text budgets now expose configured, calculated, and effective limits. A configured 6000-token limit is no longer silently reduced to the legacy 4620-token calculation.
+- Blog and Preview record finish reason, completion/reasoning/estimated visible tokens, first-pass words, cleanup effects, and the reason for the single optional expansion.
+- Disabled FAQ and practical-example modules are removed defensively and no longer requested by the expansion prompt.
+- Batch logs summarize first-pass efficiency and token-limit hits. An OpenAI Images HTTP 401 disables further remote image calls for the current batch while preserving pending work.
 - API key fields now use the same bullet mask and show an explicit green configured or red missing status without exposing credentials.
 - Provider credentials now use a canonical provider-only store that model and provider selection saves cannot overwrite; legacy stores remain synchronized for compatibility.
 - Provider API keys are validated and stored independently without accepting masks, asterisks, whitespace or control characters; invalid submissions preserve the previous key.

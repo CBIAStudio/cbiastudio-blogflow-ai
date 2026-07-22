@@ -149,9 +149,31 @@ if (!function_exists('cbia_estimate_output_tokens_for_length_target')) {
 		if ($provider === 'deepseek' && $model === 'deepseek-v4-flash' && $thinking === 'disabled' && !$include_faq && (int)$min_words === 1800 && (int)$max_words === 2000) {
 			$estimate = max($estimate, 5200);
 		}
+		if ($provider === 'deepseek' && $thinking === 'enabled') {
+			$estimate = (int)ceil($estimate * 1.25);
+		}
 		if ($estimate < 1500) $estimate = 1500;
 		if ($estimate > 12000) $estimate = 12000;
 		return $estimate;
+	}
+}
+
+if (!function_exists('cbia_resolve_text_token_budget')) {
+	function cbia_resolve_text_token_budget(array $settings, $min_words, $max_words, $language = '', $include_faq = false, $include_examples = false, $provider = '', $model = '', $thinking = ''): array {
+		$configured = max(256, min(12000, (int)($settings['responses_max_output_tokens'] ?? 6000)));
+		$calculated = cbia_estimate_output_tokens_for_length_target($min_words, $max_words, $language, $include_faq, $include_examples, $provider, $model, $thinking);
+		$effective = max($configured, $calculated);
+		return array(
+			'configured' => $configured,
+			'calculated' => $calculated,
+			'effective' => min(12000, $effective),
+			'source' => $calculated > $configured ? 'calculated_length_requirement' : 'configured_limit',
+			'provider' => sanitize_key((string)$provider),
+			'model' => sanitize_text_field((string)$model),
+			'thinking' => sanitize_key((string)$thinking),
+			'faq' => $include_faq ? 1 : 0,
+			'examples' => $include_examples ? 1 : 0,
+		);
 	}
 }
 
@@ -285,10 +307,12 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 				$prompt .= "OBJETIVO OBLIGATORIO: entre {$min_words} y {$max_words} palabras reales (minimo {$min_words}).\n";
 				$prompt .= "Estado actual: {$current_words} palabras. Faltan aprox {$missing_words}. Objetivo recomendado final: {$target_words} palabras.\n";
 				$prompt .= "Mantener estructura con <h2>, <h3>, <p>, <ul>, <li>. No usar <h1>, <table>, <iframe> ni <blockquote>.\n";
-				$prompt .= "Conservar idea y secciones; ampliar con mas detalle practico, pasos concretos, riesgos, criterios y ejemplos aplicados.\n";
+			$prompt .= "Conservar idea y secciones; ampliar con mas detalle practico, pasos concretos, riesgos y criterios.\n";
 				$prompt .= "No sobrepasar {$max_words} palabras. Si dudas, prioriza quedar entre {$min_words} y {$target_words}.\n";
 				if ($include_examples) {
 					$prompt .= "Incluir al menos 3 escenarios practicos concretos con subtitulo <h3> (Escenario 1/2/3), cada uno con contexto, accion y resultado medible.\n";
+				} else {
+					$prompt .= "No crear una seccion independiente de ejemplos, escenarios ni casos practicos.\n";
 				}
 				if ($include_faq) {
 					$prompt .= "Mantener FAQ al final si ya existe.\n";
@@ -299,10 +323,12 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 				$prompt .= "MANDATORY TARGET: between {$min_words} and {$max_words} real words (minimum {$min_words}).\n";
 				$prompt .= "Current state: {$current_words} words. Missing about {$missing_words}. Recommended final target: {$target_words} words.\n";
 				$prompt .= "Keep structure with <h2>, <h3>, <p>, <ul>, <li>. Do not use <h1>, <table>, <iframe>, or <blockquote>.\n";
-				$prompt .= "Preserve core sections and add more practical detail, decision criteria, risks, and applied examples.\n";
+				$prompt .= "Preserve core sections and add more practical detail, decision criteria, and risks.\n";
 				$prompt .= "Do not exceed {$max_words} words. If unsure, stay between {$min_words} and {$target_words}.\n";
 				if ($include_examples) {
 					$prompt .= "Include at least 3 concrete practical scenarios with <h3> subtitles (Scenario 1/2/3), each with context, action, and measurable result.\n";
+				} else {
+					$prompt .= "Do not create a standalone practical examples, scenarios, or case studies section.\n";
 				}
 				if ($include_faq) {
 					$prompt .= "Keep FAQ at the end if it already exists.\n";
@@ -310,7 +336,11 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 				$prompt .= "Return HTML only.\n\nCURRENT HTML:\n" . $current;
 			}
 
-			$expand_max_out = cbia_estimate_output_tokens_for_length_target((int)$min_words, (int)$max_words, $language, $include_faq, $include_examples);
+			$provider = function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : 'openai';
+			$model = function_exists('cbia_get_text_model_for_provider') ? cbia_get_text_model_for_provider($provider, '') : '';
+			$thinking = $provider === 'deepseek' && function_exists('cbia_deepseek_get_runtime_config') ? (string)cbia_deepseek_get_runtime_config($model)['thinking'] : '';
+			$expand_budget = cbia_resolve_text_token_budget($settings, (int)$min_words, (int)$max_words, $language, $include_faq, $include_examples, $provider, $model, $thinking);
+			$expand_max_out = (int)$expand_budget['effective'];
 			list($ok_expand, $expanded_html, $usage_expand, $model_expand, $err_expand, $raw_expand) = cbia_openai_responses_call($prompt, $title, 1, $expand_max_out, array('context' => 'blog_text_expand', 'phase' => 'expand'));
 			if (is_array($expansion_calls)) {
 				$expansion_calls[] = array(
@@ -696,19 +726,27 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		$text_prompt = $prompt;
 
 		// 2) OpenAI texto (6 valores)
-		$initial_max_out = cbia_estimate_output_tokens_for_length_target(
+		$text_provider = function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : 'openai';
+		$text_model = function_exists('cbia_get_text_model_for_provider') ? cbia_get_text_model_for_provider($text_provider, '') : '';
+		$thinking = $text_provider === 'deepseek' && function_exists('cbia_deepseek_get_runtime_config') ? (string)cbia_deepseek_get_runtime_config($text_model)['thinking'] : '';
+		$initial_budget = cbia_resolve_text_token_budget($s,
 			(int)$min_words,
 			(int)$max_words,
 			(string)($s['post_language'] ?? 'English'),
 			!empty($s['include_faq']),
-			!empty($s['include_practical_examples'])
+			!empty($s['include_practical_examples']),
+			$text_provider,
+			$text_model,
+			$thinking
 		);
+		$initial_max_out = (int)$initial_budget['effective'];
 		cbia_log(sprintf(
-			"Length target for '%s': %d-%d words | max_output_tokens budget=%d.",
+			"Length target for '%s': %d-%d words | configured=%d calculated=%d effective=%d source=%s provider=%s model=%s thinking=%s faq=%d examples=%d.",
 			(string)$title,
 			(int)$min_words,
 			(int)$max_words,
-			(int)$initial_max_out
+			(int)$initial_budget['configured'], (int)$initial_budget['calculated'], (int)$initial_budget['effective'], (string)$initial_budget['source'],
+			(string)$text_provider, (string)$text_model, (string)($thinking ?: 'n/a'), !empty($s['include_faq']) ? 1 : 0, !empty($s['include_practical_examples']) ? 1 : 0
 		), 'INFO');
 		list($ok, $text_html, $usage, $model_used, $err, $raw) = cbia_openai_responses_call($prompt, $title, 2, $initial_max_out, array('context' => 'blog_text', 'phase' => 'initial'));
 		$text_attempts = function_exists('cbia_costes_get_attempts_from_meta') ? cbia_costes_get_attempts_from_meta($raw) : array();
@@ -720,6 +758,13 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			'error'   => (string)($err ?: ''),
 			'meta'    => is_array($raw['_cbia_request_meta'] ?? null) ? $raw['_cbia_request_meta'] : array(),
 		);
+		$initial_meta = (array)$text_call['meta'];
+		$finish_reason = sanitize_key((string)($initial_meta['finish_reason'] ?? $initial_meta['status_reason'] ?? ''));
+		if (in_array($finish_reason, array('content_filter', 'insufficient_system_resource'), true)) {
+			cbia_log(sprintf("Text generation stopped for '%s': finish_reason=%s. No images will be generated.", (string)$title, $finish_reason), 'ERROR');
+			cbia_record_blog_generation_cost_rows(0, $title, $text_prompt, $text_call, $text_attempts, $image_calls, $expansion_calls, $finish_reason);
+			return array('ok'=>false,'post_id'=>0,'error'=>'Provider finish reason: ' . $finish_reason);
+		}
 		if (!$ok && trim((string)$text_html) === '') {
 				cbia_log(sprintf("Text generation failed for '%s': %s", (string)$title, (string)($err ?: 'unknown')), 'ERROR');
 			// Si OpenAI devolvió usage pero no hay post, deja rastro en el log de costes.
@@ -748,6 +793,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		// Normaliza el título de FAQ según idioma/config
 		$faq_enabled = function_exists('cbia_runtime_include_faq_enabled') ? cbia_runtime_include_faq_enabled($s) : true;
 		$words_before_faq_cleanup = cbia_count_words_from_html($text_html);
+		$words_after_faq_cleanup = $words_before_faq_cleanup;
 		if (!$faq_enabled && function_exists('cbia_strip_faq_section')) {
 			$before_faq_html = $text_html;
 			$text_html = cbia_strip_faq_section($text_html);
@@ -772,8 +818,16 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			}
 		}
 		}
+		$examples_words_removed = 0;
 		if (!empty($s['include_practical_examples'])) {
 			$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);
+		} elseif (function_exists('cbia_strip_practical_examples_section')) {
+			$before_examples = $text_html;
+			$before_examples_words = cbia_count_words_from_html($before_examples);
+			$text_html = cbia_strip_practical_examples_section($text_html);
+			$after_examples_words = cbia_count_words_from_html($text_html);
+			$examples_words_removed = max(0, $before_examples_words - $after_examples_words);
+			cbia_log(sprintf('Practical examples cleanup: enabled=no module_detected=%s words_before=%d words_after=%d words_removed=%d.', trim($before_examples) !== trim($text_html) ? 'yes' : 'no', $before_examples_words, $after_examples_words, max(0, $before_examples_words - $after_examples_words)), 'INFO');
 		}
 
 		$current_words = cbia_count_words_from_html($text_html);
@@ -782,7 +836,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		$expansion_used = false;
 		$expansion_required = !$first_pass_success;
 		$words_missing = max(0, (int)$min_words - $first_pass_words);
-		$expansion_reason = $first_pass_success ? 'not_needed' : 'below_minimum';
+		$expansion_reason = $first_pass_success ? 'not_needed' : ($finish_reason === 'length' || $finish_reason === 'max_tokens' ? 'max_tokens_reached' : 'below_word_minimum');
 		$effective_min_words = function_exists('cbia_get_effective_length_floor_words')
 			? cbia_get_effective_length_floor_words((int)$min_words, (array)$s)
 			: (function_exists('cbia_get_soft_length_floor_words') ? cbia_get_soft_length_floor_words((int)$min_words) : (int)$min_words);
@@ -800,6 +854,8 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			$expansion_reason = sanitize_key((string)($expansion_status['reason'] ?? $expansion_reason));
 			if (!empty($s['include_practical_examples'])) {
 				$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);
+			} elseif (function_exists('cbia_strip_practical_examples_section')) {
+				$text_html = cbia_strip_practical_examples_section($text_html);
 			}
 		} elseif ($current_words < (int)$min_words) {
 			cbia_log(sprintf(
@@ -811,14 +867,15 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		}
 		$text_provider = function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : 'openai';
 		cbia_log(sprintf(
-			'Text length result: provider=%s model=%s faq_enabled=%s first_pass_words=%d minimum_words=%d first_pass_success=%s expansion_used=%s.',
+			'Text length result: provider=%s model=%s faq_enabled=%s examples_enabled=%s first_pass_words=%d minimum_words=%d first_pass_success=%s expansion_used=%s finish_reason=%s completion_tokens=%d reasoning_tokens=%d visible_output_tokens_estimated=%d faq_words_removed=%d examples_words_removed=%d expansion_reason=%s.',
 			(string)$text_provider,
 			(string)$model_used,
 			$faq_enabled ? 'yes' : 'no',
+			!empty($s['include_practical_examples']) ? 'yes' : 'no',
 			(int)$first_pass_words,
 			(int)$min_words,
 			$first_pass_success ? 'yes' : 'no',
-			$expansion_used ? 'yes' : 'no'
+			$expansion_used ? 'yes' : 'no', (string)($finish_reason ?: 'unknown'), (int)($usage['completion_tokens'] ?? $usage['output_tokens'] ?? 0), (int)($usage['reasoning_tokens'] ?? 0), (int)($usage['visible_output_tokens_estimated'] ?? $usage['output_tokens'] ?? 0), max(0, (int)$words_before_faq_cleanup - (int)$words_after_faq_cleanup), (int)$examples_words_removed, (string)$expansion_reason
 		), 'INFO');
 		$text_call['meta'] = array_merge((array)($text_call['meta'] ?? array()), array(
 			'provider' => sanitize_key((string)$text_provider),
@@ -830,6 +887,12 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			'words_missing' => (int)$words_missing,
 			'expansion_reason' => $expansion_reason,
 			'faq_enabled' => $faq_enabled ? 1 : 0,
+			'finish_reason' => (string)$finish_reason,
+			'completion_tokens' => (int)($usage['completion_tokens'] ?? $usage['output_tokens'] ?? 0),
+			'reasoning_tokens' => (int)($usage['reasoning_tokens'] ?? 0),
+			'visible_output_tokens_estimated' => (int)($usage['visible_output_tokens_estimated'] ?? $usage['output_tokens'] ?? 0),
+			'faq_words_removed' => max(0, (int)$words_before_faq_cleanup - (int)$words_after_faq_cleanup),
+			'examples_words_removed' => (int)$examples_words_removed,
 		));
 		$text_html = cbia_enforce_length_ceiling_html($text_html, (int)$max_words, !empty($s['include_faq']));
 		if (!empty($s['include_practical_examples'])) {
@@ -848,6 +911,7 @@ if (!function_exists('cbia_create_single_blog_post')) {
 			cbia_log(sprintf("Text rejected before images on '%s': %d words, minimum %d. Draft=%d.", (string)$title, (int)$current_words, (int)$min_words, (int)$draft_id), 'ERROR');
 			return array('ok' => false, 'post_id' => $draft_ok ? (int)$draft_id : 0, 'error' => $draft_ok ? 'needs_manual_review_length' : ($draft_error ?: 'insufficient_length'));
 		}
+		$final_words = (int)$current_words;
 
 			cbia_log(sprintf("AI text OK: generated HTML for '%s'", (string)$title), 'INFO');
         // 3) Procesar marcadores de imagen
@@ -1055,6 +1119,15 @@ if (!function_exists('cbia_create_single_blog_post')) {
 
 			cbia_log(sprintf("Post creado OK: ID %d | '%s'", (int)$post_id, (string)$title), 'INFO');
 
-		return ['ok'=>true,'post_id'=>(int)$post_id,'error'=>''];
+		return ['ok'=>true,'post_id'=>(int)$post_id,'error'=>'','efficiency'=>array(
+			'first_pass_words'=>(int)$first_pass_words,
+			'final_words'=>(int)$final_words,
+			'expansion_used'=>$expansion_used ? 1 : 0,
+			'failed_length'=>0,
+			'reasoning_tokens'=>(int)($usage['reasoning_tokens'] ?? 0),
+			'finish_reason'=>(string)$finish_reason,
+			'hit_token_limit'=>in_array($finish_reason, array('length','max_tokens'), true) ? 1 : 0,
+			'thinking'=>(string)($thinking ?: 'n/a'),
+		)];
 	}
 }
