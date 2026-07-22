@@ -9,7 +9,7 @@ msgstr ""
 "Project-Id-Version: CBIAStudio BlogFlow with AI 2.1.5\n"
 "Report-Msgid-Bugs-To: https://github.com/CBIAStudio/cbiastudio-blogflow-ai/"
 "issues\n"
-"POT-Creation-Date: 2026-07-22 12:05+0200\n"
+"POT-Creation-Date: 2026-07-22 12:24+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3066,23 +3066,23 @@ msgstr ""
 msgid "Reply only with OK."
 msgstr ""
 
-#: includes/engine/base.php:696
+#: includes/engine/base.php:702
 #, php-format
 msgid "%1$s configured correctly. Model tested: %2$s."
 msgstr ""
 
-#: includes/engine/base.php:700
+#: includes/engine/base.php:706
 msgid ""
 "DeepSeek responded correctly, but the reasoning test did not produce final "
 "content. The connection and API key are valid."
 msgstr ""
 
-#: includes/engine/base.php:702
+#: includes/engine/base.php:708
 #, php-format
 msgid "%s rejected the API key."
 msgstr ""
 
-#: includes/engine/base.php:703
+#: includes/engine/base.php:709
 #, php-format
 msgid "Could not validate %s."
 msgstr ""
@@ -3535,6 +3535,10 @@ msgid "DeepSeek returned invalid JSON."
 msgstr ""
 
 #: includes/engine/openai.php:1419
+msgid "DeepSeek temporarily lacked resources to complete the response."
+msgstr ""
+
+#: includes/engine/openai.php:1433
 msgid "DeepSeek returned an empty content response."
 msgstr ""
 

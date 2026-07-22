@@ -275,7 +275,7 @@ if (!function_exists('cbia_ensure_practical_examples_html')) {
 }
 
 if (!function_exists('cbia_expand_text_to_length_target')) {
-	function cbia_expand_text_to_length_target($title, $html, array $settings, $min_words, $max_words, &$expansion_calls = null, &$expansion_status = null) {
+	function cbia_expand_text_to_length_target($title, $html, array $settings, $min_words, $max_words, &$expansion_calls = null, &$expansion_status = null, $force_completion = false) {
 		$current = (string)$html;
 		$expansion_status = array('ok' => false, 'reason' => 'not_needed');
 		$language = (string)($settings['post_language'] ?? 'English');
@@ -287,7 +287,7 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 		for ($attempt = 1; $attempt <= $max_tries; $attempt++) {
 			if (cbia_is_stop_requested()) return $current;
 			$current_words = cbia_count_words_from_html($current);
-			if ($current_words >= (int)$min_words) {
+			if (!$force_completion && $current_words >= (int)$min_words) {
 				$expansion_status = array('ok' => true, 'reason' => 'already_sufficient');
 				return $current;
 			}
@@ -317,6 +317,7 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 				if ($include_faq) {
 					$prompt .= "Mantener FAQ al final si ya existe.\n";
 				}
+				if ($force_completion) $prompt .= "La respuesta anterior termino por limite de tokens: completa cualquier apartado o cierre truncado sin superar el maximo.\n";
 				$prompt .= "Devuelve SOLO HTML.\n\nHTML ACTUAL:\n" . $current;
 			} else {
 				$prompt .= "Rewrite and expand this HTML article in the same language.\n";
@@ -333,6 +334,7 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 				if ($include_faq) {
 					$prompt .= "Keep FAQ at the end if it already exists.\n";
 				}
+				if ($force_completion) $prompt .= "The previous response hit its token limit: complete any unfinished section or ending without exceeding the maximum.\n";
 				$prompt .= "Return HTML only.\n\nCURRENT HTML:\n" . $current;
 			}
 
@@ -361,7 +363,10 @@ if (!function_exists('cbia_expand_text_to_length_target')) {
 			}
 			$current = cbia_fix_bracket_headings(cbia_strip_h1_to_h2(cbia_strip_document_wrappers((string)$expanded_html)));
 			$expanded_words = cbia_count_words_from_html($current);
-			$expansion_status = array('ok' => $expanded_words >= (int)$min_words, 'reason' => $expanded_words >= (int)$min_words ? 'sufficient' : 'still_short', 'words' => $expanded_words);
+			$expand_meta = is_array($raw_expand['_cbia_request_meta'] ?? null) ? $raw_expand['_cbia_request_meta'] : array();
+			$expand_finish_reason = sanitize_key((string)($expand_meta['finish_reason'] ?? ''));
+			$expand_truncated = in_array($expand_finish_reason, array('length', 'max_tokens'), true);
+			$expansion_status = array('ok' => $expanded_words >= (int)$min_words && !$expand_truncated, 'reason' => $expand_truncated ? 'max_tokens_reached' : ($expanded_words >= (int)$min_words ? 'sufficient' : 'still_short'), 'words' => $expanded_words, 'finish_reason' => $expand_finish_reason);
 			cbia_log(sprintf(
 				"Length expansion OK on '%s' (attempt %d): %d words using model %s.",
 				(string)$title,
@@ -833,14 +838,16 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		$current_words = cbia_count_words_from_html($text_html);
 		$first_pass_words = (int)$current_words;
 		$first_pass_success = $first_pass_words >= (int)$min_words;
+		$hit_token_limit = in_array($finish_reason, array('length', 'max_tokens'), true);
 		$expansion_used = false;
-		$expansion_required = !$first_pass_success;
+		$expansion_required = !$first_pass_success || $hit_token_limit;
 		$words_missing = max(0, (int)$min_words - $first_pass_words);
-		$expansion_reason = $first_pass_success ? 'not_needed' : ($finish_reason === 'length' || $finish_reason === 'max_tokens' ? 'max_tokens_reached' : 'below_word_minimum');
+		$expansion_reason = $hit_token_limit ? 'max_tokens_reached' : ($first_pass_success ? 'not_needed' : 'below_word_minimum');
+		$truncated_expansion_failed = false;
 		$effective_min_words = function_exists('cbia_get_effective_length_floor_words')
 			? cbia_get_effective_length_floor_words((int)$min_words, (array)$s)
 			: (function_exists('cbia_get_soft_length_floor_words') ? cbia_get_soft_length_floor_words((int)$min_words) : (int)$min_words);
-		if ($current_words < $effective_min_words) {
+		if ($hit_token_limit || $current_words < $effective_min_words) {
 			$expansion_used = true;
 			cbia_log(sprintf(
 				"Length below target on '%s': %d words (min=%d, effective_min=%d). Expanding content...",
@@ -850,8 +857,9 @@ if (!function_exists('cbia_create_single_blog_post')) {
 				(int)$effective_min_words
 			), 'WARN');
 			$expansion_status = array();
-			$text_html = cbia_expand_text_to_length_target($title, $text_html, $s, (int)$min_words, (int)$max_words, $expansion_calls, $expansion_status);
-			$expansion_reason = sanitize_key((string)($expansion_status['reason'] ?? $expansion_reason));
+			$text_html = cbia_expand_text_to_length_target($title, $text_html, $s, (int)$min_words, (int)$max_words, $expansion_calls, $expansion_status, $hit_token_limit);
+			$expansion_reason = $hit_token_limit ? 'max_tokens_reached' : sanitize_key((string)($expansion_status['reason'] ?? $expansion_reason));
+			$truncated_expansion_failed = $hit_token_limit && empty($expansion_status['ok']);
 			if (!empty($s['include_practical_examples'])) {
 				$text_html = cbia_ensure_practical_examples_html($text_html, $title, (string)($s['post_language'] ?? 'English'), $length_variant);
 			} elseif (function_exists('cbia_strip_practical_examples_section')) {
@@ -905,9 +913,10 @@ if (!function_exists('cbia_create_single_blog_post')) {
 		}
 		$current_words = cbia_count_words_from_html($text_html);
 		cbia_log(sprintf("Final text length on '%s': %d words.", (string)$title, (int)$current_words), 'INFO');
-		if ($current_words < (int)$min_words) {
+		if ($current_words < (int)$min_words || $truncated_expansion_failed) {
 			list($draft_ok, $draft_id, $draft_error) = cbia_create_post_in_wp_engine($title, $text_html, 0, $post_date_mysql, 'draft');
-			cbia_record_blog_generation_cost_rows($draft_ok ? (int)$draft_id : 0, $title, $text_prompt, $text_call, $text_attempts, $image_calls, $expansion_calls, 'needs_manual_review_length');
+			$review_reason = $truncated_expansion_failed ? 'needs_manual_review_truncated' : 'needs_manual_review_length';
+			cbia_record_blog_generation_cost_rows($draft_ok ? (int)$draft_id : 0, $title, $text_prompt, $text_call, $text_attempts, $image_calls, $expansion_calls, $review_reason);
 			cbia_log(sprintf("Text rejected before images on '%s': %d words, minimum %d. Draft=%d.", (string)$title, (int)$current_words, (int)$min_words, (int)$draft_id), 'ERROR');
 			return array('ok' => false, 'post_id' => $draft_ok ? (int)$draft_id : 0, 'error' => $draft_ok ? 'needs_manual_review_length' : ($draft_error ?: 'insufficient_length'));
 		}

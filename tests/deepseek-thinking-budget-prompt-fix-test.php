@@ -70,7 +70,10 @@ verify_case($usage['reasoning_tokens'] === 30, 'reasoning tokens');
 verify_case($usage['visible_output_tokens_estimated'] === 50, 'visible output estimate');
 verify_case(contains_text($source['openai'], 'finish_reason'), 'finish reason captured');
 verify_case(contains_text($source['posts'], "array('content_filter', 'insufficient_system_resource')"), 'unsafe finish reasons block publication');
+verify_case(contains_text($source['openai'], "\$finish_reason === 'insufficient_system_resource'") && contains_text($source['openai'], 'retrying with the same model'), 'temporary resource finish reason uses safe retry');
 verify_case(contains_text($source['posts'], 'max_tokens_reached'), 'length expansion reason');
+verify_case(contains_text($source['posts'], '$force_completion') && contains_text($source['posts'], '$truncated_expansion_failed'), 'token-limit response requires completion before publication');
+verify_case(contains_text($source['preview'], '$truncated_expansion_failed'), 'Preview rejects unresolved truncation before images');
 verify_case(contains_text($source['posts'], 'below_word_minimum'), 'stop short expansion reason');
 
 $base_settings = array('responses_max_output_tokens'=>6000);

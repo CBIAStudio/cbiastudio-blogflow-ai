@@ -1415,6 +1415,20 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 			$finish_reason = sanitize_key((string)($data['choices'][0]['finish_reason'] ?? ''));
 			$reasoning_present = trim((string)($data['choices'][0]['message']['reasoning_content'] ?? '')) !== '';
 			if (isset($data['choices'][0]['message']['reasoning_content'])) unset($data['choices'][0]['message']['reasoning_content']);
+			if ($finish_reason === 'insufficient_system_resource') {
+				$last_error = __('DeepSeek temporarily lacked resources to complete the response.', 'cbiastudio-blogflow-ai');
+				$meta = array_merge($usage, array('provider' => 'deepseek', 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'attempt' => $t, 'ok' => 0, 'status' => 'temporary_error', 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'finish_reason' => $finish_reason, 'content_present' => $text !== '' ? 1 : 0, 'reasoning_content_present' => $reasoning_present ? 1 : 0, 'max_output_tokens' => $max_out, 'error' => $last_error));
+				$attempts[] = array_merge(array('type' => 'text'), $meta);
+				$data['_cbia_request_meta'] = $meta;
+				$last_usage = $usage;
+				$last_raw = $data;
+				if ($t < $tries) {
+					cbia_log('DeepSeek temporary resource limit; retrying with the same model.', 'WARN');
+					cbia_deepseek_wait_before_retry($resp, $t);
+					continue;
+				}
+				return array(false, '', $usage, $model, $last_error, cbia_attach_attempts_meta($data, $attempts));
+			}
 			if ($text === '') {
 				$last_error = __('DeepSeek returned an empty content response.', 'cbiastudio-blogflow-ai');
 				$status = $reasoning_present ? 'chat_incomplete' : 'chat_empty_content';
