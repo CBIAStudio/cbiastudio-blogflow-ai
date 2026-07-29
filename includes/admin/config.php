@@ -52,22 +52,11 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 		// CAMBIO: providers disponibles (texto/imagen)
 		$providers_all = function_exists('cbia_providers_get_all') ? cbia_providers_get_all() : [];
 		$providers_list = isset($providers_all['providers']) && is_array($providers_all['providers']) ? $providers_all['providers'] : [];
-		$api_key_validation_warnings = array();
-		foreach (array_keys($providers_list) as $candidate_provider) {
-			foreach (array($provider_api_key_text_post, $provider_api_key_image_post, $provider_api_key_post) as $candidate_source) {
-				if (!array_key_exists($candidate_provider, $candidate_source) || (string)$candidate_source[$candidate_provider] === '') continue;
-				$result = cbia_sanitize_provider_api_key($candidate_provider, (string)$candidate_source[$candidate_provider]);
-				if (empty($result['valid'])) {
-					$api_key_validation_warnings[] = cbia_provider_api_key_error_message($candidate_provider, (string)$result['code']);
-					break;
-				}
-			}
-		}
 		// Submitted credentials are handled separately from model/settings persistence.
-		$first_non_empty = function (...$vals) {
+		$first_non_empty = function (string $provider, ...$vals) {
 			foreach ($vals as $val) {
 				if (!is_string($val)) continue;
-				$val = function_exists('cbia_normalize_submitted_api_key') ? cbia_normalize_submitted_api_key($val) : trim($val);
+				$val = function_exists('cbia_normalize_submitted_api_key') ? cbia_normalize_submitted_api_key($val, $provider) : trim($val);
 				if ($val !== '') return $val;
 			}
 			return '';
@@ -90,10 +79,26 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 			$image_provider = 'openai';
 		}
 
+		$api_key_validation_warnings = array();
+		$active_key_sources = array(
+			array('provider' => $text_provider, 'values' => $provider_api_key_text_post),
+			array('provider' => $image_provider, 'values' => $provider_api_key_image_post),
+		);
+		foreach ($active_key_sources as $active_key_source) {
+			$candidate_provider = (string)$active_key_source['provider'];
+			$candidate_source = (array)$active_key_source['values'];
+			if (!array_key_exists($candidate_provider, $candidate_source) || (string)$candidate_source[$candidate_provider] === '') continue;
+			$result = cbia_sanitize_provider_api_key($candidate_provider, (string)$candidate_source[$candidate_provider]);
+			if (empty($result['valid'])) {
+				$api_key_validation_warnings[] = cbia_provider_api_key_error_message($candidate_provider, (string)$result['code']);
+			}
+		}
+
 		foreach (array_keys($providers_list) as $pkey) {
 			$posted_key = $first_non_empty(
-				(string)($provider_api_key_text_post[$pkey] ?? ''),
-				(string)($provider_api_key_image_post[$pkey] ?? ''),
+				$pkey,
+				$pkey === $text_provider ? (string)($provider_api_key_text_post[$pkey] ?? '') : '',
+				$pkey === $image_provider ? (string)($provider_api_key_image_post[$pkey] ?? '') : '',
 				(string)($provider_api_key_post[$pkey] ?? '')
 			);
 			if ($posted_key === '') continue;

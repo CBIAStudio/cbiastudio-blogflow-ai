@@ -624,8 +624,8 @@ if (!function_exists('cbia_prompt_length_shape')) {
         }
 
         return $faq
-            ? array('target' => '1900-2100', 'min' => 1800, 'opening' => '230-270', 'blocks' => 4, 'block' => '280-320', 'faq' => '70-85', 'closing' => '130-160')
-            : array('target' => '1900-2100', 'min' => 1800, 'opening' => '150-220', 'blocks' => 7, 'block' => '210-230', 'faq' => '0', 'closing' => '150-220');
+            ? array('target' => '1950-2000', 'min' => 1800, 'opening' => '230-270', 'blocks' => 4, 'block' => '290-320', 'faq' => '70-85', 'closing' => '130-160')
+            : array('target' => '1950-2000', 'min' => 1800, 'opening' => '180-230', 'blocks' => 7, 'block' => '230-260', 'faq' => '0', 'closing' => '150-200');
     }
 }
 
@@ -633,18 +633,25 @@ if (!function_exists('cbia_prompt_build_length_policy_block')) {
     function cbia_prompt_build_length_policy_block(array $opts, $language = ''): string {
         $is_spanish = function_exists('cbia_prompt_is_spanish') && cbia_prompt_is_spanish($language);
         $faq = !empty($opts['include_faq']);
+        $examples = !empty($opts['include_practical_examples']);
         $shape = cbia_prompt_length_shape($opts);
         $blocks = (int)$shape['blocks'];
+        $examples_note_es = $examples
+            ? "\n- Los ejemplos practicos forman parte del total: integralos en los bloques principales y no los sumes despues como contenido adicional."
+            : '';
+        $examples_note_en = $examples
+            ? "\n- Practical examples are part of the total: integrate them into the main blocks and do not add them afterwards as extra content."
+            : '';
 
         if ($faq) {
             return $is_spanish
-                ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: {$shape['target']} palabras reales (minimo {$shape['min']}).\n- Distribucion obligatoria: apertura {$shape['opening']}; {$blocks} bloques principales de {$shape['block']} palabras; cada respuesta FAQ {$shape['faq']}; cierre {$shape['closing']}.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
-                : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: {$shape['target']} real words (minimum {$shape['min']}).\n- Mandatory distribution: opening {$shape['opening']}; {$blocks} main blocks of {$shape['block']} words; each FAQ answer {$shape['faq']}; closing {$shape['closing']}.\n- This policy overrides any previous range in this prompt.";
+                ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- Objetivo total obligatorio: {$shape['target']} palabras reales (minimo {$shape['min']}).\n- La FAQ forma parte de ese total, no se suma por encima.\n- Distribucion obligatoria: apertura {$shape['opening']}; {$blocks} bloques principales de {$shape['block']} palabras; cada respuesta FAQ {$shape['faq']}; cierre {$shape['closing']}.{$examples_note_es}\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+                : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- Mandatory total target: {$shape['target']} real words (minimum {$shape['min']}).\n- The FAQ is included in that total and is not added on top.\n- Mandatory distribution: opening {$shape['opening']}; {$blocks} main blocks of {$shape['block']} words; each FAQ answer {$shape['faq']}; closing {$shape['closing']}.{$examples_note_en}\n- This policy overrides any previous range in this prompt.";
         }
 
         return $is_spanish
-            ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- El articulo, sin FAQ porque esta desactivada, debe contener {$shape['target']} palabras visibles antes del ajuste final. Minimo obligatorio del cuerpo: {$shape['min']} palabras visibles.\n- Guia flexible: apertura {$shape['opening']}; entre 7 y 10 apartados cuando el tema lo permita, con desarrollo real; cuerpo principal aproximadamente 1500-1700 palabras; cierre {$shape['closing']}.\n- No incluyas preguntas frecuentes ni reserves palabras para FAQ. Alcanza la extension desarrollando las secciones principales, sin relleno ni repeticiones.\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
-            : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- The article, excluding FAQ because it is disabled, must contain {$shape['target']} visible words before final adjustment. Mandatory body minimum: {$shape['min']} visible words.\n- Flexible guide: opening {$shape['opening']}; 7 to 10 sections when appropriate, each with real development; main body about 1500-1700 words; closing {$shape['closing']}.\n- Do not include frequently asked questions or reserve words for FAQ. Reach the target through substantive main sections, without padding or repetition.\n- This policy overrides any previous range in this prompt.";
+            ? "POLITICA DE LONGITUD (PRIORIDAD ABSOLUTA)\n- El articulo, sin FAQ porque esta desactivada, debe contener {$shape['target']} palabras visibles antes del ajuste final. Minimo obligatorio del cuerpo: {$shape['min']} palabras visibles.\n- Guia flexible: apertura {$shape['opening']}; 7 bloques principales de {$shape['block']} palabras con desarrollo real; cierre {$shape['closing']}.\n- No incluyas preguntas frecuentes ni reserves palabras para FAQ. Alcanza la extension desarrollando las secciones principales, sin relleno ni repeticiones.{$examples_note_es}\n- Esta politica prevalece sobre cualquier rango anterior del prompt."
+            : "LENGTH POLICY (ABSOLUTE PRIORITY)\n- The article, excluding FAQ because it is disabled, must contain {$shape['target']} visible words before final adjustment. Mandatory body minimum: {$shape['min']} visible words.\n- Flexible guide: opening {$shape['opening']}; 7 main blocks of {$shape['block']} words with substantive development; closing {$shape['closing']}.\n- Do not include frequently asked questions or reserve words for FAQ. Reach the target through substantive main sections, without padding or repetition.{$examples_note_en}\n- This policy overrides any previous range in this prompt.";
     }
 }
 
@@ -892,6 +899,15 @@ if (!function_exists('cbia_prompt_get_recommended_editable_block')) {
         }
 
         $generated = cbia_prompt_get_recommended_generated_block($settings, $language, $title);
+        $is_auto_profile = sanitize_key((string)($settings['blog_prompt_profile'] ?? '')) === 'auto_by_title'
+            && function_exists('cbia_is_auto_prompt_profile_enabled')
+            && cbia_is_auto_prompt_profile_enabled();
+        if ($is_auto_profile) {
+            // Auto mode must keep the per-title profile. Extra user guidance is
+            // already included through blog_prompt_custom_instructions.
+            return $generated;
+        }
+
         $editable = (string)($settings['blog_prompt_editable'] ?? '');
         if (function_exists('cbia_prompt_sanitize_editable_block')) {
             $editable = cbia_prompt_sanitize_editable_block($editable);
@@ -985,7 +1001,11 @@ if (!function_exists('cbia_build_prompt_for_title')) {
             }
         } else {
             if ((string)($s['blog_prompt_profile'] ?? '') === 'auto_by_title' && cbia_is_auto_prompt_profile_enabled() && function_exists('cbia_log')) {
-                cbia_log(sprintf('Auto prompt profile for "%s": %s', (string)$title, cbia_detect_prompt_profile_from_title($title)), 'INFO');
+                cbia_log(sprintf(
+                    'Auto prompt profile for "%s": %s | source=generated_profile editable_override=no',
+                    (string)$title,
+                    cbia_detect_prompt_profile_from_title($title)
+                ), 'INFO');
             }
             $prompt_unico = function_exists('cbia_prompt_build_recommended_template_from_settings')
                 ? cbia_prompt_build_recommended_template_from_settings($s, $idioma_post, $title)

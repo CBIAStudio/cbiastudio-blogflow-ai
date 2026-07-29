@@ -701,12 +701,22 @@ echo '</select>';
 <input type="hidden" name="cbia_form" value="blog_actions" />
 <?php wp_nonce_field('cbia_blog_actions_nonce'); ?>
 
-<p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;">
+<p class="cbia-batch-actions">
+<span class="cbia-action-with-help">
 <button type="submit" class="button" name="cbia_action" value="test_config"><?php echo esc_html__('Test configuration', 'cbiastudio-blogflow-ai'); ?></button>
-<span class="description"><?php echo esc_html__('Tests the saved configuration.', 'cbiastudio-blogflow-ai'); ?></span>
+<span class="cbia-info-tip">
+<button type="button" class="cbia-info-tip__trigger" aria-describedby="cbia-test-config-help">i</button>
+<span id="cbia-test-config-help" class="cbia-info-tip__content" role="tooltip"><?php echo esc_html__('Tests the saved configuration.', 'cbiastudio-blogflow-ai'); ?></span>
+</span>
+</span>
 <?php if ((function_exists('cbia_get_text_provider') ? cbia_get_text_provider() : '') === 'deepseek') : ?>
+<span class="cbia-action-with-help">
 <button type="submit" class="button" name="cbia_action" value="test_config_advanced"><?php echo esc_html__('Advanced thinking test', 'cbiastudio-blogflow-ai'); ?></button>
-<span class="description"><?php echo esc_html__('Optional: tests the saved DeepSeek thinking mode and may consume more tokens.', 'cbiastudio-blogflow-ai'); ?></span>
+<span class="cbia-info-tip">
+<button type="button" class="cbia-info-tip__trigger" aria-describedby="cbia-test-config-advanced-help">i</button>
+<span id="cbia-test-config-advanced-help" class="cbia-info-tip__content" role="tooltip"><?php echo esc_html__('Optional: tests the saved DeepSeek thinking mode and may consume more tokens.', 'cbiastudio-blogflow-ai'); ?></span>
+</span>
+</span>
 <?php endif; ?>
 
 <button type="button" class="button button-primary" id="cbia_btn_generate"><?php echo esc_html__('Run batch (with resume)', 'cbiastudio-blogflow-ai'); ?></button>

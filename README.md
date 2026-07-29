@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.1.5
+# CBIAStudio BlogFlow with AI (WordPress) v2.1.6
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,22 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.1.6
+
+- Provider API keys are stored canonically per provider and remain stable when changing text or image models.
+- API-key saves are scoped to the active text/image provider, preventing hidden browser autofill fields from replacing another provider credential.
+- Settings show consistent masked key fields with configured/missing status without exposing credentials.
+- Auto by title always uses its generated per-title profile instead of being replaced by a fixed editable block.
+- Medium generation targets 1950-2000 words in the first response and includes FAQ/examples inside the same word budget.
+- A 15% lower tolerance avoids unnecessary expansion: Medium expands only below 1530 words or after a token-limit truncation.
+- Blog and Preview use the same effective minimum, and expansion telemetry reports the effective result consistently.
+
+## Comparative: 2.1.6 vs 2.1.5
+
+2.1.6 hardens provider-key persistence and reduces avoidable second text calls while preserving Usage V2, DeepSeek V4, image generation, scheduling and manual prompt profiles.
+
+## Previous: 2.1.5
 
 ## What's New in 2.1.5
 

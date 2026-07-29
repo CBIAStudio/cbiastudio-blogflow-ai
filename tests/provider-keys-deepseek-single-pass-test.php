@@ -99,10 +99,13 @@ assert_case(cbia_estimate_output_tokens_for_length_target(1800, 2000, 'Spanish',
 assert_case(cbia_estimate_output_tokens_for_length_target(950, 1100, 'Spanish', false, false, 'deepseek', 'deepseek-v4-flash', 'disabled') !== 5200, 'short length is not forced to 5200');
 
 $policy = cbia_prompt_build_length_policy_block(array('post_length_variant' => 'medium', 'include_faq' => 0), 'Spanish');
-assert_case(strpos($policy, '1900-2100') !== false && strpos($policy, '1800 palabras visibles') !== false, 'no-FAQ body target is explicit');
-assert_case(strpos($policy, 'No incluyas preguntas frecuentes') !== false && strpos($policy, '7 y 10 apartados') !== false, 'no-FAQ flexible structure is explicit');
-foreach (array(1398, 1799) as $words) assert_case($words < 1800, "{$words} words requires expansion");
-foreach (array(1800, 1873, 2000) as $words) assert_case($words >= 1800, "{$words} words succeeds first pass");
+assert_case(strpos($policy, '1950-2000') !== false && strpos($policy, '1800 palabras visibles') !== false, 'no-FAQ body target is explicit');
+assert_case(strpos($policy, 'No incluyas preguntas frecuentes') !== false && strpos($policy, '7 bloques principales') !== false, 'no-FAQ structure is explicit');
+$examples_policy = cbia_prompt_build_length_policy_block(array('post_length_variant' => 'medium', 'include_faq' => 1, 'include_practical_examples' => 1), 'Spanish');
+assert_case(strpos($examples_policy, 'La FAQ forma parte de ese total') !== false && strpos($examples_policy, 'Los ejemplos practicos forman parte del total') !== false, 'optional modules are budgeted inside one response');
+assert_case(cbia_get_soft_length_floor_words(1800) === 1530, 'medium expansion floor allows 15 percent tolerance');
+foreach (array(1398, 1529) as $words) assert_case($words < cbia_get_soft_length_floor_words(1800), "{$words} words requires expansion");
+foreach (array(1530, 1725, 1800, 2000) as $words) assert_case($words >= cbia_get_soft_length_floor_words(1800), "{$words} words succeeds first pass");
 
 $hooks = file_get_contents($root . '/includes/core/hooks.php');
 $start = strpos($hooks, 'function cbia_ajax_start_generation()');
@@ -114,5 +117,7 @@ assert_case(source_contains($root . '/includes/admin/views/usage.php', '$text_pr
 assert_case(source_contains($root . '/includes/engine/openai.php', 'cbia_deepseek_chat_call($prompt, $system, $tries, $max_output_override, $context)'), 'DeepSeek receives the output override');
 assert_case(source_contains($root . '/includes/engine/openai.php', "if (\$phase === 'expand') \$timeout = max(150, \$timeout);"), 'DeepSeek expansion timeout is 150 seconds');
 assert_case(source_contains($root . '/includes/services/article-preview-service.php', "'expansion_calls' => \$preview_expansion_calls"), 'Preview preserves expansion usage');
+assert_case(source_contains($root . '/includes/engine/prompt.php', 'if ($is_auto_profile)') && source_contains($root . '/includes/engine/prompt.php', 'return $generated;'), 'Auto by title keeps the generated per-title profile');
+assert_case(source_contains($root . '/includes/engine/posts.php', '$expanded_words >= $effective_min_words'), 'Expansion status uses the effective tolerance floor');
 
 echo "provider-keys-deepseek-single-pass: {$cases}/{$cases} OK\n";

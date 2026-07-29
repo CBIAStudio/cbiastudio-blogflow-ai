@@ -258,7 +258,10 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             $first_pass_words = function_exists('cbia_count_words_from_html')
                 ? (int)cbia_count_words_from_html((string)$text_html)
                 : (int)$this->word_count((string)$text_html);
-            $first_pass_success = $first_pass_words >= (int)$preview_min;
+            $effective_min_words = function_exists('cbia_get_effective_length_floor_words')
+                ? (int)cbia_get_effective_length_floor_words((int)$preview_min, (array)$settings)
+                : $this->get_soft_length_floor((int)$preview_min);
+            $first_pass_success = $first_pass_words >= $effective_min_words;
 			$hit_token_limit = in_array($finish_reason, array('length', 'max_tokens'), true);
             $expansion_used = false;
             $expansion_required = !$first_pass_success || $hit_token_limit;
@@ -269,7 +272,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             if (function_exists('cbia_pick_length_target_words') && function_exists('cbia_count_words_from_html') && function_exists('cbia_expand_text_to_length_target')) {
                 list($min_words, $max_words) = cbia_pick_length_target_words($length_variant, !empty($settings['include_faq']));
                 $current_words = (int) cbia_count_words_from_html((string) $text_html);
-                if ($hit_token_limit || $current_words < (int)$min_words) {
+                if ($hit_token_limit || $current_words < $effective_min_words) {
                     $expansion_used = true;
                     $preview_expansion_status = array();
                     $text_html = cbia_expand_text_to_length_target($title, (string)$text_html, (array)$settings, (int)$min_words, (int)$max_words, $preview_expansion_calls, $preview_expansion_status, $hit_token_limit);
@@ -287,7 +290,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     }
                 }
                 $text_html = $this->enforce_length_ceiling((string)$text_html, (int)$max_words, !empty($settings['include_faq']));
-                if ((int)cbia_count_words_from_html((string)$text_html) < (int)$min_words || $truncated_expansion_failed) {
+                if ((int)cbia_count_words_from_html((string)$text_html) < $effective_min_words || $truncated_expansion_failed) {
                     return new WP_Error('preview_length_insufficient', 'Generated text remains below the selected minimum. Images were not generated.');
                 }
             }
@@ -309,13 +312,14 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
             ));
             if (function_exists('cbia_log')) {
                 cbia_log(sprintf(
-                    'Preview text result: provider=%s model=%s faq_enabled=%s examples_enabled=%s first_pass_words=%d minimum_words=%d first_pass_success=%s expansion_used=%s finish_reason=%s completion_tokens=%d reasoning_tokens=%d visible_output_tokens_estimated=%d examples_words_removed=%d expansion_reason=%s.',
+                    'Preview text result: provider=%s model=%s faq_enabled=%s examples_enabled=%s first_pass_words=%d minimum_words=%d effective_minimum_words=%d first_pass_success=%s expansion_used=%s finish_reason=%s completion_tokens=%d reasoning_tokens=%d visible_output_tokens_estimated=%d examples_words_removed=%d expansion_reason=%s.',
                     (string)$text_provider,
                     (string)$model_used,
                     $faq_enabled ? 'yes' : 'no',
 					!empty($settings['include_practical_examples']) ? 'yes' : 'no',
                     $first_pass_words,
                     (int)$preview_min,
+                    $effective_min_words,
                     $first_pass_success ? 'yes' : 'no',
 					$expansion_used ? 'yes' : 'no', (string)($finish_reason ?: 'unknown'), (int)($usage['completion_tokens'] ?? $usage['output_tokens'] ?? 0), (int)($usage['reasoning_tokens'] ?? 0), (int)($usage['visible_output_tokens_estimated'] ?? $usage['output_tokens'] ?? 0), (int)$examples_words_removed, (string)$expansion_reason
                 ), 'INFO');
@@ -1119,7 +1123,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
         }
 
         private function get_soft_length_floor(int $min_words): int {
-            $slack = max(120, (int)floor($min_words * 0.08));
+            $slack = (int)floor($min_words * 0.15);
             return max(1, $min_words - $slack);
         }
 

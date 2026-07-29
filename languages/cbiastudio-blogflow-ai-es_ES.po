@@ -1,6 +1,6 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: CBIAStudio BlogFlow with AI 2.1.5\n"
+"Project-Id-Version: CBIAStudio BlogFlow with AI 2.1.6\n"
 "Report-Msgid-Bugs-To: https://github.com/CBIAStudio/cbiastudio-blogflow-ai/"
 "issues\n"
 "POT-Creation-Date: 2026-07-22 12:24+0200\n"
@@ -772,23 +772,23 @@ msgid "Batch actions"
 msgstr "sin acciones IA"
 
 #: includes/admin/views/blog.php:705
-#, fuzzy
 msgid "Test configuration"
-msgstr "Configuracion"
+msgstr "Probar configuración"
 
 #: includes/admin/views/blog.php:706
 msgid "Tests the saved configuration."
 msgstr "Prueba la configuración guardada."
 
 #: includes/admin/views/blog.php:708
-#, fuzzy
 msgid "Advanced thinking test"
-msgstr "Opciones avanzadas"
+msgstr "Probar razonamiento avanzado"
 
 #: includes/admin/views/blog.php:709
 msgid ""
 "Optional: tests the saved DeepSeek thinking mode and may consume more tokens."
 msgstr ""
+"Opcional: prueba el modo de razonamiento de DeepSeek guardado y puede "
+"consumir más tokens."
 
 #: includes/admin/views/blog.php:712
 msgid "Run batch (with resume)"

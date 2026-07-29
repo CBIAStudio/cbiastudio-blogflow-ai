@@ -332,7 +332,7 @@ foreach ($providers_list as $pkey => $pdef) {
     $link = $provider_key_urls[$pkey] ?? '';
     echo '<div class="abb-provider-key" data-scope="text" data-provider="' . esc_attr($pkey) . '" style="display:none;">';
     echo '<div class="abb-api-input">';
-		echo '<input class="abb-input" type="password" name="provider_api_key_text[' . esc_attr($pkey) . ']" value="" autocomplete="off" data-key-configured="' . ($key_configured ? '1' : '0') . '" placeholder="' . esc_attr($mask_placeholder) . '" />';
+		echo '<input class="abb-input" type="password" name="provider_api_key_text[' . esc_attr($pkey) . ']" value="" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false" data-key-configured="' . ($key_configured ? '1' : '0') . '" placeholder="' . esc_attr($mask_placeholder) . '" />';
     echo '<span class="abb-api-status ' . ($key_configured ? 'is-configured' : 'is-missing') . '" role="status">' . esc_html($key_status_label) . '</span>';
     if ($link !== '') {
         echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Get API key', 'cbiastudio-blogflow-ai') . '</a>';
@@ -359,7 +359,7 @@ foreach ($image_providers_list as $pkey => $pdef) {
     $link = $provider_key_urls[$pkey] ?? '';
     echo '<div class="abb-provider-key" data-scope="image" data-provider="' . esc_attr($pkey) . '" style="display:none;">';
     echo '<div class="abb-api-input">';
-		echo '<input class="abb-input" type="password" name="provider_api_key_image[' . esc_attr($pkey) . ']" value="" autocomplete="off" data-key-configured="' . ($key_configured ? '1' : '0') . '" placeholder="' . esc_attr($mask_placeholder) . '" />';
+		echo '<input class="abb-input" type="password" name="provider_api_key_image[' . esc_attr($pkey) . ']" value="" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false" data-key-configured="' . ($key_configured ? '1' : '0') . '" placeholder="' . esc_attr($mask_placeholder) . '" />';
     echo '<span class="abb-api-status ' . ($key_configured ? 'is-configured' : 'is-missing') . '" role="status">' . esc_html($key_status_label) . '</span>';
     if ($link !== '') {
         echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Get API key', 'cbiastudio-blogflow-ai') . '</a>';

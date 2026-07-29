@@ -46,8 +46,11 @@ check_case(!has($key_block, "'image_provider'"), 'key-only save does not change 
 check_case(!has($key_block, "'current_provider'"), 'key-only save does not change provider registry selection');
 check_case(has($files['config'], "if (\$posted_key === '') continue;"), 'only explicitly posted keys are saved');
 check_case(has($files['config'], 'cbia_store_provider_api_key($pkey, $posted_key)'), 'canonical provider key store remains synchronized');
+check_case(has($files['config'], '$pkey === $text_provider ?') && has($files['config'], '$pkey === $image_provider ?'), 'key save ignores inactive provider-scope fields');
+check_case(has($files['config'], 'cbia_normalize_submitted_api_key($val, $provider)'), 'key normalization receives the effective provider');
 check_case(has($files['config_view'], 'placeholder="' . "' . esc_attr(\$mask_placeholder)"), 'key mask is a placeholder');
-check_case(has($files['config_view'], 'value="" autocomplete="off"'), 'real keys are never rendered in HTML');
+check_case(has($files['config_view'], 'value="" autocomplete="new-password"'), 'real keys are never rendered and browser password autofill is discouraged');
+check_case(has($files['config_view'], 'data-lpignore="true"') && has($files['config_view'], 'data-1p-ignore="true"'), 'password managers are asked not to overwrite API key fields');
 check_case(!has($files['config_view'], 'substr($api_key'), 'diagnostics expose no key fragments');
 check_case(has($files['config_view'], "cbia_has_provider_api_key('deepseek')"), 'DeepSeek diagnostic is yes/no only');
 check_case(has($files['config_view'], "cbia_has_provider_api_key('google')"), 'Google diagnostic is yes/no only');

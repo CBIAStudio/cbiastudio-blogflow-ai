@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.0
-Stable tag: 2.1.5
+Stable tag: 2.1.6
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -155,6 +155,15 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://platform.deepseek.com/privacy
 
 == Changelog ==
+
+= 2.1.6 =
+* Provider API keys now use a canonical per-provider store and remain stable when changing providers or models.
+* API-key saves are scoped to the selected text/image provider so hidden browser autofill values cannot replace another credential.
+* Key fields use a consistent safe mask and configured/missing status without exposing credential fragments.
+* Auto by title always sends the generated per-title profile and cannot be replaced by a fixed editable prompt block.
+* Medium first-pass prompts target 1950-2000 words and budget FAQ and practical examples inside the same response.
+* A 15% effective lower tolerance avoids expansion at 1530 words or more; truncation still triggers one guarded completion.
+* Blog, Preview, final validation and expansion telemetry use the same effective minimum.
 
 = 2.1.5 =
 * DeepSeek tests now separate the /models connection check, a basic 32-token chat with thinking disabled, and an optional advanced thinking test.
