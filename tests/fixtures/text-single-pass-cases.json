@@ -1,0 +1,29 @@
+{
+  "observed_short": {
+    "provider": "openai",
+    "model": "gpt-5-mini",
+    "profile": "how_to",
+    "length": "medium",
+    "faq_enabled": false,
+    "examples_enabled": false,
+    "configured_max_tokens": 6000,
+    "visible_words": 1120,
+    "completion_tokens": 1659,
+    "reasoning_tokens": 0,
+    "completion_status": "complete",
+    "faq_words_removed": 0,
+    "examples_words_removed": 0,
+    "expected_reason": "below_effective_minimum",
+    "expanded_visible_words": 1813,
+    "expected_expansion_result": "sufficient"
+  },
+  "accepted_with_tolerance": {
+    "visible_words": 1600,
+    "completion_status": "complete",
+    "expected_accepted": true,
+    "expected_nominal_target_met": false,
+    "expected_accepted_with_tolerance": true,
+    "expected_expansion_reason": "none",
+    "expected_remote_text_requests": 1
+  }
+}

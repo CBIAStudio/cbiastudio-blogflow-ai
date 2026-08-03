@@ -355,6 +355,26 @@ if (!function_exists('cbia_openai_responses_call')) {
 		return (bool)$saved;
 	}
 
+	function cbia_normalize_openai_completion_status($provider_status, $incomplete_reason = '') {
+		$provider_status = sanitize_key((string)$provider_status);
+		$incomplete_reason = sanitize_key((string)$incomplete_reason);
+		if ($provider_status === 'completed' || $provider_status === '') return 'complete';
+		if (in_array($incomplete_reason, array('max_output_tokens', 'max_tokens', 'length'), true)) return 'output_limit';
+		if (in_array($incomplete_reason, array('content_filter', 'safety'), true)) return 'content_filter';
+		if ($provider_status === 'incomplete') return 'incomplete';
+		if (in_array($provider_status, array('failed', 'cancelled'), true)) return 'provider_error';
+		return 'unknown';
+	}
+
+	function cbia_normalize_chat_completion_status($finish_reason) {
+		$finish_reason = sanitize_key((string)$finish_reason);
+		if (in_array($finish_reason, array('stop', 'completed'), true)) return 'complete';
+		if (in_array($finish_reason, array('length', 'max_tokens', 'max_output_tokens'), true)) return 'output_limit';
+		if (in_array($finish_reason, array('content_filter', 'safety', 'recitation'), true)) return 'content_filter';
+		if (in_array($finish_reason, array('error', 'insufficient_system_resource'), true)) return 'provider_error';
+		return 'unknown';
+	}
+
 		function cbia_openai_responses_call($prompt, $title_for_log = '', $tries = 2, $max_output_override = 0, $context = array()) {
 			cbia_try_unlimited_runtime();
 			$attempts = array();
@@ -455,7 +475,8 @@ if (!function_exists('cbia_openai_responses_call')) {
 				$max_out = (int)($s['responses_max_output_tokens'] ?? 6000);
 				$max_out_override = (int)$max_output_override;
 				if ($max_out_override > 0) {
-					$max_out = sanitize_key((string)($context['phase'] ?? '')) === 'configuration_test' ? $max_out_override : max($max_out, $max_out_override);
+					$strict_override = !empty($context['strict_max_output_override']) || sanitize_key((string)($context['phase'] ?? '')) === 'configuration_test';
+					$max_out = $strict_override ? $max_out_override : max($max_out, $max_out_override);
 				}
 				if (sanitize_key((string)($context['phase'] ?? '')) === 'configuration_test') {
 					$max_out = max(16, min(64, $max_out));
@@ -547,6 +568,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 				$usage = cbia_usage_from_responses_payload($data);
 				$response_status = sanitize_key((string)($data['status'] ?? 'completed'));
 				$incomplete_reason = sanitize_key((string)($data['incomplete_details']['reason'] ?? ''));
+				$completion_status = cbia_normalize_openai_completion_status($response_status, $incomplete_reason);
 
 				if ($text === '') {
 					cbia_log(("Response without text (model={$model})"), 'ERROR');
@@ -559,10 +581,10 @@ if (!function_exists('cbia_openai_responses_call')) {
 
 				cbia_openai_log_text_success($model, $usage, false);
 
-				$completed = ($response_status === '' || $response_status === 'completed');
-				$attempt = array_merge($attempt_context, $usage, array('elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => $completed ? 1 : 0, 'status' => $completed ? 'success' : 'incomplete', 'status_reason' => $incomplete_reason));
+				$completed = $completion_status === 'complete';
+				$attempt = array_merge($attempt_context, $usage, array('elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => $completed ? 1 : 0, 'status' => $completed ? 'success' : $completion_status, 'status_reason' => $incomplete_reason, 'completion_status' => $completion_status, 'provider_status' => $response_status, 'provider_incomplete_reason' => $incomplete_reason));
 				cbia_openai_record_text_attempt($attempt_context, $usage, $attempt);
-				$data['_cbia_request_meta'] = array_merge($attempt_context, array('provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'fallback_from' => ((string)$model !== (string)$model_preferred ? (string)$model_preferred : ''), 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'status' => $completed ? 'success' : 'incomplete', 'status_reason' => $incomplete_reason));
+				$data['_cbia_request_meta'] = array_merge($attempt_context, array('provider' => 'openai', 'model_requested' => (string)$model_preferred, 'model_effective' => (string)$model, 'fallback_from' => ((string)$model !== (string)$model_preferred ? (string)$model_preferred : ''), 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'status' => $completed ? 'success' : $completion_status, 'status_reason' => $incomplete_reason, 'completion_status' => $completion_status, 'provider_status' => $response_status, 'provider_incomplete_reason' => $incomplete_reason, 'finish_reason' => $completion_status === 'output_limit' ? 'max_tokens' : ($completion_status === 'complete' ? 'stop' : $completion_status)));
 				return [$completed, $text, $usage, $model, $completed ? '' : ('Incomplete response' . ($incomplete_reason ? ': ' . $incomplete_reason : '')), cbia_attach_attempts_meta($data, $attempts)];
 			}
 		}
@@ -1355,9 +1377,12 @@ if (!function_exists('cbia_google_generate_content_call')) {
 				$usage['total_tokens'] = (int)($data['usageMetadata']['totalTokenCount'] ?? 0);
 			}
 
-			cbia_log(("Google Gemini OK: model={$model} tokens_in=") . (int)$usage['input_tokens'] . " tokens_out=" . (int)$usage['output_tokens'], 'INFO');
-			$data['_cbia_request_meta'] = array_merge($usage, array('provider' => 'google', 'model_requested' => $model, 'model_effective' => $model, 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'attempt' => $t, 'status' => 'success'));
-			return [true, $text, $usage, $model, '', cbia_attach_attempts_meta($data, $attempts)];
+			$finish_reason = sanitize_key((string)($data['candidates'][0]['finishReason'] ?? 'stop'));
+			$completion_status = cbia_normalize_chat_completion_status($finish_reason);
+			$completed = $completion_status === 'complete';
+			cbia_log(("Google Gemini OK: model={$model} tokens_in=") . (int)$usage['input_tokens'] . " tokens_out=" . (int)$usage['output_tokens'] . " completion_status={$completion_status}", 'INFO');
+			$data['_cbia_request_meta'] = array_merge($usage, array('provider' => 'google', 'model_requested' => $model, 'model_effective' => $model, 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'attempt' => $t, 'status' => $completed ? 'success' : $completion_status, 'finish_reason' => $finish_reason, 'completion_status' => $completion_status, 'provider_status' => $finish_reason, 'provider_incomplete_reason' => $completed ? '' : $finish_reason));
+			return [$completed, $text, $usage, $model, $completed ? '' : 'Incomplete response: ' . $finish_reason, cbia_attach_attempts_meta($data, $attempts)];
 		}
 
 		return [false, '', ['input_tokens'=>0,'output_tokens'=>0,'total_tokens'=>0], $model, __('Could not get a response.', 'cbiastudio-blogflow-ai'), cbia_attach_attempts_meta(array(), $attempts)];
@@ -1470,6 +1495,7 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 
 			$text = trim((string)($data['choices'][0]['message']['content'] ?? ''));
 			$finish_reason = sanitize_key((string)($data['choices'][0]['finish_reason'] ?? ''));
+			$completion_status = cbia_normalize_chat_completion_status($finish_reason);
 			$reasoning_present = trim((string)($data['choices'][0]['message']['reasoning_content'] ?? '')) !== '';
 			if (isset($data['choices'][0]['message']['reasoning_content'])) unset($data['choices'][0]['message']['reasoning_content']);
 			if ($finish_reason === 'insufficient_system_resource') {
@@ -1500,9 +1526,9 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 				continue;
 			}
 
-			$data['_cbia_request_meta'] = array_merge($usage, array('provider' => 'deepseek', 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'attempt' => $t, 'timeout' => 0, 'finish_reason' => $finish_reason, 'content_present' => 1, 'reasoning_content_present' => $reasoning_present ? 1 : 0, 'max_output_tokens' => $max_out));
+			$data['_cbia_request_meta'] = array_merge($usage, array('provider' => 'deepseek', 'model_requested' => (string)$config['model_requested'], 'model_effective' => $model, 'thinking' => (string)$config['thinking'], 'reasoning_effort' => (string)$config['reasoning_effort'], 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms, 'attempt' => $t, 'timeout' => 0, 'finish_reason' => $finish_reason, 'completion_status' => $completion_status, 'provider_status' => $finish_reason, 'provider_incomplete_reason' => $completion_status === 'complete' ? '' : $finish_reason, 'content_present' => 1, 'reasoning_content_present' => $reasoning_present ? 1 : 0, 'max_output_tokens' => $max_out));
 			cbia_log(sprintf('DeepSeek OK: model=%s tokens_in=%d cache_hit=%d cache_miss=%d completion_tokens=%d reasoning_tokens=%d visible_output_tokens_estimated=%d finish_reason=%s', $model, $usage['input_tokens'], $usage['cache_hit_tokens'], $usage['cache_miss_tokens'], $usage['completion_tokens'], $usage['reasoning_tokens'], $usage['visible_output_tokens_estimated'], $finish_reason ?: 'unknown'), 'INFO');
-			return array(true, $text, $usage, $model, '', cbia_attach_attempts_meta($data, $attempts));
+			return array($completion_status === 'complete' || $completion_status === 'unknown', $text, $usage, $model, $completion_status === 'output_limit' ? 'Incomplete response: output limit' : '', cbia_attach_attempts_meta($data, $attempts));
 		}
 
 		return array(false, '', $last_usage, $model, $last_error, cbia_attach_attempts_meta($last_raw, $attempts));

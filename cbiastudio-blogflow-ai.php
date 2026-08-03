@@ -2,7 +2,7 @@
 /**
  * Plugin Name: CBIAStudio BlogFlow with AI
  * Description: Base edition of CBIAStudio BlogFlow with AI for WordPress.
- * Version: 2.1.6
+ * Version: 2.1.7
  * Text Domain: cbiastudio-blogflow-ai
  * Domain Path: /languages
  *
@@ -15,7 +15,7 @@
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
 
-if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.1.6');
+if (!defined('CBIA_BASE_VERSION')) define('CBIA_BASE_VERSION', '2.1.7');
 if (!defined('CBIA_BASE_PLUGIN_FILE')) define('CBIA_BASE_PLUGIN_FILE', __FILE__);
 if (!defined('CBIA_BASE_PLUGIN_DIR')) define('CBIA_BASE_PLUGIN_DIR', plugin_dir_path(__FILE__));
 if (!defined('CBIA_BASE_PLUGIN_URL')) define('CBIA_BASE_PLUGIN_URL', plugin_dir_url(__FILE__));

@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.0
-Stable tag: 2.1.6
+Stable tag: 2.1.7
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -155,6 +155,14 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://platform.deepseek.com/privacy
 
 == Changelog ==
+
+= 2.1.7 =
+* Medium keeps its 1800-2000 nominal range and 1530 effective minimum while guiding the first response toward 1650-1850 visible words.
+* Complete articles from 1530 to 1799 words are accepted without expansion and recorded as accepted with tolerance.
+* FAQ and practical-example instructions are included only when enabled; profiles use flexible, substantial single-pass structures.
+* Provider completion states are normalized and expansion cause is separated from expansion result.
+* Text generation uses at most two remote requests per article. Small safe deficits use an incremental HTML fragment instead of rewriting the full article.
+* Blog and Preview share visible-word counting, deterministic validation, length policy, Usage metadata and batch efficiency logs.
 
 = 2.1.6 =
 * Provider API keys now use a canonical per-provider store and remain stable when changing providers or models.

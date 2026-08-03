@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.1.6
+# CBIAStudio BlogFlow with AI (WordPress) v2.1.7
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,22 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.1.7
+
+- Medium remains nominally 1800-2000 words with a 1530-word effective floor; the first response is guided toward a flexible 1650-1850-word range.
+- Complete 1530-1799-word articles are accepted with tolerance instead of triggering a second request.
+- FAQ and practical-example modules are requested only when enabled, with distinct single-pass guidance for How-to, Discover and SEO Balanced.
+- OpenAI, Google and DeepSeek completion states are normalized without treating a complete sub-1800 response as truncated.
+- Expansion cause and result are separate telemetry fields. Each article is limited to two remote text requests in total.
+- Safe deficits up to 600 words use an incremental fragment; incomplete, invalid or large-deficit responses use one guarded full completion.
+- Blog and Preview share the same visible-word counter, deterministic validator, policy and cost telemetry.
+
+## Comparative: 2.1.7 vs 2.1.6
+
+2.1.7 replaces rigid first-pass length instructions and avoidable full rewrites with one central acceptance policy and a bounded incremental fallback, without changing models, prices, images, scheduling or stored API keys.
+
+## Previous: 2.1.6
 
 ## What's New in 2.1.6
 

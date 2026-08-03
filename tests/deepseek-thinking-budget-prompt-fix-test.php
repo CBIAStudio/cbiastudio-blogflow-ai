@@ -69,12 +69,12 @@ verify_case($usage['completion_tokens'] === 80, 'completion tokens');
 verify_case($usage['reasoning_tokens'] === 30, 'reasoning tokens');
 verify_case($usage['visible_output_tokens_estimated'] === 50, 'visible output estimate');
 verify_case(contains_text($source['openai'], 'finish_reason'), 'finish reason captured');
-verify_case(contains_text($source['posts'], "array('content_filter', 'insufficient_system_resource')"), 'unsafe finish reasons block publication');
-verify_case(contains_text($source['openai'], "\$finish_reason === 'insufficient_system_resource'") && contains_text($source['openai'], 'retrying with the same model'), 'temporary resource finish reason uses safe retry');
-verify_case(contains_text($source['posts'], 'max_tokens_reached'), 'length expansion reason');
-verify_case(contains_text($source['posts'], '$force_completion') && contains_text($source['posts'], '$truncated_expansion_failed'), 'token-limit response requires completion before publication');
-verify_case(contains_text($source['preview'], '$truncated_expansion_failed'), 'Preview rejects unresolved truncation before images');
-verify_case(contains_text($source['posts'], 'below_word_minimum'), 'stop short expansion reason');
+verify_case(contains_text($source['posts'], "array('content_filter', 'provider_error')"), 'unsafe completion states block publication');
+verify_case(contains_text($source['openai'], 'cbia_normalize_chat_completion_status') && contains_text($source['openai'], "return 'unknown'"), 'provider finish reasons are normalized safely');
+verify_case(contains_text($source['posts'], 'output_limit_reached'), 'output-limit expansion reason');
+verify_case(contains_text($source['posts'], '$force_completion') && contains_text($source['posts'], 'needs_manual_review_length'), 'token-limit response requires completion before publication');
+verify_case(contains_text($source['preview'], 'preview_length_insufficient'), 'Preview rejects unresolved truncation before images');
+verify_case(contains_text($source['posts'], 'below_effective_minimum'), 'short response expansion reason');
 
 $base_settings = array('responses_max_output_tokens'=>6000);
 $budget = cbia_resolve_text_token_budget($base_settings, 1800, 2000, 'Spanish', false, false, 'deepseek', 'deepseek-v4-flash', 'disabled');
@@ -89,7 +89,7 @@ verify_case(cbia_resolve_text_token_budget($base_settings, 950, 1100, 'Spanish')
 verify_case(cbia_resolve_text_token_budget($base_settings, 1800, 2000, 'Spanish')['effective'] >= 6000, 'medium configured limit');
 verify_case(cbia_resolve_text_token_budget($base_settings, 2000, 2200, 'Spanish')['effective'] >= 6000, 'long configured limit');
 verify_case(contains_text($source['preview'], 'cbia_resolve_text_token_budget'), 'Preview shares budget resolver');
-verify_case(contains_text($source['posts'], '$expand_budget = cbia_resolve_text_token_budget'), 'expansion shares budget resolver');
+verify_case(contains_text($source['posts'], "'strict_max_output_override' => true") && contains_text($source['posts'], "'remote_text_request' => 2"), 'expansion uses its constrained second-request budget');
 
 $html = '<h2>Inicio</h2><p>Texto.</p><h2>Ejemplos prácticos aplicados</h2><h3>Escenario 1</h3><p>Eliminar.</p><h2>Cierre</h2><p>Conservar.</p>';
 $clean = cbia_strip_practical_examples_section($html);
@@ -97,17 +97,17 @@ verify_case(strpos($clean, 'Escenario 1') === false, 'examples detected and remo
 verify_case(strpos($clean, 'Conservar') !== false, 'content after examples preserved');
 verify_case(cbia_strip_practical_examples_section('<h2>Inicio</h2><p>Sin modulo.</p>') === '<h2>Inicio</h2><p>Sin modulo.</p>', 'examples absent unchanged');
 verify_case(contains_text($source['posts'], 'Practical examples cleanup:'), 'examples cleanup logged');
-verify_case(contains_text($source['posts'], 'No crear una seccion independiente de ejemplos'), 'Spanish expansion forbids disabled module');
-verify_case(contains_text($source['posts'], 'Do not create a standalone practical examples'), 'English expansion forbids disabled module');
+verify_case(!contains_text($source['posts'], 'No crear una seccion independiente de ejemplos'), 'disabled Spanish module is omitted from expansion prompts');
+verify_case(!contains_text($source['posts'], 'Do not create a standalone practical examples'), 'disabled English module is omitted from expansion prompts');
 verify_case(contains_text($source['prompt'], "if (!empty(\$opts['include_practical_examples']))"), 'profile examples conditional');
 verify_case(contains_text($source['prompt'], 'discover_editorial'), 'Discover profile');
 verify_case(contains_text($source['prompt'], 'seo_balanced'), 'SEO profile');
 verify_case(contains_text($source['prompt'], 'how_to'), 'How-to profile');
-verify_case(contains_text($source['posts'], '$max_tries = 1'), 'single expansion maximum');
+verify_case(contains_text($source['posts'], "'remote_text_request' => 2") && contains_text($source['posts'], 'cbia_openai_responses_call($prompt, $title, 1, $max_output'), 'single expansion maximum');
 verify_case(strpos($source['posts'], 'cbia_generate_image_openai_with_prompt') > strpos($source['posts'], 'Generated text remains below'), 'images occur after text validation');
 verify_case(contains_text($source['blog'], 'Text generation efficiency:'), 'batch efficiency summary');
 verify_case(contains_text($source['posts'], '$words_after_faq_cleanup = $words_before_faq_cleanup;'), 'FAQ-enabled metrics initialize cleanup count');
-verify_case(contains_text($source['blog'], "!empty(\$metric['first_pass_success'])"), 'batch summary uses actual first-pass result');
+verify_case(contains_text($source['blog'], "!empty(\$metric['first_pass_accepted'])"), 'batch summary uses actual first-pass result');
 
 cbia_image_batch_auth_guard_begin();
 verify_case(empty(cbia_image_batch_auth_guard_get()['blocked']), 'image guard starts open');
