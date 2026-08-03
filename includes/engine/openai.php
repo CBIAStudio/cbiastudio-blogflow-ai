@@ -557,7 +557,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 					return [false, '', $usage, $model, $last_err, cbia_attach_attempts_meta($data, $attempts)];
 				}
 
-				cbia_log(("OpenAI Responses OK: model={$model} tokens_in=") . (int)($usage['input_tokens'] ?? 0) . " tokens_out=" . (int)($usage['output_tokens'] ?? 0), 'INFO');
+				cbia_openai_log_text_success($model, $usage, false);
 
 				$completed = ($response_status === '' || $response_status === 'completed');
 				$attempt = array_merge($attempt_context, $usage, array('elapsed_ms' => $elapsed_ms, 'http_code' => $code, 'request_id' => $request_id, 'ok' => $completed ? 1 : 0, 'status' => $completed ? 'success' : 'incomplete', 'status_reason' => $incomplete_reason));
@@ -715,7 +715,7 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 					continue;
 				}
 
-				cbia_log(("OpenAI Responses STREAM OK: model={$model} tokens_in=") . (int)($last_usage['input_tokens'] ?? 0) . " tokens_out=" . (int)($last_usage['output_tokens'] ?? 0), 'INFO');
+				cbia_openai_log_text_success($model, $last_usage, true);
 				return [true, $acc_text, $last_usage, $model, '', $last_event];
 			}
 		}
@@ -761,6 +761,69 @@ if (!function_exists('cbia_openai_finalize_image_meta')) {
 			foreach ($cost as $key => $value) $meta[$key] = $value;
 		}
 		return $meta;
+	}
+}
+
+if (!function_exists('cbia_openai_log_text_success')) {
+	function cbia_openai_log_text_success($model, $usage, $stream = false) {
+		$cost = function_exists('cbia_costes_calculate_row')
+			? cbia_costes_calculate_row(array_merge((array)$usage, array(
+				'type' => 'text',
+				'provider' => 'openai',
+				'model' => (string)$model,
+				'model_effective' => (string)$model,
+				'ok' => 1,
+			)))
+			: array();
+		$exact_cost_usd = isset($cost['cost_micro_usd']) && (string)($cost['cost_status'] ?? '') === 'exact'
+			? rtrim(rtrim(number_format(((int)$cost['cost_micro_usd']) / 1000000, 6, '.', ''), '0'), '.')
+			: 'unknown';
+		cbia_log(sprintf(
+			'OpenAI Responses%1$s OK: model=%2$s tokens_in=%3$d cached_input_tokens=%4$d tokens_out=%5$d reasoning_tokens=%6$d cost_status=%7$s exact_cost_usd=%8$s',
+			$stream ? ' STREAM' : '',
+			(string)$model,
+			(int)($usage['input_tokens'] ?? 0),
+			(int)($usage['cached_input_tokens'] ?? 0),
+			(int)($usage['output_tokens'] ?? 0),
+			(int)($usage['reasoning_tokens'] ?? 0),
+			(string)($cost['cost_status'] ?? 'unknown'),
+			$exact_cost_usd
+		), 'INFO');
+	}
+}
+
+if (!function_exists('cbia_openai_log_image_success')) {
+	function cbia_openai_log_image_success($section_label, $attach_id, $model, $image_meta, $http_code, $request_id = '') {
+		$effective_quality = $image_meta['effective_quality'] !== null ? (string)$image_meta['effective_quality'] : 'unknown';
+		$effective_size = $image_meta['effective_size'] !== null ? (string)$image_meta['effective_size'] : 'unknown';
+		$estimated_output_usd = $image_meta['estimated_micro_usd'] !== null
+			? rtrim(rtrim(number_format(((int)$image_meta['estimated_micro_usd']) / 1000000, 6, '.', ''), '0'), '.')
+			: 'unknown';
+		$exact_cost_usd = isset($image_meta['cost_micro_usd']) && (string)($image_meta['cost_status'] ?? '') === 'exact'
+			? rtrim(rtrim(number_format(((int)$image_meta['cost_micro_usd']) / 1000000, 6, '.', ''), '0'), '.')
+			: 'unknown';
+
+		cbia_log(sprintf(
+			'AI image OK: section=%1$s attach_id=%2$d model=%3$s requested_quality=%4$s effective_quality=%5$s requested_size=%6$s effective_size=%7$s input_tokens=%8$d cached_input_tokens=%9$d text_input_tokens=%10$d image_input_tokens=%11$d output_tokens=%12$d image_output_tokens=%13$d cost_status=%14$s exact_cost_usd=%15$s estimated_output_usd=%16$s HTTP=%17$d%18$s',
+			(string)$section_label,
+			(int)$attach_id,
+			(string)$model,
+			(string)($image_meta['requested_quality'] ?? 'auto'),
+			$effective_quality,
+			(string)($image_meta['requested_size'] ?? 'auto'),
+			$effective_size,
+			(int)($image_meta['input_tokens'] ?? 0),
+			(int)($image_meta['cached_input_tokens'] ?? 0),
+			(int)($image_meta['text_input_tokens'] ?? ($image_meta['input_text_tokens'] ?? 0)),
+			(int)($image_meta['image_input_tokens'] ?? ($image_meta['input_image_tokens'] ?? 0)),
+			(int)($image_meta['output_tokens'] ?? 0),
+			(int)($image_meta['image_output_tokens'] ?? ($image_meta['output_image_tokens'] ?? 0)),
+			(string)($image_meta['cost_status'] ?? 'unknown'),
+			$exact_cost_usd,
+			$estimated_output_usd,
+			(int)$http_code,
+			$request_id !== '' ? ' request_id=' . sanitize_text_field((string)$request_id) : ''
+		), 'INFO');
 	}
 }
 
@@ -963,10 +1026,7 @@ if (!function_exists('cbia_generate_image_openai')) {
 				}
 
 				$image_meta = cbia_openai_finalize_image_meta($model, $request_fields, $image_usage, array('provider' => 'openai', 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'fallback_from' => ((string)$model !== (string)$preferred_model ? (string)$preferred_model : ''), 'image_type' => $image_type, 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms));
-				$effective_quality_label = $image_meta['effective_quality'] !== null ? (string)$image_meta['effective_quality'] : 'unknown';
-				$effective_size_label = $image_meta['effective_size'] !== null ? (string)$image_meta['effective_size'] : 'unknown';
-				$estimated_output_usd = $image_meta['estimated_micro_usd'] !== null ? rtrim(rtrim(number_format(((int)$image_meta['estimated_micro_usd']) / 1000000, 6, '.', ''), '0'), '.') : 'unknown';
-				cbia_log(sprintf('AI image OK: section=%1$s attach_id=%2$d model=%3$s requested_quality=%4$s effective_quality=%5$s requested_size=%6$s effective_size=%7$s cost_status=%8$s estimated_output_usd=%9$s HTTP=%10$d%11$s', (string)$section_label, (int)$attach_id, (string)$model, (string)$image_meta['requested_quality'], $effective_quality_label, (string)$image_meta['requested_size'], $effective_size_label, (string)($image_meta['cost_status'] ?? 'unknown'), (string)$estimated_output_usd, (int)$code, $request_id ? " request_id={$request_id}" : ''), 'INFO');
+				cbia_openai_log_image_success($section_label, $attach_id, $model, $image_meta, $code, $request_id);
 				cbia_openai_store_image_response_meta((int)$attach_id, $image_meta, $image_type);
 				return [true, (int)$attach_id, $model, '', cbia_attach_attempts_meta($image_meta, $attempts)];
 			}
@@ -1120,10 +1180,7 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 				}
 
 				$image_meta = cbia_openai_finalize_image_meta($model, $request_fields, $image_usage, array('provider' => 'openai', 'model_requested' => (string)$preferred_model, 'model_effective' => (string)$model, 'fallback_from' => ((string)$model !== (string)$preferred_model ? (string)$preferred_model : ''), 'image_type' => $image_type, 'http_code' => $code, 'request_id' => $request_id, 'elapsed_ms' => $elapsed_ms));
-				$effective_quality_label = $image_meta['effective_quality'] !== null ? (string)$image_meta['effective_quality'] : 'unknown';
-				$effective_size_label = $image_meta['effective_size'] !== null ? (string)$image_meta['effective_size'] : 'unknown';
-				$estimated_output_usd = $image_meta['estimated_micro_usd'] !== null ? rtrim(rtrim(number_format(((int)$image_meta['estimated_micro_usd']) / 1000000, 6, '.', ''), '0'), '.') : 'unknown';
-				cbia_log(sprintf('AI image OK: section=%1$s attach_id=%2$d model=%3$s requested_quality=%4$s effective_quality=%5$s requested_size=%6$s effective_size=%7$s cost_status=%8$s estimated_output_usd=%9$s HTTP=%10$d%11$s', (string)$section_label, (int)$attach_id, (string)$model, (string)$image_meta['requested_quality'], $effective_quality_label, (string)$image_meta['requested_size'], $effective_size_label, (string)($image_meta['cost_status'] ?? 'unknown'), (string)$estimated_output_usd, (int)$code, $request_id ? " request_id={$request_id}" : ''), 'INFO');
+				cbia_openai_log_image_success($section_label, $attach_id, $model, $image_meta, $code, $request_id);
 				cbia_openai_store_image_response_meta((int)$attach_id, $image_meta, $image_type);
 				return [true, (int)$attach_id, $model, '', cbia_attach_attempts_meta($image_meta, $attempts)];
 			}

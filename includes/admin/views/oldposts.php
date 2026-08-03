@@ -221,6 +221,10 @@ if (!empty($picker_query->posts) && is_array($picker_query->posts)) {
         }
         $picker_lang = strtolower(trim($picker_lang));
         if ($picker_lang === '') $picker_lang = 'auto';
+        $picker_seo_raw = get_post_meta($picker_post_id, '_yoast_wpseo_linkdex', true);
+        $picker_readability_raw = get_post_meta($picker_post_id, '_yoast_wpseo_content_score', true);
+        $picker_seo_score = ($picker_seo_raw !== '' && is_numeric($picker_seo_raw)) ? max(0, min(100, (int)$picker_seo_raw)) : null;
+        $picker_readability_score = ($picker_readability_raw !== '' && is_numeric($picker_readability_raw)) ? max(0, min(100, (int)$picker_readability_raw)) : null;
 
         $content = (string)$post_obj->post_content;
         $is_elementor = false;
@@ -264,6 +268,8 @@ if (!empty($picker_query->posts) && is_array($picker_query->posts)) {
             'date'         => get_the_date('Y-m-d', $picker_post_id),
             'thumb'        => $picker_thumb ? (string)$picker_thumb : '',
             'lang'         => $picker_lang,
+            'seo_score'    => $picker_seo_score,
+            'readability_score' => $picker_readability_score,
             'author_id'    => $picker_author_id,
             'author_label' => $picker_author_label,
             'category_ids' => $picker_category_ids,
@@ -434,6 +440,9 @@ $oldposts_js_i18n = array(
     'badgeNoInternals' => __('no internals', 'cbiastudio-blogflow-ai'),
     'badgeInternalOne' => __('{count} internal', 'cbiastudio-blogflow-ai'),
     'badgeInternalMany' => __('{count} internals', 'cbiastudio-blogflow-ai'),
+    'seoScore' => __('SEO score', 'cbiastudio-blogflow-ai'),
+    'readabilityScore' => __('Readability score', 'cbiastudio-blogflow-ai'),
+    'scoreUnavailable' => __('Not available', 'cbiastudio-blogflow-ai'),
 );
 $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
 
@@ -544,6 +553,10 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                                 $row_status = sanitize_key((string)$row['status']);
                                 $row_date = sanitize_text_field((string)$row['date']);
                                 $row_lang = sanitize_text_field((string)$row['lang']);
+                                $row_seo_score = isset($row['seo_score']) && is_numeric($row['seo_score']) ? max(0, min(100, (int)$row['seo_score'])) : null;
+                                $row_readability_score = isset($row['readability_score']) && is_numeric($row['readability_score']) ? max(0, min(100, (int)$row['readability_score'])) : null;
+                                $row_seo_state = $row_seo_score === null ? 'none' : ($row_seo_score >= 71 ? 'good' : ($row_seo_score >= 41 ? 'ok' : 'bad'));
+                                $row_readability_state = $row_readability_score === null ? 'none' : ($row_readability_score >= 71 ? 'good' : ($row_readability_score >= 41 ? 'ok' : 'bad'));
                                 $row_thumb = (string)$row['thumb'];
                                 $row_selected = !empty($row['selected']);
                                 $row_author_id = absint((int)($row['author_id'] ?? 0));
@@ -568,6 +581,8 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                                     data-post-has-internal="<?php echo esc_attr(!empty($row['has_internal']) ? '1' : '0'); ?>"
                                     data-post-internal-count="<?php echo esc_attr((string) absint((int)($row['internal_count'] ?? 0))); ?>"
                                     data-post-elementor="<?php echo esc_attr(!empty($row['is_elementor']) ? '1' : '0'); ?>"
+                                    data-post-seo-score="<?php echo esc_attr($row_seo_score === null ? '' : (string)$row_seo_score); ?>"
+                                    data-post-readability-score="<?php echo esc_attr($row_readability_score === null ? '' : (string)$row_readability_score); ?>"
                                 >
                                     <div class="cbia-oldv2-thumb">
                                         <?php if ($row_thumb !== ''): ?>
@@ -579,6 +594,14 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                                     <div class="cbia-oldv2-meta">
                                         <input type="checkbox" class="cbia-oldposts-check" value="<?php echo esc_attr((string)$row_id); ?>" <?php checked($row_selected, true); ?> />
                                         <div class="cbia-oldv2-title"><?php echo esc_html($row_title); ?></div>
+                                        <div class="cbia-oldv2-scores" aria-label="<?php echo esc_attr__('Yoast scores', 'cbiastudio-blogflow-ai'); ?>">
+                                            <span class="cbia-oldv2-score is-<?php echo esc_attr($row_seo_state); ?>" data-cbia-score="seo" title="<?php echo esc_attr(sprintf('%s: %s', __('SEO score', 'cbiastudio-blogflow-ai'), $row_seo_score === null ? __('Not available', 'cbiastudio-blogflow-ai') : $row_seo_score . '/100')); ?>">
+                                                <span class="cbia-oldv2-score-dot" aria-hidden="true"></span><span>SEO</span><strong class="cbia-oldv2-score-value"><?php echo esc_html($row_seo_score === null ? '–' : (string)$row_seo_score); ?></strong>
+                                            </span>
+                                            <span class="cbia-oldv2-score is-<?php echo esc_attr($row_readability_state); ?>" data-cbia-score="readability" title="<?php echo esc_attr(sprintf('%s: %s', __('Readability score', 'cbiastudio-blogflow-ai'), $row_readability_score === null ? __('Not available', 'cbiastudio-blogflow-ai') : $row_readability_score . '/100')); ?>">
+                                                <span class="cbia-oldv2-score-dot" aria-hidden="true"></span><span><?php echo esc_html__('Readability', 'cbiastudio-blogflow-ai'); ?></span><strong class="cbia-oldv2-score-value"><?php echo esc_html($row_readability_score === null ? '–' : (string)$row_readability_score); ?></strong>
+                                            </span>
+                                        </div>
                                         <div class="cbia-oldv2-badges">
                                             <span class="cbia-oldv2-badge">#<?php echo esc_html((string)$row_id); ?></span>
                                             <span class="cbia-oldv2-badge"><?php echo esc_html($row_status); ?></span>
@@ -1568,9 +1591,29 @@ $oldposts_js_i18n_json = (string) wp_json_encode($oldposts_js_i18n);
                 const hasFeatured = parseInt(row.has_featured || 0, 10) === 1;
                 const internalCount = Math.max(0, parseInt(row.internal_count || 0, 10) || 0);
                 const thumbUrl = String(row.thumb || '');
+                const normalizeScore = function(value) {
+                    if (value === null || value === undefined || value === '') return null;
+                    const score = parseInt(value, 10);
+                    return Number.isFinite(score) ? Math.max(0, Math.min(100, score)) : null;
+                };
+                const updateScore = function(kind, value, label) {
+                    const score = normalizeScore(value);
+                    const state = score === null ? 'none' : (score >= 71 ? 'good' : (score >= 41 ? 'ok' : 'bad'));
+                    const item = card.querySelector('[data-cbia-score="' + kind + '"]');
+                    if (!item) return;
+                    item.classList.remove('is-good', 'is-ok', 'is-bad', 'is-none');
+                    item.classList.add('is-' + state);
+                    item.title = label + ': ' + (score === null ? t('scoreUnavailable') : score + '/100');
+                    const valueNode = item.querySelector('.cbia-oldv2-score-value');
+                    if (valueNode) valueNode.textContent = score === null ? '–' : String(score);
+                };
                 card.setAttribute('data-post-has-featured', hasFeatured ? '1' : '0');
                 card.setAttribute('data-post-has-internal', internalCount > 0 ? '1' : '0');
                 card.setAttribute('data-post-internal-count', String(internalCount));
+                card.setAttribute('data-post-seo-score', row.seo_score === null || row.seo_score === undefined ? '' : String(row.seo_score));
+                card.setAttribute('data-post-readability-score', row.readability_score === null || row.readability_score === undefined ? '' : String(row.readability_score));
+                updateScore('seo', row.seo_score, t('seoScore'));
+                updateScore('readability', row.readability_score, t('readabilityScore'));
 
                 const thumbWrap = card.querySelector('.cbia-oldv2-thumb');
                 if (thumbWrap) {

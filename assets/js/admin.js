@@ -648,9 +648,13 @@
         var providerSelect = document.getElementById('cbia-usage-provider-filter');
         var statusSelect = document.getElementById('cbia-usage-status-filter');
         var requestStatusSelect = document.getElementById('cbia-usage-request-status-filter');
+        var qualitySelect = document.getElementById('cbia-usage-quality-filter');
+        var imageRoleSelect = document.getElementById('cbia-usage-image-role-filter');
         var fromInput = document.getElementById('cbia-usage-from');
         var toInput = document.getElementById('cbia-usage-to');
         var searchInput = document.getElementById('cbia-usage-search');
+        var clearFiltersBtn = document.getElementById('cbia-usage-clear-filters');
+        var filterSummary = document.getElementById('cbia-usage-filter-summary');
         var daysSelect = document.getElementById('cbia-usage-days');
         var hiddenModel = document.getElementById('cbia-usage-model-hidden');
         var periodForm = document.getElementById('cbia-usage-period-form');
@@ -661,6 +665,10 @@
         var activityEmpty = document.getElementById('cbia-usage-activity-empty');
         var typeCanvas = document.getElementById('cbia-usage-type-chart');
         var typeEmpty = document.getElementById('cbia-usage-type-empty');
+        var imageQualityCanvas = document.getElementById('cbia-usage-image-quality-chart');
+        var imageQualityEmpty = document.getElementById('cbia-usage-image-quality-empty');
+        var imageRoleCanvas = document.getElementById('cbia-usage-image-role-chart');
+        var imageRoleEmpty = document.getElementById('cbia-usage-image-role-empty');
         var monthlyCanvas = document.getElementById('cbia-usage-monthly-chart');
         var monthlyEmpty = document.getElementById('cbia-usage-monthly-empty');
         var activityHint = document.getElementById('cbia-usage-activity-hint');
@@ -768,6 +776,19 @@
 
         function getSearchValue() {
             return String((searchInput && searchInput.value) || '').trim().toLowerCase();
+        }
+
+        function normalizeImageQuality(row) {
+            var value = String((row && (row.effective_quality || row.quality || row.requested_quality)) || '').trim().toLowerCase();
+            return ['auto', 'low', 'medium', 'high'].indexOf(value) !== -1 ? value : 'unknown';
+        }
+
+        function normalizeImageRole(row) {
+            var value = String((row && row.image_type) || '').trim().toLowerCase();
+            var section = String((row && row.section) || '').trim().toLowerCase();
+            if (value === 'featured' || section === 'featured') return 'featured';
+            if (value === 'content' || value === 'internal' || ['body', 'closing', 'faq'].indexOf(section) !== -1) return 'content';
+            return 'other';
         }
 
         function parseIsoDay(text) {
@@ -893,6 +914,8 @@
             var hasExtraFilter = !!String((providerSelect && providerSelect.value) || '').trim()
                 || !!String((statusSelect && statusSelect.value) || '').trim()
                 || !!String((requestStatusSelect && requestStatusSelect.value) || '').trim()
+                || !!String((qualitySelect && qualitySelect.value) || '').trim()
+                || !!String((imageRoleSelect && imageRoleSelect.value) || '').trim()
                 || !!(fromInput && fromInput.value) || !!(toInput && toInput.value);
             return !hasTypeFilter && !hasSearchFilter && !hasExtraFilter;
         }
@@ -903,6 +926,8 @@
             var provider = String((providerSelect && providerSelect.value) || '').trim();
             var costStatus = String((statusSelect && statusSelect.value) || '').trim();
             var requestStatus = String((requestStatusSelect && requestStatusSelect.value) || '').trim();
+            var quality = String((qualitySelect && qualitySelect.value) || '').trim();
+            var imageRole = String((imageRoleSelect && imageRoleSelect.value) || '').trim();
             var fromTs = fromInput && fromInput.value ? new Date(fromInput.value).getTime() : 0;
             var toTs = toInput && toInput.value ? new Date(toInput.value).getTime() : 0;
             var term = getSearchValue();
@@ -913,6 +938,8 @@
                 if (provider && String(row.provider || '') !== provider) return false;
                 if (costStatus && String(row.cost_status || 'unknown') !== costStatus) return false;
                 if (requestStatus && String(row.status || (row.ok ? 'success' : 'error')) !== requestStatus) return false;
+                if (quality && (String(row.type || '') !== 'image' || normalizeImageQuality(row) !== quality)) return false;
+                if (imageRole && (String(row.type || '') !== 'image' || normalizeImageRole(row) !== imageRole)) return false;
                 var rowTs = row.ts ? new Date(String(row.ts).replace(' ', 'T')).getTime() : 0;
                 if (fromTs && rowTs && rowTs < fromTs) return false;
                 if (toTs && rowTs && rowTs > toTs) return false;
@@ -929,6 +956,8 @@
                     row.type_label,
                     row.message_preview,
                     row.status_label
+                    , normalizeImageQuality(row)
+                    , normalizeImageRole(row)
                 ].join(' ').toLowerCase();
                 return haystack.indexOf(term) !== -1;
             });
@@ -1327,8 +1356,44 @@
         function getUsageChartColors() {
             return {
                 text: '#5B8DEF',
-                image: '#7BC67B'
+                image: '#7BC67B',
+                low: '#25a56a',
+                medium: '#2388c9',
+                high: '#e78424',
+                auto: '#8794a8',
+                unknown: '#b2bcc9',
+                featured: '#d77b17',
+                content: '#18a0ae',
+                other: '#8794a8'
             };
+        }
+
+        function getImageQualitySeries(filtered) {
+            var counts = { low: 0, medium: 0, high: 0, auto: 0, unknown: 0 };
+            filtered.forEach(function (row) {
+                if (String(row.type || '') !== 'image') return;
+                counts[normalizeImageQuality(row)] += 1;
+            });
+            return [
+                { key: 'low', label: t('low', 'Low'), value: counts.low },
+                { key: 'medium', label: t('medium', 'Medium'), value: counts.medium },
+                { key: 'high', label: t('high', 'High'), value: counts.high },
+                { key: 'auto', label: t('automatic', 'Automatic'), value: counts.auto },
+                { key: 'unknown', label: t('unknown', 'Unknown'), value: counts.unknown }
+            ];
+        }
+
+        function getImageRoleSeries(filtered) {
+            var counts = { featured: 0, content: 0, other: 0 };
+            filtered.forEach(function (row) {
+                if (String(row.type || '') !== 'image') return;
+                counts[normalizeImageRole(row)] += 1;
+            });
+            return [
+                { key: 'featured', label: t('featured', 'Featured'), value: counts.featured },
+                { key: 'content', label: t('internal', 'Internal'), value: counts.content },
+                { key: 'other', label: t('other', 'Other'), value: counts.other }
+            ];
         }
 
         function getTypeActivityBuckets(filtered) {
@@ -1496,6 +1561,76 @@
                 ctx.textAlign = 'center';
                 ctx.fillText(numberFormat(value), xCenter, inside ? labelY : Math.max(area.top + 10, y - 6));
             });
+        }
+
+        function renderImageBreakdownChart(canvas, emptyNode, series) {
+            if (!canvas || !emptyNode) return;
+            var visibleSeries = series.filter(function (item) {
+                return Number(item.value || 0) > 0;
+            });
+            if (!visibleSeries.length) {
+                canvas.hidden = true;
+                emptyNode.hidden = false;
+                return;
+            }
+
+            canvas.hidden = false;
+            emptyNode.hidden = true;
+            var chart = setupCanvas(canvas);
+            var ctx = chart.ctx;
+            var labels = visibleSeries.map(function (item) { return item.label; });
+            var rawMaxValue = Math.max.apply(null, visibleSeries.map(function (item) {
+                return Number(item.value || 0);
+            }).concat([1]));
+            var maxValue = getNiceCountAxisMax(rawMaxValue, 4);
+            var area = drawAxes(ctx, chart.width, chart.height, maxValue, labels, {
+                categorical: true,
+                valueFormatter: formatAxisNumber,
+                maxLabels: labels.length
+            });
+            var bandW = area.width / Math.max(1, visibleSeries.length);
+            var barWidth = Math.max(30, Math.min(78, Math.floor(bandW * 0.56)));
+            var colors = getUsageChartColors();
+
+            visibleSeries.forEach(function (item, index) {
+                var xCenter = getBandCenter(area, visibleSeries.length, index);
+                var value = Number(item.value || 0);
+                var barH = Math.max(2, (value / maxValue) * area.height);
+                var x = xCenter - (barWidth / 2);
+                var y = area.bottom - barH;
+                ctx.fillStyle = colors[item.key] || colors.unknown;
+                ctx.fillRect(x, y, barWidth, barH);
+                ctx.fillStyle = barH >= 28 ? '#ffffff' : '#627892';
+                ctx.font = barH >= 28 ? '600 12px Segoe UI, Arial, sans-serif' : '11px Segoe UI, Arial, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(numberFormat(value), xCenter, barH >= 28 ? y + 19 : Math.max(area.top + 10, y - 6));
+            });
+        }
+
+        function renderImageQualityChart(filtered) {
+            renderImageBreakdownChart(imageQualityCanvas, imageQualityEmpty, getImageQualitySeries(filtered));
+        }
+
+        function renderImageRoleChart(filtered) {
+            renderImageBreakdownChart(imageRoleCanvas, imageRoleEmpty, getImageRoleSeries(filtered));
+        }
+
+        function updateFilterSummary(filtered) {
+            var controls = [modelSelect, typeSelect, providerSelect, statusSelect, requestStatusSelect, qualitySelect, imageRoleSelect, fromInput, toInput];
+            var activeCount = controls.reduce(function (count, control) {
+                return count + (control && String(control.value || '').trim() ? 1 : 0);
+            }, getSearchValue() ? 1 : 0);
+            var imageCount = filtered.filter(function (row) {
+                return String(row.type || '') === 'image';
+            }).length;
+            if (filterSummary) {
+                filterSummary.textContent = numberFormat(filtered.length) + ' ' + t('events', 'events')
+                    + ' · ' + numberFormat(imageCount) + ' ' + t('images', 'images')
+                    + ' · ' + (activeCount ? (numberFormat(activeCount) + ' ' + t('activeFilters', 'active filters')) : t('noActiveFilters', 'No additional filters'));
+            }
+            if (clearFiltersBtn) {
+                clearFiltersBtn.disabled = activeCount === 0;
+            }
         }
 
         function renderMonthlyChart() {
@@ -1759,16 +1894,18 @@
                 }).join(', ')
                 : '-';
 
-            var tokenMetricsApplicable = !(String(row.type || '') === 'image') && row.token_metrics_applicable !== false;
+            var isImageEvent = String(row.type || '') === 'image';
+            var hasImageTokenUsage = isImageEvent && Number(row.tokens_total || 0) > 0;
+            var tokenMetricsApplicable = (!isImageEvent && row.token_metrics_applicable !== false) || hasImageTokenUsage;
             var tokenInText = tokenMetricsApplicable ? numberFormat(row.tokens_in) : 'N/A';
             var tokenOutText = tokenMetricsApplicable ? numberFormat(row.tokens_out) : 'N/A';
             var tokenTotalText = tokenMetricsApplicable ? numberFormat(row.tokens_total) : 'N/A';
 
-            var applicabilityNote = tokenMetricsApplicable
-                ? ''
-                : '<div class="cbia-usage-detail-note">' + (canViewCosts
-                    ? 'Image APIs do not provide reliable token breakdowns. This view compares only cost and section.'
-                    : 'Image APIs do not provide reliable token breakdowns in base mode.') + '</div>';
+            var applicabilityNote = isImageEvent
+                ? '<div class="cbia-usage-detail-note">' + escapeHtml(hasImageTokenUsage
+                    ? t('imageTokenUsageAvailable', 'Exact image token usage returned by the API is shown when available. Output price also depends on the effective quality and size.')
+                    : t('imageTokenUsageUnavailable', 'This image response did not include a complete token breakdown. Quality, size and locally known cost remain available.')) + '</div>'
+                : '';
 
             var summaryCostStat = canViewCosts
                 ? ('<div class="cbia-usage-detail-stat"><span>Total cost</span><strong>' + (summary ? currencyFormat(eurToUsd(summary.total_cost)) : '-') + '</strong></div>')
@@ -1867,18 +2004,23 @@
             allFilteredRows = filtered.slice();
             tableBody.innerHTML = displayRows.map(function (row) {
                 var activeClass = rowKey(row) === selectedKey ? ' is-active' : '';
-                var tokenMetricsApplicable = !(String(row.type || '') === 'image') && row.token_metrics_applicable !== false;
+                var isImageEvent = String(row.type || '') === 'image';
+                var tokenMetricsApplicable = (!isImageEvent && row.token_metrics_applicable !== false)
+                    || (isImageEvent && Number(row.tokens_total || 0) > 0);
                 var typeLabel = String(row.type_label || '');
                 if (row.section_detail || row.section_label) {
                     typeLabel += ' · ' + String(row.section_detail || row.section_label || '');
                 }
                 typeLabel = String(typeLabel || '').replace(/\s*Â·\s*/g, ' · ').replace(/\s*·\s*/g, ' · ');
+                var imageMeta = isImageEvent
+                    ? '<span class="cbia-usage-image-meta"><span class="quality-' + escapeHtml(normalizeImageQuality(row)) + '">' + escapeHtml(row.effective_quality_label || row.quality_label || t(normalizeImageQuality(row), normalizeImageQuality(row))) + '</span><span>' + escapeHtml(normalizeImageRole(row) === 'content' ? t('internal', 'Internal') : t(normalizeImageRole(row), normalizeImageRole(row))) + '</span></span>'
+                    : '';
                 return ''
-                    + '<tr class="' + activeClass + '" data-row-key="' + escapeHtml(rowKey(row)) + '">'
+                    + '<tr class="' + activeClass + '" data-row-key="' + escapeHtml(rowKey(row)) + '" tabindex="0" role="button" aria-label="' + escapeHtml(typeLabel + ': ' + (row.post_title || '-')) + '">'
                     + '  <td><span class="cbia-usage-date">' + escapeHtml(formatDateTime(row.ts)) + '</span></td>'
                     + '  <td>' + escapeHtml(row.user_name || '-') + '</td>'
                     + '  <td><div class="cbia-usage-source"><span class="cbia-usage-source-title">' + escapeHtml(row.post_title || '-') + '</span><span class="cbia-usage-source-meta">#' + escapeHtml(String(row.post_id || 0)) + '</span></div></td>'
-                    + '  <td><span class="cbia-usage-type-badge type-' + escapeHtml(row.type) + '">' + escapeHtml(typeLabel) + '</span></td>'
+                    + '  <td><span class="cbia-usage-type-badge type-' + escapeHtml(row.type) + '">' + escapeHtml(typeLabel) + '</span>' + imageMeta + '</td>'
                     + '  <td><span class="cbia-usage-metric">' + (tokenMetricsApplicable ? numberFormat(row.tokens_total) : 'N/A') + '</span></td>'
                     + (canViewCosts ? ('  <td><span class="cbia-usage-cost">' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : t('unknownCost', 'Unknown')) + '</span></td>') : '')
                     + '  <td><code class="cbia-usage-model-code">' + escapeHtml(row.model || '-') + '</code>' + (row.quality_label || row.quality ? '<small class="cbia-usage-source-meta">' + escapeHtml(row.quality_label || row.quality) + (row.size ? ' · ' + escapeHtml(row.size) : '') + '</small>' : '') + '</td>'
@@ -1890,7 +2032,7 @@
             }
 
             Array.prototype.slice.call(tableBody.querySelectorAll('tr[data-row-key]')).forEach(function (tr) {
-                tr.addEventListener('click', function () {
+                function selectRow() {
                     selectedKey = tr.getAttribute('data-row-key') || '';
                     Array.prototype.slice.call(tableBody.querySelectorAll('tr[data-row-key]')).forEach(function (node) {
                         node.classList.toggle('is-active', node === tr);
@@ -1899,6 +2041,12 @@
                         return rowKey(row) === selectedKey;
                     }) || null;
                     renderDetail(selected, allFilteredRows);
+                }
+                tr.addEventListener('click', selectRow);
+                tr.addEventListener('keydown', function (event) {
+                    if (event.key !== 'Enter' && event.key !== ' ') return;
+                    event.preventDefault();
+                    selectRow();
                 });
             });
 
@@ -1917,8 +2065,11 @@
             updateChartHints();
             var filtered = getFilteredRows();
             renderKpis(filtered);
+            updateFilterSummary(filtered);
             renderActivityChart(filtered);
             renderTypeChart(filtered);
+            renderImageQualityChart(filtered);
+            renderImageRoleChart(filtered);
             renderMonthlyChart();
             renderTable(filtered);
         }
@@ -1932,12 +2083,22 @@
         if (typeSelect) {
             typeSelect.addEventListener('change', refresh);
         }
-        [providerSelect, statusSelect, requestStatusSelect, fromInput, toInput].forEach(function (control) {
+        [providerSelect, statusSelect, requestStatusSelect, qualitySelect, imageRoleSelect, fromInput, toInput].forEach(function (control) {
             if (control) control.addEventListener('change', refresh);
         });
 
         if (searchInput) {
             searchInput.addEventListener('input', refresh);
+        }
+
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener('click', function () {
+                [modelSelect, typeSelect, providerSelect, statusSelect, requestStatusSelect, qualitySelect, imageRoleSelect, fromInput, toInput, searchInput].forEach(function (control) {
+                    if (control) control.value = '';
+                });
+                refresh();
+                if (modelSelect) modelSelect.focus();
+            });
         }
 
         function runHistoricalRecalculation(apply) {

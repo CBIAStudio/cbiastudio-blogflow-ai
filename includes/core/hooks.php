@@ -861,7 +861,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
 
 if (!function_exists('cbia_usage_overview_cache_key')) {
     function cbia_usage_overview_cache_key($days) {
-        return 'cbia_pro_usage_overview_v9_' . get_current_blog_id() . '_' . (int) $days;
+        return 'cbia_pro_usage_overview_v10_' . get_current_blog_id() . '_' . (int) $days;
     }
 }
 
@@ -892,6 +892,7 @@ if (!function_exists('cbia_usage_invalidate_dashboard_cache')) {
     function cbia_usage_invalidate_dashboard_cache() {
         foreach (array(7, 30, 90, 730) as $days) {
             delete_transient(cbia_usage_overview_cache_key($days));
+            delete_transient('cbia_pro_usage_overview_v9_' . get_current_blog_id() . '_' . (int) $days);
             delete_transient('cbia_pro_usage_overview_v8_' . get_current_blog_id() . '_' . (int) $days);
         }
     }
@@ -1063,6 +1064,23 @@ if (!function_exists('cbia_usage_dashboard_format_row')) {
     }
 }
 
+if (!function_exists('cbia_usage_event_row_identity')) {
+    function cbia_usage_event_row_identity($row) {
+        if (!is_array($row)) {
+            return '';
+        }
+        $attempt_id = sanitize_text_field((string) ($row['attempt_id'] ?? ''));
+        if ($attempt_id !== '') {
+            return 'attempt:' . $attempt_id;
+        }
+        $request_id = sanitize_text_field((string) ($row['request_id'] ?? ''));
+        if ($request_id !== '') {
+            return 'request:' . $request_id;
+        }
+        return '';
+    }
+}
+
 if (!function_exists('cbia_usage_compact_event_rows')) {
     function cbia_usage_compact_event_rows($rows) {
         if (!is_array($rows)) {
@@ -1071,6 +1089,7 @@ if (!function_exists('cbia_usage_compact_event_rows')) {
         $limits = cbia_usage_event_store_limits();
         $min_ts = time() - ((int) $limits['retention_days'] * DAY_IN_SECONDS);
         $clean = array();
+        $identity_indexes = array();
         foreach ($rows as $row) {
             if (!is_array($row)) continue;
             $sort_ts = isset($row['sort_ts']) ? (int) $row['sort_ts'] : 0;
@@ -1080,7 +1099,23 @@ if (!function_exists('cbia_usage_compact_event_rows')) {
             }
             if ($sort_ts > 0 && $sort_ts < $min_ts) continue;
             if (empty($row['model'])) $row['model'] = 'unknown';
+            $identity = cbia_usage_event_row_identity($row);
+            if ($identity !== '' && isset($identity_indexes[$identity])) {
+                $existing_index = (int) $identity_indexes[$identity];
+                $existing = $clean[$existing_index];
+                $merged = array_merge($existing, $row);
+                if ((int) ($existing['post_id'] ?? 0) > 0 && (int) ($row['post_id'] ?? 0) <= 0) {
+                    foreach (array('post_id', 'post_title', 'post_edit_url', 'user_id', 'user_name', 'source_label') as $post_key) {
+                        $merged[$post_key] = $existing[$post_key] ?? ($merged[$post_key] ?? '');
+                    }
+                }
+                $clean[$existing_index] = $merged;
+                continue;
+            }
             $clean[] = $row;
+            if ($identity !== '') {
+                $identity_indexes[$identity] = count($clean) - 1;
+            }
         }
         usort($clean, static function ($a, $b) {
             $bts = (int) ($b['sort_ts'] ?? 0);
@@ -1165,7 +1200,11 @@ if (!function_exists('cbia_usage_get_event_store_rows')) {
         $opt = get_option(cbia_usage_event_store_option_key(), array());
         $rows = is_array($opt) && !empty($opt['rows']) && is_array($opt['rows']) ? $opt['rows'] : array();
         if (!empty($rows)) {
-            return cbia_usage_compact_event_rows($rows);
+            $compacted = cbia_usage_compact_event_rows($rows);
+            if ($compacted !== $rows) {
+                return cbia_usage_save_event_store_rows($compacted);
+            }
+            return $compacted;
         }
         if (!$build_if_missing) {
             return array();
@@ -1180,7 +1219,20 @@ if (!function_exists('cbia_usage_store_append_row')) {
         $formatted = cbia_usage_dashboard_format_row((int) $post_id, $row);
         if (!$formatted) return;
         $rows = cbia_usage_get_event_store_rows(false);
-        $rows[] = $formatted;
+        $identity = cbia_usage_event_row_identity($formatted);
+        $replaced = false;
+        if ($identity !== '') {
+            foreach ($rows as $index => $stored) {
+                if (cbia_usage_event_row_identity($stored) === $identity) {
+                    $rows[$index] = array_merge((array) $stored, $formatted);
+                    $replaced = true;
+                    break;
+                }
+            }
+        }
+        if (!$replaced) {
+            $rows[] = $formatted;
+        }
         cbia_usage_save_event_store_rows($rows);
     }
 }
@@ -6171,6 +6223,8 @@ if (!function_exists('cbia_ajax_oldposts_cards_snapshot')) {
                 'thumb' => $thumb ? esc_url_raw((string)$thumb) : '',
                 'has_featured' => has_post_thumbnail($post_id) ? 1 : 0,
                 'internal_count' => cbia_oldposts_card_internal_count($post_id),
+                'seo_score' => (($score = get_post_meta($post_id, '_yoast_wpseo_linkdex', true)) !== '' && is_numeric($score)) ? max(0, min(100, (int)$score)) : null,
+                'readability_score' => (($score = get_post_meta($post_id, '_yoast_wpseo_content_score', true)) !== '' && is_numeric($score)) ? max(0, min(100, (int)$score)) : null,
             );
         }
 

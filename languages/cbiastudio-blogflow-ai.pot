@@ -3578,3 +3578,87 @@ msgstr ""
 #: includes/support/image-pricing.php:160
 msgid "GPT Image 2 does not support a transparent background; opaque was used."
 msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "Image role"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "Other"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "events"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "images"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "active filters"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "No additional filters"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "Images by effective quality"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "Number of image events grouped by the quality actually used."
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "Automatic / unknown"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "Images by role"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "Featured and internal image events in the current filter."
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "No image data available for this filter."
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "All image qualities"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "All image roles"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "Clear filters"
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "Exact image token usage returned by the API is shown when available. Output price also depends on the effective quality and size."
+msgstr ""
+
+#: includes/admin/views/usage.php
+msgid "This image response did not include a complete token breakdown. Quality, size and locally known cost remain available."
+msgstr ""
+
+#: includes/admin/views/oldposts.php
+msgid "SEO score"
+msgstr ""
+
+#: includes/admin/views/oldposts.php
+msgid "Readability score"
+msgstr ""
+
+#: includes/admin/views/oldposts.php
+msgid "Yoast scores"
+msgstr ""
+
+#: includes/admin/views/oldposts.php
+msgid "Readability"
+msgstr ""

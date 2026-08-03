@@ -862,6 +862,22 @@ $dashboard_payload['i18n'] = array(
     'insufficientUsageData' => __('Insufficient usage data.', 'cbiastudio-blogflow-ai'),
     'modelWithoutPricing' => __('The effective model has no local price.', 'cbiastudio-blogflow-ai'),
     'missingTokenUsage' => __('The response did not include sufficient token usage.', 'cbiastudio-blogflow-ai'),
+    'imageQuality' => __('Image quality', 'cbiastudio-blogflow-ai'),
+    'imageRole' => __('Image role', 'cbiastudio-blogflow-ai'),
+    'automatic' => __('Automatic', 'cbiastudio-blogflow-ai'),
+    'low' => __('Low', 'cbiastudio-blogflow-ai'),
+    'medium' => __('Medium', 'cbiastudio-blogflow-ai'),
+    'high' => __('High', 'cbiastudio-blogflow-ai'),
+    'unknown' => __('Unknown', 'cbiastudio-blogflow-ai'),
+    'featured' => __('Featured', 'cbiastudio-blogflow-ai'),
+    'internal' => __('Internal', 'cbiastudio-blogflow-ai'),
+    'other' => __('Other', 'cbiastudio-blogflow-ai'),
+    'events' => __('events', 'cbiastudio-blogflow-ai'),
+    'images' => __('images', 'cbiastudio-blogflow-ai'),
+    'activeFilters' => __('active filters', 'cbiastudio-blogflow-ai'),
+    'noActiveFilters' => __('No additional filters', 'cbiastudio-blogflow-ai'),
+    'imageTokenUsageAvailable' => __('Exact image token usage returned by the API is shown when available. Output price also depends on the effective quality and size.', 'cbiastudio-blogflow-ai'),
+    'imageTokenUsageUnavailable' => __('This image response did not include a complete token breakdown. Quality, size and locally known cost remain available.', 'cbiastudio-blogflow-ai'),
 );
 ?>
 <div class="cbia-usage-page">
@@ -1048,6 +1064,42 @@ $dashboard_payload['i18n'] = array(
                     </div>
                 </section>
 
+                <section class="cbia-usage-panel -image-quality">
+                    <div class="cbia-usage-panel-head">
+                        <div class="cbia-usage-panel-title">
+                            <h3><?php echo esc_html__('Images by effective quality', 'cbiastudio-blogflow-ai'); ?></h3>
+                            <p id="cbia-usage-image-quality-hint"><?php echo esc_html__('Number of image events grouped by the quality actually used.', 'cbiastudio-blogflow-ai'); ?></p>
+                        </div>
+                        <div class="cbia-usage-legend cbia-usage-quality-legend">
+                            <span class="cbia-usage-legend-item is-quality-low"><i></i><?php echo esc_html__('Low', 'cbiastudio-blogflow-ai'); ?></span>
+                            <span class="cbia-usage-legend-item is-quality-medium"><i></i><?php echo esc_html__('Medium', 'cbiastudio-blogflow-ai'); ?></span>
+                            <span class="cbia-usage-legend-item is-quality-high"><i></i><?php echo esc_html__('High', 'cbiastudio-blogflow-ai'); ?></span>
+                            <span class="cbia-usage-legend-item is-quality-auto"><i></i><?php echo esc_html__('Automatic / unknown', 'cbiastudio-blogflow-ai'); ?></span>
+                        </div>
+                    </div>
+                    <div class="cbia-usage-chart-wrap">
+                        <canvas id="cbia-usage-image-quality-chart" height="240"></canvas>
+                        <div class="cbia-usage-empty" id="cbia-usage-image-quality-empty" hidden><?php echo esc_html__('No image data available for this filter.', 'cbiastudio-blogflow-ai'); ?></div>
+                    </div>
+                </section>
+
+                <section class="cbia-usage-panel -image-role">
+                    <div class="cbia-usage-panel-head">
+                        <div class="cbia-usage-panel-title">
+                            <h3><?php echo esc_html__('Images by role', 'cbiastudio-blogflow-ai'); ?></h3>
+                            <p id="cbia-usage-image-role-hint"><?php echo esc_html__('Featured and internal image events in the current filter.', 'cbiastudio-blogflow-ai'); ?></p>
+                        </div>
+                        <div class="cbia-usage-legend">
+                            <span class="cbia-usage-legend-item is-featured"><i></i><?php echo esc_html__('Featured', 'cbiastudio-blogflow-ai'); ?></span>
+                            <span class="cbia-usage-legend-item is-internal"><i></i><?php echo esc_html__('Internal', 'cbiastudio-blogflow-ai'); ?></span>
+                        </div>
+                    </div>
+                    <div class="cbia-usage-chart-wrap">
+                        <canvas id="cbia-usage-image-role-chart" height="240"></canvas>
+                        <div class="cbia-usage-empty" id="cbia-usage-image-role-empty" hidden><?php echo esc_html__('No image data available for this filter.', 'cbiastudio-blogflow-ai'); ?></div>
+                    </div>
+                </section>
+
                 <?php if ($costs_advanced_enabled) : ?>
                 <section class="cbia-usage-panel -monthly">
                     <div class="cbia-usage-panel-head">
@@ -1103,6 +1155,22 @@ $dashboard_payload['i18n'] = array(
                     <option value="seo">SEO</option>
                 </select>
 
+                <select id="cbia-usage-quality-filter" class="abb-select" aria-label="<?php echo esc_attr__('Image quality', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All image qualities', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="auto"><?php echo esc_html__('Automatic', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="low"><?php echo esc_html__('Low', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="medium"><?php echo esc_html__('Medium', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="high"><?php echo esc_html__('High', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="unknown"><?php echo esc_html__('Unknown', 'cbiastudio-blogflow-ai'); ?></option>
+                </select>
+
+                <select id="cbia-usage-image-role-filter" class="abb-select" aria-label="<?php echo esc_attr__('Image role', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All image roles', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="featured"><?php echo esc_html__('Featured', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="content"><?php echo esc_html__('Internal', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="other"><?php echo esc_html__('Other', 'cbiastudio-blogflow-ai'); ?></option>
+                </select>
+
                 <select id="cbia-usage-provider-filter" class="abb-select" aria-label="<?php echo esc_attr__('Provider', 'cbiastudio-blogflow-ai'); ?>">
                     <option value=""><?php echo esc_html__('All providers', 'cbiastudio-blogflow-ai'); ?></option>
                     <option value="openai">OpenAI</option><option value="google">Google</option><option value="deepseek">DeepSeek</option>
@@ -1132,10 +1200,12 @@ $dashboard_payload['i18n'] = array(
                     aria-label="<?php echo esc_attr__('Search logs', 'cbiastudio-blogflow-ai'); ?>"
                 />
 
+                <button type="button" class="button cbia-usage-clear-filters" id="cbia-usage-clear-filters"><?php echo esc_html__('Clear filters', 'cbiastudio-blogflow-ai'); ?></button>
+                <span id="cbia-usage-filter-summary" class="cbia-usage-filter-summary" aria-live="polite"></span>
                 <a class="button button-secondary" id="cbia-usage-export" href="<?php echo esc_url($export_url); ?>"><?php echo esc_html__('Export CSV', 'cbiastudio-blogflow-ai'); ?></a>
                 <button type="button" class="button" id="cbia-usage-recalc-dry-run"><?php echo esc_html__('Simulate historical cost recalculation', 'cbiastudio-blogflow-ai'); ?></button>
                 <button type="button" class="button" id="cbia-usage-recalc-apply"><?php echo esc_html__('Apply recalculation', 'cbiastudio-blogflow-ai'); ?></button>
-                <span id="cbia-usage-recalc-result" class="description"></span>
+                <span id="cbia-usage-recalc-result" class="description" aria-live="polite"></span>
             </div>
 
             <div class="cbia-usage-main-grid">
@@ -1143,7 +1213,7 @@ $dashboard_payload['i18n'] = array(
                     <div class="cbia-usage-panel-head">
                         <h3><?php echo esc_html__('Usage events', 'cbiastudio-blogflow-ai'); ?></h3>
                     </div>
-                    <p class="description" id="cbia-usage-table-meta">
+                    <p class="description" id="cbia-usage-table-meta" aria-live="polite">
                         <?php echo esc_html__('Loading the latest events sample for faster access...', 'cbiastudio-blogflow-ai'); ?>
                     </p>
                     <div class="cbia-usage-table-wrap">
@@ -1178,7 +1248,7 @@ $dashboard_payload['i18n'] = array(
                     </div>
                 </section>
 
-                <aside class="cbia-usage-panel cbia-usage-detail-panel" id="cbia-usage-detail">
+                <aside class="cbia-usage-panel cbia-usage-detail-panel" id="cbia-usage-detail" aria-live="polite">
                     <div class="cbia-usage-detail-skeleton" id="cbia-usage-detail-skeleton" aria-hidden="true">
                         <span class="is-title"></span>
                         <span></span>
