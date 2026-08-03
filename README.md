@@ -11,6 +11,11 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 
 ## What's New in 2.1.7
 
+- AI credentials are managed from dedicated OpenAI, Google and DeepSeek connection cards instead of the general settings form.
+- New and updated credentials are stored only in the canonical, non-autoloaded per-provider vault. Changing providers, models or other settings no longer rewrites credentials.
+- Existing legacy credentials are migrated once without deleting their source values. Runtime resolution remains backward compatible while canonical values take precedence.
+- Connection tests are explicit and non-generative, use the provider model-list endpoint, and never expose credentials in HTML, JavaScript, logs or responses.
+- Disconnect removes only the selected provider after confirmation; other providers, models, prompts, usage data and jobs remain unchanged.
 - Medium remains nominally 1800-2000 words with a 1530-word effective floor; the first response is guided toward a flexible 1650-1850-word range.
 - Complete 1530-1799-word articles are accepted with tolerance instead of triggering a second request.
 - FAQ and practical-example modules are requested only when enabled, with distinct single-pass guidance for How-to, Discover and SEO Balanced.
@@ -21,7 +26,7 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 
 ## Comparative: 2.1.7 vs 2.1.6
 
-2.1.7 replaces rigid first-pass length instructions and avoidable full rewrites with one central acceptance policy and a bounded incremental fallback, without changing models, prices, images, scheduling or stored API keys.
+2.1.7 replaces rigid first-pass length instructions and avoidable full rewrites, and isolates provider credentials from mutable generation settings through dedicated connection controls. Models, prices, images and scheduling remain unchanged.
 
 ## Previous: 2.1.6
 

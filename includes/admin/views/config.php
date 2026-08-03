@@ -48,8 +48,6 @@ if (!isset($s['image_model'])) $s['image_model'] = 'gpt-image-2';
 if (!isset($s['text_provider'])) $s['text_provider'] = $provider_current;
 if (!isset($s['image_provider'])) $s['image_provider'] = 'openai';
 if (!isset($s['text_model'])) $s['text_model'] = '';
-if (!isset($s['google_api_key'])) $s['google_api_key'] = '';
-if (!isset($s['deepseek_api_key'])) $s['deepseek_api_key'] = '';
 if (!isset($s['deepseek_thinking_mode'])) $s['deepseek_thinking_mode'] = 'disabled';
 if (!isset($s['deepseek_reasoning_effort'])) $s['deepseek_reasoning_effort'] = 'high';
 if (!isset($s['content_images_banner_enabled'])) $s['content_images_banner_enabled'] = 1;
@@ -94,7 +92,6 @@ $yoast_log = $yoast_service && method_exists($yoast_service, 'get_log')
     ? (string)$yoast_service->get_log()
     : (function_exists('cbia_yoast_log_get') ? (string)cbia_yoast_log_get() : '');
 
-$api_key = (string)($s['openai_api_key'] ?? '');
 $diag_info = array(
     'Plugin version' => defined('CBIA_VERSION') ? CBIA_VERSION : 'n/a',
     'WordPress' => get_bloginfo('version'),
@@ -128,6 +125,58 @@ if (!empty($warnings) && is_array($warnings)) {
     delete_transient('cbia_config_warnings');
 }
 
+$connection_capabilities = array(
+    'openai' => __('Text and images', 'cbiastudio-blogflow-ai'),
+    'google' => __('Text and images', 'cbiastudio-blogflow-ai'),
+    'deepseek' => __('Text', 'cbiastudio-blogflow-ai'),
+);
+$connection_state_labels = array(
+    'not_configured' => __('Not configured', 'cbiastudio-blogflow-ai'),
+    'not_tested' => __('Connection not checked', 'cbiastudio-blogflow-ai'),
+    'verified' => __('Connection verified', 'cbiastudio-blogflow-ai'),
+    'authentication_error' => __('Key rejected', 'cbiastudio-blogflow-ai'),
+);
+echo '<section class="cbia-provider-connections" id="cbia-provider-connections" aria-labelledby="cbia-provider-connections-title" data-network-error="' . esc_attr__('The connection request could not be completed.', 'cbiastudio-blogflow-ai') . '">';
+echo '<div class="cbia-section-header"><div class="cbia-section-title" id="cbia-provider-connections-title">' . esc_html__('AI connections', 'cbiastudio-blogflow-ai') . '</div>';
+echo '<p class="description">' . esc_html__('Connect the API keys for the providers CBIA will use to generate text and images.', 'cbiastudio-blogflow-ai') . '</p></div>';
+echo '<div class="cbia-provider-connections-grid">';
+foreach ($providers_list as $pkey => $pdef) {
+    if (!in_array($pkey, array('openai', 'google', 'deepseek'), true)) continue;
+    $plabel = (string)($pdef['label'] ?? ucfirst($pkey));
+    $status = function_exists('cbia_get_provider_connection_status') ? cbia_get_provider_connection_status((string)$pkey) : array('status' => 'not_configured', 'configured' => false, 'last_success' => '');
+    $state = isset($connection_state_labels[$status['status'] ?? '']) ? (string)$status['status'] : 'not_tested';
+    $configured = !empty($status['configured']);
+    $in_text = sanitize_key((string)($s['text_provider'] ?? 'openai')) === $pkey;
+    $in_image = sanitize_key((string)($s['image_provider'] ?? 'openai')) === $pkey;
+    $usage_label = '';
+    if ($in_text && $in_image) $usage_label = __('In use for text and images', 'cbiastudio-blogflow-ai');
+    elseif ($in_text) $usage_label = __('In use for text', 'cbiastudio-blogflow-ai');
+    elseif ($in_image) $usage_label = __('In use for images', 'cbiastudio-blogflow-ai');
+    $logo = plugins_url('assets/images/providers/' . $pkey . '.svg', CBIA_PLUGIN_FILE);
+    if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $pkey . '.svg')) $logo = plugins_url('assets/images/providers/openai.svg', CBIA_PLUGIN_FILE);
+    $placeholder = $configured ? __('Enter a new key to replace the current one', 'cbiastudio-blogflow-ai') : sprintf(__('Enter your %s API key', 'cbiastudio-blogflow-ai'), $plabel);
+    $confirm = sprintf(__('Do you want to disconnect %s? The saved key will be deleted, but all other settings will be preserved.', 'cbiastudio-blogflow-ai'), $plabel);
+    echo '<article class="cbia-provider-connection-card is-' . esc_attr($state) . '" data-provider="' . esc_attr($pkey) . '" data-provider-label="' . esc_attr($plabel) . '" data-disconnect-confirm="' . esc_attr($confirm) . '">';
+    echo '<div class="cbia-provider-connection-heading"><img src="' . esc_url($logo) . '" alt="" /><div><h3>' . esc_html($plabel) . '</h3><p>' . esc_html($connection_capabilities[$pkey] ?? __('Text', 'cbiastudio-blogflow-ai')) . '</p></div></div>';
+    echo '<div class="cbia-provider-connection-meta"><span class="cbia-connection-state" data-role="state">' . esc_html($connection_state_labels[$state]) . '</span>';
+    if ($usage_label !== '') echo '<span class="cbia-provider-use">' . esc_html($usage_label) . '</span>';
+    echo '</div>';
+    echo '<label for="cbia-provider-key-' . esc_attr($pkey) . '">' . esc_html(sprintf(__('%s API key', 'cbiastudio-blogflow-ai'), $plabel)) . '</label>';
+    echo '<input id="cbia-provider-key-' . esc_attr($pkey) . '" class="abb-input cbia-provider-credential-input" type="password" value="" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false" placeholder="' . esc_attr($placeholder) . '" />';
+    echo '<div class="cbia-provider-connection-actions">';
+    echo '<button type="button" class="button button-primary" data-action="connect">' . esc_html($configured ? __('Update key', 'cbiastudio-blogflow-ai') : __('Connect', 'cbiastudio-blogflow-ai')) . '</button>';
+    echo '<button type="button" class="button button-secondary" data-action="test"' . disabled(!$configured, true, false) . '>' . esc_html__('Test connection', 'cbiastudio-blogflow-ai') . '</button>';
+    if ($configured) echo '<button type="button" class="button-link-delete" data-action="disconnect">' . esc_html__('Disconnect', 'cbiastudio-blogflow-ai') . '</button>';
+    echo '</div>';
+    echo '<p class="cbia-provider-last-test" data-role="last-success">';
+    if (!empty($status['last_success'])) echo esc_html(sprintf(__('Last successful check: %s', 'cbiastudio-blogflow-ai'), (string)$status['last_success']));
+    echo '</p>';
+    if (!empty($provider_key_urls[$pkey])) echo '<a class="cbia-provider-key-link" href="' . esc_url($provider_key_urls[$pkey]) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Get API key', 'cbiastudio-blogflow-ai') . '</a>';
+    echo '<div class="cbia-provider-connection-message" data-role="message" aria-live="polite"></div>';
+    echo '</article>';
+}
+echo '</div></section>';
+
 echo '<form method="post" id="cbia-config-form">';
 wp_nonce_field('cbia_config_save_action', 'cbia_config_nonce');
 echo '<input type="hidden" name="cbia_config_save" value="1" />';
@@ -145,6 +194,7 @@ if ($image_provider === '' || !isset($image_providers_list[$image_provider])) $i
 
 $text_provider_data = $providers_list[$text_provider] ?? [];
 $text_provider_label = (string)($text_provider_data['label'] ?? 'OpenAI');
+$text_provider_label .= function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($text_provider) ? ' — ' . __('connected', 'cbiastudio-blogflow-ai') : ' — ' . __('not configured', 'cbiastudio-blogflow-ai');
 $text_provider_logo = plugins_url('assets/images/providers/' . $text_provider . '.svg', CBIA_PLUGIN_FILE);
 if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $text_provider . '.svg')) {
     $text_provider_logo = plugins_url('assets/images/providers/openai.svg', CBIA_PLUGIN_FILE);
@@ -152,6 +202,7 @@ if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' 
 
 $image_provider_data = $image_providers_list[$image_provider] ?? [];
 $image_provider_label = (string)($image_provider_data['label'] ?? 'OpenAI');
+$image_provider_label .= function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($image_provider) ? ' — ' . __('connected', 'cbiastudio-blogflow-ai') : ' — ' . __('not configured', 'cbiastudio-blogflow-ai');
 $image_provider_logo = plugins_url('assets/images/providers/' . $image_provider . '.svg', CBIA_PLUGIN_FILE);
 if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $image_provider . '.svg')) {
     $image_provider_logo = plugins_url('assets/images/providers/openai.svg', CBIA_PLUGIN_FILE);
@@ -170,6 +221,7 @@ echo '</button>';
 echo '<div class="abb-provider-menu">';
 foreach ($providers_list as $pkey => $pdef) {
     $plabel = (string)($pdef['label'] ?? $pkey);
+    $plabel .= function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key((string)$pkey) ? ' — ' . __('connected', 'cbiastudio-blogflow-ai') : ' — ' . __('not configured', 'cbiastudio-blogflow-ai');
     $plogo = plugins_url('assets/images/providers/' . $pkey . '.svg', CBIA_PLUGIN_FILE);
     if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $pkey . '.svg')) {
         $plogo = plugins_url('assets/images/providers/openai.svg', CBIA_PLUGIN_FILE);
@@ -183,6 +235,7 @@ echo '</div>';
 echo '<select class="abb-provider-select-input" name="text_provider" data-scope="text" style="display:none;">';
 foreach ($providers_list as $pkey => $pdef) {
     $plabel = (string)($pdef['label'] ?? $pkey);
+    $plabel .= function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key((string)$pkey) ? ' — ' . __('connected', 'cbiastudio-blogflow-ai') : ' — ' . __('not configured', 'cbiastudio-blogflow-ai');
     $plogo = plugins_url('assets/images/providers/' . $pkey . '.svg', CBIA_PLUGIN_FILE);
     if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $pkey . '.svg')) {
         $plogo = plugins_url('assets/images/providers/openai.svg', CBIA_PLUGIN_FILE);
@@ -205,6 +258,7 @@ echo '</button>';
 echo '<div class="abb-provider-menu">';
 foreach ($image_providers_list as $pkey => $pdef) {
     $plabel = (string)($pdef['label'] ?? $pkey);
+    $plabel .= function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key((string)$pkey) ? ' — ' . __('connected', 'cbiastudio-blogflow-ai') : ' — ' . __('not configured', 'cbiastudio-blogflow-ai');
     $plogo = plugins_url('assets/images/providers/' . $pkey . '.svg', CBIA_PLUGIN_FILE);
     if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $pkey . '.svg')) {
         $plogo = plugins_url('assets/images/providers/openai.svg', CBIA_PLUGIN_FILE);
@@ -218,6 +272,7 @@ echo '</div>';
 echo '<select class="abb-provider-select-input" name="image_provider" data-scope="image" style="display:none;">';
 foreach ($image_providers_list as $pkey => $pdef) {
     $plabel = (string)($pdef['label'] ?? $pkey);
+    $plabel .= function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key((string)$pkey) ? ' — ' . __('connected', 'cbiastudio-blogflow-ai') : ' — ' . __('not configured', 'cbiastudio-blogflow-ai');
     $plogo = plugins_url('assets/images/providers/' . $pkey . '.svg', CBIA_PLUGIN_FILE);
     if (!file_exists(plugin_dir_path(CBIA_PLUGIN_FILE) . 'assets/images/providers/' . $pkey . '.svg')) {
         $plogo = plugins_url('assets/images/providers/openai.svg', CBIA_PLUGIN_FILE);
@@ -314,65 +369,6 @@ echo '<div class="abb-field abb-deepseek-settings"' . ($deepseek_visible ? '' : 
 echo '<label>' . esc_html__('Indicative pricing', 'cbiastudio-blogflow-ai') . '</label>';
 echo '<p class="description">' . esc_html__('Flash: cache hit $0.0028, cache miss $0.14, output $0.28 per 1M tokens. Pro: cache hit $0.003625, cache miss $0.435, output $0.87 per 1M tokens. Verified July 14, 2026.', 'cbiastudio-blogflow-ai') . '</p></div>';
 echo '</div>'; // grid
-
-// API keys: texto
-echo '<div class="abb-api-row">';
-echo '<label>' . esc_html__('API key (text)', 'cbiastudio-blogflow-ai') . '</label>';
-foreach ($providers_list as $pkey => $pdef) {
-    $key_val = '';
-    if ($pkey === 'openai') $key_val = (string)($s['openai_api_key'] ?? '');
-    if ($pkey === 'google') $key_val = (string)($s['google_api_key'] ?? '');
-    if ($pkey === 'deepseek') $key_val = (string)($s['deepseek_api_key'] ?? '');
-    if ($key_val === '' && !empty($provider_settings['providers'][$pkey]['api_key'])) $key_val = (string)$provider_settings['providers'][$pkey]['api_key'];
-    $key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($pkey);
-    $mask_placeholder = $key_configured ? '••••••••••••••••' : '';
-    $key_status_label = $key_configured
-        ? __('API key configured', 'cbiastudio-blogflow-ai')
-        : __('API key not configured', 'cbiastudio-blogflow-ai');
-    $link = $provider_key_urls[$pkey] ?? '';
-    echo '<div class="abb-provider-key" data-scope="text" data-provider="' . esc_attr($pkey) . '" style="display:none;">';
-    echo '<div class="abb-api-input">';
-		echo '<input class="abb-input" type="password" name="provider_api_key_text[' . esc_attr($pkey) . ']" value="" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false" data-key-configured="' . ($key_configured ? '1' : '0') . '" placeholder="' . esc_attr($mask_placeholder) . '" />';
-    echo '<span class="abb-api-status ' . ($key_configured ? 'is-configured' : 'is-missing') . '" role="status">' . esc_html($key_status_label) . '</span>';
-    if ($link !== '') {
-        echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Get API key', 'cbiastudio-blogflow-ai') . '</a>';
-    }
-    echo '</div>';
-    echo '</div>';
-}
-echo '</div>'; // api row texto
-
-// API keys: imagen
-echo '<div class="abb-api-row">';
-echo '<label>' . esc_html__('API key (image)', 'cbiastudio-blogflow-ai') . '</label>';
-foreach ($image_providers_list as $pkey => $pdef) {
-    $key_val = '';
-    if ($pkey === 'openai') $key_val = (string)($s['openai_api_key'] ?? '');
-    if ($pkey === 'google') $key_val = (string)($s['google_api_key'] ?? '');
-    if ($pkey === 'deepseek') $key_val = (string)($s['deepseek_api_key'] ?? '');
-    if ($key_val === '' && !empty($provider_settings['providers'][$pkey]['api_key'])) $key_val = (string)$provider_settings['providers'][$pkey]['api_key'];
-    $key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($pkey);
-    $mask_placeholder = $key_configured ? '••••••••••••••••' : '';
-    $key_status_label = $key_configured
-        ? __('API key configured', 'cbiastudio-blogflow-ai')
-        : __('API key not configured', 'cbiastudio-blogflow-ai');
-    $link = $provider_key_urls[$pkey] ?? '';
-    echo '<div class="abb-provider-key" data-scope="image" data-provider="' . esc_attr($pkey) . '" style="display:none;">';
-    echo '<div class="abb-api-input">';
-		echo '<input class="abb-input" type="password" name="provider_api_key_image[' . esc_attr($pkey) . ']" value="" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" spellcheck="false" data-key-configured="' . ($key_configured ? '1' : '0') . '" placeholder="' . esc_attr($mask_placeholder) . '" />';
-    echo '<span class="abb-api-status ' . ($key_configured ? 'is-configured' : 'is-missing') . '" role="status">' . esc_html($key_status_label) . '</span>';
-    if ($link !== '') {
-        echo '<a class="button button-secondary abb-api-link" href="' . esc_url($link) . '" target="_blank" rel="noopener noreferrer">' . esc_html__('Get API key', 'cbiastudio-blogflow-ai') . '</a>';
-    }
-    echo '</div>';
-    echo '</div>';
-}
-echo '</div>'; // api row imagen
-
-echo '<div class="abb-actions-row" style="margin-top:10px;">';
-echo '<button type="submit" name="cbia_config_save_api_keys" value="1" class="button button-secondary">' . esc_html__('Save API keys', 'cbiastudio-blogflow-ai') . '</button>';
-echo '<span class="description" style="margin-left:10px;">' . esc_html__('Saves provider keys without changing prompts, lengths, categories or other generation settings.', 'cbiastudio-blogflow-ai') . '</span>';
-echo '</div>';
 
 echo '<p class="description" style="margin-top:8px;">' . esc_html__('You can use different providers for text and image generation. DeepSeek is available only for text.', 'cbiastudio-blogflow-ai') . '</p>';
 

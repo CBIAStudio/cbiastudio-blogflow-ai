@@ -234,6 +234,15 @@ if (!function_exists('cbia_register_core_hooks')) {
         if (!has_action('wp_ajax_cbia_ai_composer_test_api_key', 'cbia_ajax_ai_composer_test_api_key')) {
             add_action('wp_ajax_cbia_ai_composer_test_api_key', 'cbia_ajax_ai_composer_test_api_key');
         }
+        if (!has_action('wp_ajax_cbia_provider_connection_save', 'cbia_ajax_provider_connection_save')) {
+            add_action('wp_ajax_cbia_provider_connection_save', 'cbia_ajax_provider_connection_save');
+        }
+        if (!has_action('wp_ajax_cbia_provider_connection_test', 'cbia_ajax_provider_connection_test')) {
+            add_action('wp_ajax_cbia_provider_connection_test', 'cbia_ajax_provider_connection_test');
+        }
+        if (!has_action('wp_ajax_cbia_provider_connection_disconnect', 'cbia_ajax_provider_connection_disconnect')) {
+            add_action('wp_ajax_cbia_provider_connection_disconnect', 'cbia_ajax_provider_connection_disconnect');
+        }
         if (!has_action('wp_ajax_cbia_ai_composer_load_snapshot', 'cbia_ajax_ai_composer_load_snapshot')) {
             add_action('wp_ajax_cbia_ai_composer_load_snapshot', 'cbia_ajax_ai_composer_load_snapshot');
         }
@@ -277,8 +286,8 @@ if (!function_exists('cbia_register_core_hooks')) {
             add_action('cbia_usage_row_recorded', 'cbia_usage_store_append_row', 10, 2);
         }
 // Historical usage is never rewritten automatically. Recalculation is an explicit dry-run workflow.
-        if (!has_action('admin_init', 'cbia_repair_provider_api_keys_into_main_settings')) {
-            add_action('admin_init', 'cbia_repair_provider_api_keys_into_main_settings', 2);
+        if (!has_action('admin_init', 'cbia_maybe_migrate_provider_credentials')) {
+            add_action('admin_init', 'cbia_maybe_migrate_provider_credentials', 2);
         }
 
         // Frontend styles for banner images
@@ -1357,30 +1366,6 @@ if (!function_exists('cbia_usage_migrate_openai_image_high_costs')) {
             'rows_updated' => $rows_updated,
         ), false);
         delete_transient($lock_key);
-    }
-}
-
-if (!function_exists('cbia_repair_provider_api_keys_into_main_settings')) {
-    function cbia_repair_provider_api_keys_into_main_settings() {
-        if (!is_admin() || !current_user_can('manage_options')) {
-            return;
-        }
-        if (!function_exists('cbia_providers_get_settings')) {
-            return;
-        }
-        $settings = get_option('cbia_settings', array());
-        $settings = is_array($settings) ? $settings : array();
-        $provider_settings = cbia_providers_get_settings();
-        $vault = function_exists('cbia_get_provider_api_keys_store') ? cbia_get_provider_api_keys_store() : array();
-        $map = array('openai' => 'openai_api_key', 'google' => 'google_api_key', 'deepseek' => 'deepseek_api_key');
-        foreach ($map as $provider => $settings_key) {
-            $vault_result = cbia_sanitize_provider_api_key($provider, (string)($vault[$provider] ?? ''));
-            if (!empty($vault_result['valid'])) continue;
-            $main_result = cbia_sanitize_provider_api_key($provider, (string)($settings[$settings_key] ?? ''));
-            $provider_result = cbia_sanitize_provider_api_key($provider, (string)($provider_settings['providers'][$provider]['api_key'] ?? ''));
-            $candidate = !empty($main_result['valid']) ? (string)$main_result['value'] : (!empty($provider_result['valid']) ? (string)$provider_result['value'] : '');
-            if ($candidate !== '' && function_exists('cbia_store_provider_api_key')) cbia_store_provider_api_key($provider, $candidate);
-        }
     }
 }
 
@@ -3783,6 +3768,118 @@ if (!function_exists('cbia_ajax_test_csv_titles')) {
             'total' => count($titles),
             'titles' => array_slice($titles, 0, 10),
         ));
+    }
+}
+
+if (!function_exists('cbia_provider_connection_label')) {
+    function cbia_provider_connection_label(string $provider): string {
+        $provider = sanitize_key($provider);
+        $definition = function_exists('cbia_providers_get_provider') ? cbia_providers_get_provider($provider) : array();
+        $fallbacks = array('openai' => 'OpenAI', 'google' => 'Google', 'deepseek' => 'DeepSeek');
+        return sanitize_text_field((string)($definition['label'] ?? ($fallbacks[$provider] ?? $provider)));
+    }
+}
+
+if (!function_exists('cbia_provider_connection_public_state')) {
+    function cbia_provider_connection_public_state(string $provider): array {
+        $status = cbia_get_provider_connection_status($provider);
+        $labels = array(
+            'not_configured' => __('Not configured', 'cbiastudio-blogflow-ai'),
+            'not_tested' => __('Connection not checked', 'cbiastudio-blogflow-ai'),
+            'verified' => __('Connection verified', 'cbiastudio-blogflow-ai'),
+            'authentication_error' => __('Key rejected', 'cbiastudio-blogflow-ai'),
+        );
+        $state = isset($labels[$status['status']]) ? (string)$status['status'] : 'not_tested';
+        return array(
+            'provider' => sanitize_key($provider),
+            'configured' => !empty($status['configured']),
+            'status' => $state,
+            'statusLabel' => $labels[$state],
+            'lastSuccess' => (string)($status['last_success'] ?? ''),
+            'lastSuccessLabel' => !empty($status['last_success']) ? sprintf(__('Last successful check: %s', 'cbiastudio-blogflow-ai'), (string)$status['last_success']) : '',
+            'connectLabel' => !empty($status['configured']) ? __('Update key', 'cbiastudio-blogflow-ai') : __('Connect', 'cbiastudio-blogflow-ai'),
+            'disconnectLabel' => __('Disconnect', 'cbiastudio-blogflow-ai'),
+            'placeholder' => !empty($status['configured']) ? __('Enter a new key to replace the current one', 'cbiastudio-blogflow-ai') : sprintf(__('Enter your %s API key', 'cbiastudio-blogflow-ai'), cbia_provider_connection_label($provider)),
+        );
+    }
+}
+
+if (!function_exists('cbia_test_provider_connection')) {
+    function cbia_test_provider_connection(string $provider): array {
+        $provider = sanitize_key($provider);
+        if (!in_array($provider, cbia_supported_credential_providers(), true)) return array('ok' => false, 'code' => 'invalid_provider', 'message' => __('Invalid provider.', 'cbiastudio-blogflow-ai'));
+        $key = cbia_get_provider_api_key($provider);
+        if ($key === '') return array('ok' => false, 'code' => 'missing_key', 'message' => __('That provider has no saved API key.', 'cbiastudio-blogflow-ai'));
+
+        $cfg = function_exists('cbia_providers_get_provider') ? cbia_providers_get_provider($provider) : array();
+        $base_url = rtrim((string)($cfg['base_url'] ?? ''), '/');
+        $api_version = trim((string)($cfg['api_version'] ?? ''), '/');
+        $url = '';
+        $args = array('timeout' => 20, 'headers' => array());
+        if ($provider === 'openai') {
+            $url = ($base_url !== '' ? $base_url : 'https://api.openai.com') . '/' . ($api_version !== '' ? $api_version : 'v1') . '/models';
+            $args['headers'] = function_exists('cbia_http_headers_openai') ? cbia_http_headers_openai($key) : array('Authorization' => 'Bearer ' . $key);
+        } elseif ($provider === 'google') {
+            $url = ($base_url !== '' ? $base_url : 'https://generativelanguage.googleapis.com') . '/' . ($api_version !== '' ? $api_version : 'v1beta') . '/models';
+            $args['headers'] = array('x-goog-api-key' => $key);
+        } elseif ($provider === 'deepseek') {
+            $url = ($base_url !== '' ? $base_url : 'https://api.deepseek.com') . '/' . ($api_version !== '' ? $api_version : 'v1') . '/models';
+            $args['headers'] = array('Authorization' => 'Bearer ' . $key);
+        }
+        $response = wp_remote_get($url, $args);
+        if (is_wp_error($response)) return array('ok' => false, 'code' => 'network_error', 'message' => cbia_sanitize_provider_error($provider, $response->get_error_message()));
+        $http_code = (int)wp_remote_retrieve_response_code($response);
+        $data = json_decode((string)wp_remote_retrieve_body($response), true);
+        if ($http_code < 200 || $http_code >= 300) {
+            $auth_error = in_array($http_code, array(401, 403), true);
+            return array(
+                'ok' => false,
+                'code' => $auth_error ? 'authentication_error' : 'http_error',
+                'message' => $auth_error ? sprintf(__('%s rejected the configured API key.', 'cbiastudio-blogflow-ai'), cbia_provider_connection_label($provider)) : sprintf(__('The provider connection failed with HTTP %d.', 'cbiastudio-blogflow-ai'), $http_code),
+            );
+        }
+        if (!is_array($data)) return array('ok' => false, 'code' => 'invalid_response', 'message' => __('The provider returned an invalid response.', 'cbiastudio-blogflow-ai'));
+        $count = $provider === 'google' ? count((array)($data['models'] ?? array())) : count((array)($data['data'] ?? array()));
+        return array('ok' => true, 'code' => 'verified', 'message' => sprintf(__('Valid connection. Detected models: %d', 'cbiastudio-blogflow-ai'), $count));
+    }
+}
+
+if (!function_exists('cbia_ajax_provider_connection_save')) {
+    function cbia_ajax_provider_connection_save() {
+        check_ajax_referer('cbia_ajax_nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => __('Unauthorized', 'cbiastudio-blogflow-ai')), 403);
+        $provider = isset($_POST['provider']) ? sanitize_key((string)wp_unslash($_POST['provider'])) : '';
+        if (!isset($_POST['api_key'])) wp_send_json_error(array('message' => __('API key is required.', 'cbiastudio-blogflow-ai')), 400);
+        $candidate = (string)wp_unslash($_POST['api_key']);
+        if (!in_array($provider, cbia_supported_credential_providers(), true)) wp_send_json_error(array('message' => __('Invalid provider.', 'cbiastudio-blogflow-ai')), 400);
+        $result = cbia_save_provider_api_key($provider, $candidate);
+        if (empty($result['valid'])) wp_send_json_error(array('message' => cbia_provider_api_key_error_message($provider, (string)$result['code'])), 400);
+        wp_send_json_success(array('message' => sprintf(__('The %s API key was saved successfully.', 'cbiastudio-blogflow-ai'), cbia_provider_connection_label($provider)), 'connection' => cbia_provider_connection_public_state($provider)));
+    }
+}
+
+if (!function_exists('cbia_ajax_provider_connection_test')) {
+    function cbia_ajax_provider_connection_test() {
+        check_ajax_referer('cbia_ajax_nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => __('Unauthorized', 'cbiastudio-blogflow-ai')), 403);
+        $provider = isset($_POST['provider']) ? sanitize_key((string)wp_unslash($_POST['provider'])) : '';
+        if (!in_array($provider, cbia_supported_credential_providers(), true)) wp_send_json_error(array('message' => __('Invalid provider.', 'cbiastudio-blogflow-ai')), 400);
+        $result = cbia_test_provider_connection($provider);
+        cbia_mark_provider_test_result($provider, array('status' => !empty($result['ok']) ? 'verified' : (($result['code'] ?? '') === 'authentication_error' ? 'authentication_error' : 'not_tested')));
+        $payload = array('message' => (string)$result['message'], 'connection' => cbia_provider_connection_public_state($provider));
+        if (empty($result['ok'])) wp_send_json_error($payload, 400);
+        wp_send_json_success($payload);
+    }
+}
+
+if (!function_exists('cbia_ajax_provider_connection_disconnect')) {
+    function cbia_ajax_provider_connection_disconnect() {
+        check_ajax_referer('cbia_ajax_nonce');
+        if (!current_user_can('manage_options')) wp_send_json_error(array('message' => __('Unauthorized', 'cbiastudio-blogflow-ai')), 403);
+        $provider = isset($_POST['provider']) ? sanitize_key((string)wp_unslash($_POST['provider'])) : '';
+        if (!in_array($provider, cbia_supported_credential_providers(), true)) wp_send_json_error(array('message' => __('Invalid provider.', 'cbiastudio-blogflow-ai')), 400);
+        cbia_delete_provider_api_key($provider);
+        wp_send_json_success(array('message' => sprintf(__('%s was disconnected.', 'cbiastudio-blogflow-ai'), cbia_provider_connection_label($provider)), 'connection' => cbia_provider_connection_public_state($provider)));
     }
 }
 

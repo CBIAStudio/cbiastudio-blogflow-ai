@@ -6128,3 +6128,107 @@
 })();
 
 
+
+(function () {
+    'use strict';
+
+    function initProviderConnections() {
+        var root = document.getElementById('cbia-provider-connections');
+        if (!root || !window.CBIAAdmin || !CBIAAdmin.ajaxUrl || !CBIAAdmin.nonce) return;
+
+        function setBusy(card, busy) {
+            card.setAttribute('aria-busy', busy ? 'true' : 'false');
+            card.querySelectorAll('button').forEach(function (button) {
+                button.disabled = busy || (button.getAttribute('data-action') === 'test' && card.classList.contains('is-not_configured'));
+            });
+        }
+
+        function render(card, connection) {
+            if (!connection) return;
+            ['not_configured', 'not_tested', 'verified', 'authentication_error'].forEach(function (state) {
+                card.classList.remove('is-' + state);
+            });
+            card.classList.add('is-' + connection.status);
+            var stateNode = card.querySelector('[data-role="state"]');
+            var lastNode = card.querySelector('[data-role="last-success"]');
+            var input = card.querySelector('.cbia-provider-credential-input');
+            var connect = card.querySelector('[data-action="connect"]');
+            var test = card.querySelector('[data-action="test"]');
+            var disconnect = card.querySelector('[data-action="disconnect"]');
+            if (stateNode) stateNode.textContent = connection.statusLabel || '';
+            if (lastNode) lastNode.textContent = connection.lastSuccessLabel || '';
+            if (input) {
+                input.value = '';
+                input.placeholder = connection.placeholder || '';
+            }
+            if (connect) connect.textContent = connection.connectLabel || connect.textContent;
+            if (test) test.disabled = !connection.configured;
+            if (connection.configured && !disconnect) {
+                disconnect = document.createElement('button');
+                disconnect.type = 'button';
+                disconnect.className = 'button-link-delete';
+                disconnect.setAttribute('data-action', 'disconnect');
+                disconnect.textContent = connection.disconnectLabel || 'Disconnect';
+                card.querySelector('.cbia-provider-connection-actions').appendChild(disconnect);
+            } else if (!connection.configured && disconnect) {
+                disconnect.remove();
+            }
+        }
+
+        function request(card, action, apiKey) {
+            var message = card.querySelector('[data-role="message"]');
+            var params = new URLSearchParams();
+            params.append('action', action);
+            params.append('_ajax_nonce', CBIAAdmin.nonce);
+            params.append('provider', card.getAttribute('data-provider') || '');
+            if (typeof apiKey === 'string') params.append('api_key', apiKey);
+            if (message) {
+                message.textContent = '';
+                message.classList.remove('is-error', 'is-success');
+            }
+            setBusy(card, true);
+            return fetch(CBIAAdmin.ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                body: params.toString()
+            }).then(function (response) {
+                return response.json().catch(function () { return null; });
+            }).then(function (response) {
+                if (!response || !response.success) {
+                    var error = response && response.data && response.data.message ? response.data.message : root.getAttribute('data-network-error');
+                    if (response && response.data && response.data.connection) render(card, response.data.connection);
+                    throw new Error(error);
+                }
+                render(card, response.data.connection);
+                if (message) {
+                    message.textContent = response.data.message || '';
+                    message.classList.add('is-success');
+                }
+            }).catch(function (error) {
+                if (message) {
+                    message.textContent = error && error.message ? error.message : root.getAttribute('data-network-error');
+                    message.classList.add('is-error');
+                }
+            }).finally(function () {
+                setBusy(card, false);
+            });
+        }
+
+        root.addEventListener('click', function (event) {
+            var button = event.target.closest('[data-action]');
+            if (!button) return;
+            var card = button.closest('.cbia-provider-connection-card');
+            if (!card) return;
+            event.preventDefault();
+            var action = button.getAttribute('data-action');
+            var input = card.querySelector('.cbia-provider-credential-input');
+            if (action === 'connect') request(card, 'cbia_provider_connection_save', input ? input.value : '');
+            if (action === 'test') request(card, 'cbia_provider_connection_test');
+            if (action === 'disconnect' && window.confirm(card.getAttribute('data-disconnect-confirm') || '')) request(card, 'cbia_provider_connection_disconnect');
+        });
+    }
+
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initProviderConnections);
+    else initProviderConnections();
+}());

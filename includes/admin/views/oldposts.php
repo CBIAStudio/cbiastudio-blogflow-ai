@@ -374,18 +374,9 @@ if ($image_model_default === '' && !empty($image_model_lists[$image_provider_def
 $text_model_lists_json = (string) wp_json_encode($text_model_lists);
 $image_model_lists_json = (string) wp_json_encode($image_model_lists);
 $provider_labels_json = (string) wp_json_encode($provider_labels);
-$cbia_main_settings = function_exists('cbia_get_settings') ? cbia_get_settings() : array();
-$cbia_provider_settings = function_exists('cbia_providers_get_settings') ? cbia_providers_get_settings() : array();
 $provider_key_state = array();
 foreach (array_keys($provider_labels) as $pkey) {
-    $main_key = (string)($cbia_main_settings[$pkey . '_api_key'] ?? '');
-    $providers_key = '';
-    if (!empty($cbia_provider_settings['providers'][$pkey]['api_key'])) {
-        $providers_key = (string)$cbia_provider_settings['providers'][$pkey]['api_key'];
-    }
-    // OJO: aqui no usamos fallback legacy global (api_key unico),
-    // para que la UI detecte correctamente falta de clave por proveedor.
-    $provider_key_state[$pkey] = ($main_key !== '' || $providers_key !== '');
+    $provider_key_state[$pkey] = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key((string)$pkey);
 }
 $provider_key_state_json = (string) wp_json_encode($provider_key_state);
 $active_run_state = function_exists('cbia_oldposts_public_run_state')

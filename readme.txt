@@ -157,6 +157,11 @@ This plugin can connect to third-party AI services only when the site administra
 == Changelog ==
 
 = 2.1.7 =
+* Added dedicated OpenAI, Google and DeepSeek connection cards with explicit connect, test and disconnect actions.
+* Credentials are stored in the canonical non-autoloaded per-provider vault and are not rewritten when saving general settings or changing models.
+* Existing legacy credentials are migrated once without destructive cleanup; canonical credentials take precedence at runtime.
+* Connection tests use a non-generative provider endpoint and never expose credentials in markup, JavaScript, logs or AJAX responses.
+* Disconnect affects only the selected provider and preserves all unrelated settings and operational data.
 * Medium keeps its 1800-2000 nominal range and 1530 effective minimum while guiding the first response toward 1650-1850 visible words.
 * Complete articles from 1530 to 1799 words are accepted without expansion and recorded as accepted with tolerance.
 * FAQ and practical-example instructions are included only when enabled; profiles use flexible, substantial single-pass structures.

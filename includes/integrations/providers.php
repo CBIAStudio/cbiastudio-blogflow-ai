@@ -12,7 +12,6 @@ if (!function_exists('cbia_providers_defaults')) {
             'providers' => array(
                 'openai' => array(
                     'label' => 'OpenAI',
-                    'api_key' => '',
                     'model' => 'gpt-5-mini',
                     // CAMBIO: modelo de imagen por proveedor (persistencia)
                     'image_model' => 'gpt-image-2',
@@ -21,7 +20,6 @@ if (!function_exists('cbia_providers_defaults')) {
                 ),
                 'google' => array(
                     'label' => 'Google (Gemini)',
-                    'api_key' => '',
                     'model' => 'gemini-2.5-flash',
                     // CAMBIO: modelo de imagen por proveedor (persistencia)
                     'image_model' => 'imagen-3.0-generate-002',
@@ -30,7 +28,6 @@ if (!function_exists('cbia_providers_defaults')) {
                 ),
                 'deepseek' => array(
                     'label' => 'DeepSeek',
-                    'api_key' => '',
                     'model' => 'deepseek-v4-flash',
                     // CAMBIO: sin modelo de imagen por defecto
                     'image_model' => '',
@@ -57,18 +54,13 @@ if (!function_exists('cbia_providers_save_settings')) {
             foreach ($settings['providers'] as $provider => $provider_settings) {
                 if (!is_array($provider_settings)) continue;
                 $new_key = (string)($provider_settings['api_key'] ?? '');
-                $old_key = (string)($current['providers'][$provider]['api_key'] ?? '');
                 $result = function_exists('cbia_sanitize_provider_api_key')
                     ? cbia_sanitize_provider_api_key((string)$provider, $new_key)
                     : array('valid' => $new_key !== '', 'value' => $new_key);
                 if (!empty($result['valid'])) {
-                    $settings['providers'][$provider]['api_key'] = (string)$result['value'];
 					if (function_exists('cbia_store_provider_api_key')) cbia_store_provider_api_key((string)$provider, (string)$result['value']);
-                } elseif ($old_key !== '') {
-                    $settings['providers'][$provider]['api_key'] = $old_key;
-                } else {
-                    unset($settings['providers'][$provider]['api_key']);
                 }
+                unset($settings['providers'][$provider]['api_key']);
             }
         }
         update_option('cbia_provider_settings', array_replace_recursive($current, $settings), false);

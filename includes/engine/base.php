@@ -119,6 +119,24 @@ if (!function_exists('cbia_provider_api_keys_option_name')) {
     }
 }
 
+if (!function_exists('cbia_supported_credential_providers')) {
+    function cbia_supported_credential_providers(): array {
+        return array('openai', 'google', 'deepseek');
+    }
+}
+
+if (!function_exists('cbia_provider_credentials_schema_option_name')) {
+    function cbia_provider_credentials_schema_option_name(): string {
+        return 'cbia_provider_credentials_schema_version';
+    }
+}
+
+if (!function_exists('cbia_provider_connection_status_option_name')) {
+    function cbia_provider_connection_status_option_name(): string {
+        return 'cbia_provider_connection_status';
+    }
+}
+
 if (!function_exists('cbia_get_provider_api_keys_store')) {
     function cbia_get_provider_api_keys_store(): array {
         $stored = get_option(cbia_provider_api_keys_option_name(), array());
@@ -127,10 +145,10 @@ if (!function_exists('cbia_get_provider_api_keys_store')) {
 }
 
 if (!function_exists('cbia_store_provider_api_key')) {
-    /** Persist one provider credential without touching provider or model settings. */
+    /** Persist one provider credential without touching provider, model or prompt settings. */
     function cbia_store_provider_api_key(string $provider, $candidate): array {
         $provider = sanitize_key($provider);
-        if (!in_array($provider, array('openai', 'google', 'deepseek'), true)) {
+        if (!in_array($provider, cbia_supported_credential_providers(), true)) {
             return array('valid' => false, 'value' => '', 'code' => 'invalid_provider');
         }
 
@@ -142,21 +160,117 @@ if (!function_exists('cbia_store_provider_api_key')) {
         $vault[$provider] = $value;
         update_option(cbia_provider_api_keys_option_name(), $vault, false);
 
-        // Keep historical stores synchronized for one-way compatibility.
-        $settings_key = $provider . '_api_key';
-        $settings = get_option('cbia_settings', array());
-        $settings = is_array($settings) ? $settings : array();
-        $settings[$settings_key] = $value;
-        update_option('cbia_settings', $settings, false);
-
-        $provider_settings = get_option('cbia_provider_settings', array());
-        $provider_settings = is_array($provider_settings) ? $provider_settings : array();
-        if (!isset($provider_settings['providers']) || !is_array($provider_settings['providers'])) $provider_settings['providers'] = array();
-        if (!isset($provider_settings['providers'][$provider]) || !is_array($provider_settings['providers'][$provider])) $provider_settings['providers'][$provider] = array();
-        $provider_settings['providers'][$provider]['api_key'] = $value;
-        update_option('cbia_provider_settings', $provider_settings, false);
+        cbia_mark_provider_test_result($provider, array('status' => 'not_tested', 'reset_success' => true));
 
         return $result;
+    }
+}
+
+if (!function_exists('cbia_save_provider_api_key')) {
+    function cbia_save_provider_api_key(string $provider, $candidate): array {
+        return cbia_store_provider_api_key($provider, $candidate);
+    }
+}
+
+if (!function_exists('cbia_get_provider_connection_statuses')) {
+    function cbia_get_provider_connection_statuses(): array {
+        $stored = get_option(cbia_provider_connection_status_option_name(), array());
+        return is_array($stored) ? $stored : array();
+    }
+}
+
+if (!function_exists('cbia_get_provider_connection_status')) {
+    function cbia_get_provider_connection_status(string $provider): array {
+        $provider = sanitize_key($provider);
+        $configured = in_array($provider, cbia_supported_credential_providers(), true) && cbia_has_provider_api_key($provider);
+        if (!$configured) {
+            return array('status' => 'not_configured', 'configured' => false, 'verified' => false, 'last_checked' => '', 'last_success' => '');
+        }
+        $statuses = cbia_get_provider_connection_statuses();
+        $status = isset($statuses[$provider]) && is_array($statuses[$provider]) ? $statuses[$provider] : array();
+        $state = sanitize_key((string)($status['status'] ?? 'not_tested'));
+        if (!in_array($state, array('not_tested', 'verified', 'authentication_error'), true)) $state = 'not_tested';
+        return array(
+            'status' => $state,
+            'configured' => true,
+            'verified' => $state === 'verified',
+            'last_checked' => sanitize_text_field((string)($status['last_checked'] ?? '')),
+            'last_success' => sanitize_text_field((string)($status['last_success'] ?? '')),
+        );
+    }
+}
+
+if (!function_exists('cbia_mark_provider_test_result')) {
+    function cbia_mark_provider_test_result(string $provider, array $result): bool {
+        $provider = sanitize_key($provider);
+        if (!in_array($provider, cbia_supported_credential_providers(), true)) return false;
+        $state = sanitize_key((string)($result['status'] ?? 'not_tested'));
+        if (!in_array($state, array('not_tested', 'verified', 'authentication_error'), true)) $state = 'not_tested';
+        $statuses = cbia_get_provider_connection_statuses();
+        $previous = isset($statuses[$provider]) && is_array($statuses[$provider]) ? $statuses[$provider] : array();
+        $now = function_exists('current_time') ? current_time('mysql') : gmdate('Y-m-d H:i:s');
+        $statuses[$provider] = array(
+            'status' => $state,
+            'last_checked' => $state === 'not_tested' ? '' : $now,
+            'last_success' => $state === 'verified'
+                ? $now
+                : (!empty($result['reset_success']) ? '' : sanitize_text_field((string)($previous['last_success'] ?? ''))),
+        );
+        return (bool)update_option(cbia_provider_connection_status_option_name(), $statuses, false);
+    }
+}
+
+if (!function_exists('cbia_delete_provider_api_key')) {
+    function cbia_delete_provider_api_key(string $provider): bool {
+        $provider = sanitize_key($provider);
+        if (!in_array($provider, cbia_supported_credential_providers(), true)) return false;
+
+        $vault = cbia_get_provider_api_keys_store();
+        unset($vault[$provider]);
+        update_option(cbia_provider_api_keys_option_name(), $vault, false);
+
+        // Remove only legacy copies for this provider so fallback cannot reconnect it.
+        $settings = get_option('cbia_settings', array());
+        if (is_array($settings)) {
+            unset($settings[$provider . '_api_key']);
+            if ($provider === 'openai') unset($settings['api_key']);
+            update_option('cbia_settings', $settings, false);
+        }
+        $provider_settings = get_option('cbia_provider_settings', array());
+        if (is_array($provider_settings) && isset($provider_settings['providers'][$provider]) && is_array($provider_settings['providers'][$provider])) {
+            unset($provider_settings['providers'][$provider]['api_key']);
+            update_option('cbia_provider_settings', $provider_settings, false);
+        }
+        $statuses = cbia_get_provider_connection_statuses();
+        unset($statuses[$provider]);
+        update_option(cbia_provider_connection_status_option_name(), $statuses, false);
+        return true;
+    }
+}
+
+if (!function_exists('cbia_maybe_migrate_provider_credentials')) {
+    function cbia_maybe_migrate_provider_credentials(): void {
+        $target_version = 1;
+        if ((int)get_option(cbia_provider_credentials_schema_option_name(), 0) >= $target_version) return;
+
+        $vault = cbia_get_provider_api_keys_store();
+        $settings = get_option('cbia_settings', array());
+        $settings = is_array($settings) ? $settings : array();
+        $provider_settings = get_option('cbia_provider_settings', array());
+        $provider_settings = is_array($provider_settings) ? $provider_settings : array();
+
+        foreach (cbia_supported_credential_providers() as $provider) {
+            $current = cbia_sanitize_provider_api_key($provider, (string)($vault[$provider] ?? ''));
+            if (!empty($current['valid'])) continue;
+            $dedicated = cbia_sanitize_provider_api_key($provider, (string)($settings[$provider . '_api_key'] ?? ''));
+            $nested = cbia_sanitize_provider_api_key($provider, (string)($provider_settings['providers'][$provider]['api_key'] ?? ''));
+            $legacy = array('valid' => false, 'value' => '');
+            if ($provider === 'openai') $legacy = cbia_sanitize_provider_api_key($provider, (string)($settings['api_key'] ?? ''));
+            $candidate = !empty($dedicated['valid']) ? $dedicated : (!empty($nested['valid']) ? $nested : $legacy);
+            if (!empty($candidate['valid'])) $vault[$provider] = (string)$candidate['value'];
+        }
+        update_option(cbia_provider_api_keys_option_name(), $vault, false);
+        update_option(cbia_provider_credentials_schema_option_name(), $target_version, false);
     }
 }
 

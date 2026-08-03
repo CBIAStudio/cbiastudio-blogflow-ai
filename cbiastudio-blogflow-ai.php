@@ -175,13 +175,9 @@ if (!function_exists('cbia_get_default_settings')) {
 	function cbia_get_default_settings(): array {
 		return [
 			// OpenAI
-			'openai_api_key'        => '',
 			'openai_consent'        => 0,
 			'openai_model'          => 'gpt-5-mini',
 			'openai_temperature'    => 0.7,
-			// CAMBIO: claves por proveedor
-			'google_api_key'        => '',
-			'deepseek_api_key'      => '',
 			'deepseek_thinking_mode' => 'disabled',
 			'deepseek_reasoning_effort' => 'high',
 			// CAMBIO: proveedor/modelo texto/imagen

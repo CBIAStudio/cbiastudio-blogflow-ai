@@ -30,15 +30,6 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 
 		$settings = cbia_get_settings();
 		// Sanitizar arrays de entrada primero
-		$provider_api_key_post = isset($_POST['provider_api_key']) && is_array($_POST['provider_api_key'])
-			? wp_unslash($_POST['provider_api_key'])
-			: [];
-		$provider_api_key_text_post = isset($_POST['provider_api_key_text']) && is_array($_POST['provider_api_key_text'])
-			? wp_unslash($_POST['provider_api_key_text'])
-			: [];
-		$provider_api_key_image_post = isset($_POST['provider_api_key_image']) && is_array($_POST['provider_api_key_image'])
-			? wp_unslash($_POST['provider_api_key_image'])
-			: [];
 		$text_models_post = isset($_POST['text_model']) && is_array($_POST['text_model'])
 			? wp_unslash($_POST['text_model'])
 			: [];
@@ -52,15 +43,6 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 		// CAMBIO: providers disponibles (texto/imagen)
 		$providers_all = function_exists('cbia_providers_get_all') ? cbia_providers_get_all() : [];
 		$providers_list = isset($providers_all['providers']) && is_array($providers_all['providers']) ? $providers_all['providers'] : [];
-		// Submitted credentials are handled separately from model/settings persistence.
-		$first_non_empty = function (string $provider, ...$vals) {
-			foreach ($vals as $val) {
-				if (!is_string($val)) continue;
-				$val = function_exists('cbia_normalize_submitted_api_key') ? cbia_normalize_submitted_api_key($val, $provider) : trim($val);
-				if ($val !== '') return $val;
-			}
-			return '';
-		};
 		$openai_consent = 1;
 
 		// CAMBIO: proveedores de texto e imagen
@@ -77,46 +59,6 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 			|| (function_exists('cbia_providers_supports_image') && !cbia_providers_supports_image($image_provider))
 		) {
 			$image_provider = 'openai';
-		}
-
-		$api_key_validation_warnings = array();
-		$active_key_sources = array(
-			array('provider' => $text_provider, 'values' => $provider_api_key_text_post),
-			array('provider' => $image_provider, 'values' => $provider_api_key_image_post),
-		);
-		foreach ($active_key_sources as $active_key_source) {
-			$candidate_provider = (string)$active_key_source['provider'];
-			$candidate_source = (array)$active_key_source['values'];
-			if (!array_key_exists($candidate_provider, $candidate_source) || (string)$candidate_source[$candidate_provider] === '') continue;
-			$result = cbia_sanitize_provider_api_key($candidate_provider, (string)$candidate_source[$candidate_provider]);
-			if (empty($result['valid'])) {
-				$api_key_validation_warnings[] = cbia_provider_api_key_error_message($candidate_provider, (string)$result['code']);
-			}
-		}
-
-		foreach (array_keys($providers_list) as $pkey) {
-			$posted_key = $first_non_empty(
-				$pkey,
-				$pkey === $text_provider ? (string)($provider_api_key_text_post[$pkey] ?? '') : '',
-				$pkey === $image_provider ? (string)($provider_api_key_image_post[$pkey] ?? '') : '',
-				(string)($provider_api_key_post[$pkey] ?? '')
-			);
-			if ($posted_key === '') continue;
-			cbia_store_provider_api_key($pkey, $posted_key);
-		}
-
-		$save_api_keys_only = isset($_POST['cbia_config_save_api_keys']);
-		if ($save_api_keys_only) {
-
-			if (!empty($api_key_validation_warnings)) set_transient('cbia_config_warnings', array_values(array_unique($api_key_validation_warnings)), 60);
-			else delete_transient('cbia_config_warnings');
-			$redirect_url = admin_url('admin.php?page=cbia&tab=config&keys_saved=1');
-			if (!headers_sent()) {
-				wp_safe_redirect($redirect_url);
-				exit;
-			}
-			echo '<meta http-equiv="refresh" content="0;url=' . esc_url($redirect_url) . '">';
-			exit;
 		}
 
 		$api_key = cbia_get_provider_api_key('openai');
@@ -407,7 +349,7 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 		];
 
 		// CAMBIO: avisos por API key faltante (sin bloquear guardado)
-		$warnings = $api_key_validation_warnings;
+		$warnings = array();
 		$key_map = [
 			'openai'  => $api_key,
 			'google'  => $google_api_key,

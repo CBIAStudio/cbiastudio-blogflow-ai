@@ -3165,3 +3165,128 @@ body.cbia-hide-external-notices #wpbody-content .cbia-shell #message{
     flex-direction:column;
   }
 }
+.cbia-provider-connections {
+    margin: 0 0 22px;
+    padding: 18px;
+    border: 1px solid rgba(34, 211, 238, 0.38);
+    border-radius: 12px;
+    background: #fff;
+}
+
+.cbia-provider-connections-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 14px;
+}
+
+.cbia-provider-connection-card {
+    min-width: 0;
+    padding: 16px;
+    border: 1px solid #dbe4ee;
+    border-radius: 12px;
+    background: linear-gradient(145deg, #fff 0%, #f7fbfd 100%);
+}
+
+.cbia-provider-connection-heading,
+.cbia-provider-connection-meta,
+.cbia-provider-connection-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.cbia-provider-connection-heading img {
+    width: 32px;
+    height: 32px;
+}
+
+.cbia-provider-connection-heading h3,
+.cbia-provider-connection-heading p {
+    margin: 0;
+}
+
+.cbia-provider-connection-heading p,
+.cbia-provider-last-test,
+.cbia-provider-key-link {
+    color: #64748b;
+    font-size: 12px;
+}
+
+.cbia-provider-connection-meta {
+    margin: 12px 0;
+}
+
+.cbia-connection-state,
+.cbia-provider-use {
+    display: inline-flex;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cbia-connection-state {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.is-verified .cbia-connection-state {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.is-authentication_error .cbia-connection-state {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.cbia-provider-use {
+    background: #e0f2fe;
+    color: #075985;
+}
+
+.cbia-provider-connection-card > label {
+    display: block;
+    margin: 0 0 6px;
+    font-weight: 600;
+}
+
+.cbia-provider-credential-input {
+    width: 100%;
+    max-width: none !important;
+}
+
+.cbia-provider-connection-actions {
+    margin-top: 10px;
+}
+
+.cbia-provider-connection-card[aria-busy="true"] {
+    opacity: 0.72;
+}
+
+.cbia-provider-connection-message {
+    min-height: 20px;
+    margin-top: 8px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cbia-provider-connection-message.is-success { color: #166534; }
+.cbia-provider-connection-message.is-error { color: #b91c1c; }
+
+.cbia-provider-connection-card :focus-visible {
+    outline: 2px solid #0891b2;
+    outline-offset: 2px;
+}
+
+@media (max-width: 960px) {
+    .cbia-provider-connections-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 600px) {
+    .cbia-provider-connections { padding: 12px; }
+    .cbia-provider-connection-actions .button,
+    .cbia-provider-connection-actions .button-link-delete { width: 100%; justify-content: center; text-align: center; }
+}
