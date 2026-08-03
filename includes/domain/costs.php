@@ -147,55 +147,19 @@ if (!function_exists('cbia_costes_log_clear')) {
    - Imagen: gpt-image-2, gpt-image-1, gpt-image-1-mini
    ========================================================= */
 if (!function_exists('cbia_costes_price_table_usd_per_million')) {
-    function cbia_costes_price_table_usd_per_million() {
-        // input, cached_input, output  (USD por 1M tokens)
-        return array(
-            // TEXTO / SEO
-            'gpt-4.1'       => array('in'=>2.00,  'cin'=>0.50,  'out'=>8.00),
-            'gpt-4.1-mini'  => array('in'=>0.40,  'cin'=>0.10,  'out'=>1.60),
-            'gpt-4.1-nano'  => array('in'=>0.10,  'cin'=>0.025, 'out'=>0.40),
-
-            'gpt-5'         => array('in'=>1.25,  'cin'=>0.125, 'out'=>10.00),
-            'gpt-5-chat-latest' => array('in'=>1.25, 'cin'=>0.125, 'out'=>10.00),
-            'gpt-5-mini'    => array('in'=>0.25,  'cin'=>0.025, 'out'=>2.00),
-            'gpt-5-nano'    => array('in'=>0.05,  'cin'=>0.005, 'out'=>0.40),
-            'gpt-5-codex'   => array('in'=>1.25,  'cin'=>0.125, 'out'=>10.00),
-
-            'gpt-5.1'       => array('in'=>1.25,  'cin'=>0.125, 'out'=>10.00),
-            'gpt-5.1-chat-latest' => array('in'=>1.25, 'cin'=>0.125, 'out'=>10.00),
-            'gpt-5.1-mini'  => array('in'=>0.25,  'cin'=>0.025, 'out'=>2.00),
-            'gpt-5.1-codex' => array('in'=>1.25,  'cin'=>0.125, 'out'=>10.00),
-            'gpt-5.1-codex-max' => array('in'=>1.25, 'cin'=>0.125, 'out'=>10.00),
-            'gpt-5.2'       => array('in'=>1.75,  'cin'=>0.175, 'out'=>14.00),
-            'gpt-5.2-chat-latest' => array('in'=>1.75, 'cin'=>0.175, 'out'=>14.00),
-            'gpt-5.2-codex' => array('in'=>1.75, 'cin'=>0.175, 'out'=>14.00),
-            'gpt-5.4-mini'  => array('in'=>0.75,  'cin'=>0.075, 'out'=>4.50),
-            'gpt-5.4'       => array('in'=>2.50,  'cin'=>0.25,  'out'=>15.00),
-            'gpt-5.5'       => array('in'=>5.00,  'cin'=>0.50,  'out'=>30.00),
-
-            // GOOGLE GEMINI (standard pricing, <=200k prompt tokens)
-            'gemini-2.5-pro'        => array('in'=>1.25, 'cin'=>0.125, 'out'=>10.00),
-            'gemini-2.5-flash'      => array('in'=>0.30, 'cin'=>0.03,  'out'=>2.50),
-            'gemini-2.5-flash-lite' => array('in'=>0.10, 'cin'=>0.01,  'out'=>0.40),
-
-            // DEEPSEEK
-            'deepseek-chat'     => array('in'=>0.28, 'cin'=>0.028, 'out'=>0.42),
-            'deepseek-reasoner' => array('in'=>0.28, 'cin'=>0.028, 'out'=>0.42),
-
-            // IMAGEN (solo para estimaciÃƒÂ³n basada en tokens; por defecto usaremos tarifa fija)
-            'gpt-image-2'       => array('in'=>8.00,  'cin'=>2.00, 'out'=>30.00),
-            'gpt-image-1'       => array('in'=>10.00, 'cin'=>2.50, 'out'=>40.00),
-            'gpt-image-1-mini'  => array('in'=>2.50,  'cin'=>0.25, 'out'=>8.00),
-        );
+    function cbia_costes_price_table_usd_per_million($timestamp = null) {
+        return function_exists('cbia_provider_catalog_text_price_table')
+            ? cbia_provider_catalog_text_price_table($timestamp)
+            : array();
     }
 }
 
 if (!function_exists('cbia_costes_pricing_version')) {
-    function cbia_costes_pricing_version() { return 'openai-2026-07-13-v1'; }
+    function cbia_costes_pricing_version() { return function_exists('cbia_provider_model_catalog_version') ? cbia_provider_model_catalog_version() : 'providers-2026-08-03-v1'; }
 }
 
 if (!function_exists('cbia_costes_pricing_verified_at')) {
-    function cbia_costes_pricing_verified_at() { return '2026-07-13'; }
+    function cbia_costes_pricing_verified_at() { return '2026-08-03'; }
 }
 
 if (!function_exists('cbia_costes_image_token_prices_usd_per_million')) {
@@ -268,7 +232,8 @@ if (!function_exists('cbia_costes_calculate_row')) {
                 $result['pricing_verified_at'] = '2026-07-14';
                 return $result;
             }
-            $table = apply_filters('cbia_openai_text_pricing_catalog', cbia_costes_price_table_usd_per_million());
+            $event_timestamp = (string)($row['ts'] ?? '');
+            $table = apply_filters('cbia_openai_text_pricing_catalog', cbia_costes_price_table_usd_per_million($event_timestamp !== '' ? $event_timestamp : null));
             if ($model === '' || !isset($table[$model]) || ($in + $out) <= 0) {
                 $result['cost_reason'] = $model === '' || !isset($table[$model]) ? 'model_without_pricing' : 'missing_token_usage';
                 return $result;
@@ -335,6 +300,11 @@ if (!function_exists('cbia_costes_calculate_row')) {
 if (!function_exists('cbia_costes_image_flat_price_usd')) {
     function cbia_costes_image_flat_price_usd($model, $cost_settings, $quality = null, $size = null) {
         $model = (string)$model;
+        $provider = strpos($model, 'gemini-') === 0 || strpos($model, 'imagen-') === 0 ? 'google' : 'openai';
+        if (function_exists('cbia_provider_catalog_image_price_micro_usd') && null !== $quality && null !== $size) {
+            $micro = cbia_provider_catalog_image_price_micro_usd($provider, $model, sanitize_key((string)$quality), sanitize_text_field((string)$size));
+            if (null !== $micro) return $micro / 1000000;
+        }
         if (class_exists('CBIA_Image_Pricing_Service') && in_array($model, CBIA_Image_Pricing_Service::get_models(), true)) {
             $quality = null === $quality ? (function_exists('cbia_get_image_quality') ? cbia_get_image_quality() : 'auto') : $quality;
             $size = null === $size ? '1536x1024' : $size;
@@ -368,13 +338,13 @@ if (!function_exists('cbia_costes_image_flat_price_usd')) {
 
 if (!function_exists('cbia_costes_get_supported_image_models')) {
     function cbia_costes_get_supported_image_models() {
-        return array(
-            'gpt-image-2',
-            'gpt-image-1-mini',
-            'gpt-image-1',
-            'imagen-3.0-generate-002',
-            'imagen-4.0-generate-001',
-        );
+        if (function_exists('cbia_provider_catalog_model_ids')) {
+            return array_values(array_unique(array_merge(
+                cbia_provider_catalog_model_ids('openai', 'image', true),
+                cbia_provider_catalog_model_ids('google', 'image', true)
+            )));
+        }
+        return array('gpt-image-2', 'gpt-image-1-mini', 'gpt-image-1', 'imagen-3.0-generate-002', 'imagen-4.0-generate-001');
     }
 }
 

@@ -10,25 +10,18 @@ if (!function_exists('cbia_get_allowed_models_for_ui')) {
      * Lista UI (selector + bloqueo)
      */
     function cbia_get_allowed_models_for_ui(): array {
-        return [
-            'gpt-5-mini',
-            'gpt-5.4-mini',
-            'gpt-5.4',
-            'gpt-5.5',
-            'gpt-5',
-            'gpt-5-nano',
-            'gpt-5.1',
-            'gpt-5.2',
-            'gpt-4.1-mini',
-            'gpt-4.1',
-            'gpt-4.1-nano',
-        ];
+        return function_exists('cbia_provider_catalog_model_ids')
+            ? cbia_provider_catalog_model_ids('openai', 'text')
+            : ['gpt-5-mini'];
     }
 }
 
 if (!function_exists('cbia_get_recommended_text_model')) {
     function cbia_get_recommended_text_model(): string {
-        return 'gpt-5-mini';
+        $recommended = function_exists('cbia_provider_catalog_recommended_model')
+            ? cbia_provider_catalog_recommended_model('openai', 'text')
+            : '';
+        return $recommended !== '' ? $recommended : 'gpt-5-mini';
     }
 }
 

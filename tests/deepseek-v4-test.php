@@ -47,6 +47,7 @@ function cbia_log( $message, $level = 'INFO' ) { $GLOBALS['test_logs'][] = array
 function cbia_mask_sensitive_log_text( $message ) { return str_replace( 'test-key', '[REDACTED]', (string) $message ); }
 
 require_once dirname( __DIR__ ) . '/includes/engine/usage.php';
+require_once dirname( __DIR__ ) . '/includes/support/provider-model-catalog.php';
 require_once dirname( __DIR__ ) . '/includes/support/deepseek-v4.php';
 require_once dirname( __DIR__ ) . '/includes/engine/openai.php';
 

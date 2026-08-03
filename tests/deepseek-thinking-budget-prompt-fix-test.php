@@ -16,6 +16,7 @@ function cbia_log($message, $level = 'INFO') { $GLOBALS['logs'][] = array($level
 function cbia_attach_attempts_meta($meta, $attempts) { $meta['_cbia_attempts'] = $attempts; return $meta; }
 function cbia_prompt_is_spanish($language) { return strtolower((string)$language) === 'spanish'; }
 
+require dirname(__DIR__) . '/includes/support/provider-model-catalog.php';
 require dirname(__DIR__) . '/includes/support/deepseek-v4.php';
 require dirname(__DIR__) . '/includes/engine/content.php';
 require dirname(__DIR__) . '/includes/engine/posts.php';

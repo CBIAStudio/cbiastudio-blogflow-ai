@@ -10,7 +10,9 @@ if ( ! class_exists( 'CBIA_Image_Pricing_Service' ) ) {
 		public const PRICE_LAST_VERIFIED = '2026-07-10';
 
 		public static function get_models(): array {
-			return array( 'gpt-image-2', 'gpt-image-1', 'gpt-image-1-mini' );
+			return function_exists( 'cbia_provider_catalog_model_ids' )
+				? cbia_provider_catalog_model_ids( 'openai', 'image', true )
+				: array( 'gpt-image-2', 'gpt-image-1', 'gpt-image-1-mini' );
 		}
 
 		public static function get_qualities(): array {
@@ -40,23 +42,12 @@ if ( ! class_exists( 'CBIA_Image_Pricing_Service' ) ) {
 		}
 
 		public static function get_pricing_catalog(): array {
-			$catalog = array(
-				'gpt-image-1-mini' => array(
-					'low'    => array( '1024x1024' => 5000, '1024x1536' => 6000, '1536x1024' => 6000 ),
-					'medium' => array( '1024x1024' => 11000, '1024x1536' => 15000, '1536x1024' => 15000 ),
-					'high'   => array( '1024x1024' => 36000, '1024x1536' => 52000, '1536x1024' => 52000 ),
-				),
-				'gpt-image-1' => array(
-					'low'    => array( '1024x1024' => 11000, '1024x1536' => 16000, '1536x1024' => 16000 ),
-					'medium' => array( '1024x1024' => 42000, '1024x1536' => 63000, '1536x1024' => 63000 ),
-					'high'   => array( '1024x1024' => 167000, '1024x1536' => 250000, '1536x1024' => 250000 ),
-				),
-				'gpt-image-2' => array(
-					'low'    => array( '1024x1024' => 6000, '1024x1536' => 5000, '1536x1024' => 5000 ),
-					'medium' => array( '1024x1024' => 53000, '1024x1536' => 41000, '1536x1024' => 41000 ),
-					'high'   => array( '1024x1024' => 211000, '1024x1536' => 165000, '1536x1024' => 165000 ),
-				),
-			);
+			$catalog = array();
+			foreach ( self::get_models() as $model ) {
+				$catalog[ $model ] = function_exists( 'cbia_provider_catalog_image_price_rules' )
+					? cbia_provider_catalog_image_price_rules( 'openai', $model )
+					: array();
+			}
 
 			return (array) apply_filters( 'cbia_image_pricing_catalog', $catalog );
 		}

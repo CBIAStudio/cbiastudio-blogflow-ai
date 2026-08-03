@@ -296,6 +296,32 @@ echo '</div>';
 
 // Modelos texto
 $openai_models = cbia_get_allowed_models_for_ui();
+$model_group_labels = array(
+    'recommended' => __('Recommended', 'cbiastudio-blogflow-ai'),
+    'current' => __('Current', 'cbiastudio-blogflow-ai'),
+    'economic' => __('Economic', 'cbiastudio-blogflow-ai'),
+    'high_quality' => __('Maximum quality', 'cbiastudio-blogflow-ai'),
+    'preview' => __('Preview', 'cbiastudio-blogflow-ai'),
+    'compatibility' => __('Compatibility', 'cbiastudio-blogflow-ai'),
+);
+$render_model_options = static function ($provider, $models, $selected_model) use ($model_group_labels) {
+    $groups = array();
+    foreach ((array)$models as $model_id) {
+        $display = function_exists('cbia_providers_get_model_display') ? cbia_providers_get_model_display((string)$provider, (string)$model_id) : array('label' => $model_id, 'group' => 'current', 'recommended' => false);
+        $group = isset($model_group_labels[$display['group'] ?? '']) ? (string)$display['group'] : 'current';
+        $label = (string)($display['label'] ?? $model_id);
+        if (!empty($display['recommended'])) $label .= ' — ' . __('Recommended', 'cbiastudio-blogflow-ai');
+        $groups[$group][] = array('id' => (string)$model_id, 'label' => $label);
+    }
+    foreach ($model_group_labels as $group => $group_label) {
+        if (empty($groups[$group])) continue;
+        echo '<optgroup label="' . esc_attr($group_label) . '">';
+        foreach ($groups[$group] as $option) {
+            echo '<option value="' . esc_attr($option['id']) . '" ' . selected($selected_model, $option['id'], false) . '>' . esc_html($option['label']) . '</option>';
+        }
+        echo '</optgroup>';
+    }
+};
 foreach ($providers_list as $pkey => $pdef) {
     $text_list = ($pkey === 'openai') ? $openai_models : (function_exists('cbia_providers_get_text_model_list') ? cbia_providers_get_text_model_list($pkey) : []);
     $saved = '';
@@ -306,14 +332,7 @@ foreach ($providers_list as $pkey => $pdef) {
     echo '<div class="abb-field abb-provider-model" data-scope="text" data-provider="' . esc_attr($pkey) . '"' . ($text_provider === $pkey ? '' : ' style="display:none;"') . '>';
     echo '<label>' . esc_html__('Model (text)', 'cbiastudio-blogflow-ai') . '</label>';
     echo '<select name="text_model[' . esc_attr($pkey) . ']" class="abb-select">';
-    foreach ($text_list as $mdl) {
-        $label = $mdl;
-        if ($pkey === 'google' && $mdl === 'gemini-2.5-flash') $label .= ' (Recomendado)';
-        if ($pkey === 'openai' && $mdl === $recommended) $label .= ' (RECOMENDADO)';
-        if ($pkey === 'deepseek' && $mdl === 'deepseek-v4-flash') $label = __('DeepSeek V4 Flash — Recommended', 'cbiastudio-blogflow-ai');
-        if ($pkey === 'deepseek' && $mdl === 'deepseek-v4-pro') $label = __('DeepSeek V4 Pro — Maximum capability', 'cbiastudio-blogflow-ai');
-        echo '<option value="' . esc_attr($mdl) . '" ' . selected($saved, $mdl, false) . '>' . esc_html($label) . '</option>';
-    }
+    $render_model_options($pkey, $text_list, $saved);
     echo '</select>';
     echo '</div>';
 }
@@ -331,14 +350,7 @@ foreach ($image_providers_list as $pkey => $pdef) {
     if (empty($img_list)) {
         echo '<option value="">' . esc_html__('Not available', 'cbiastudio-blogflow-ai') . '</option>';
     } else {
-        foreach ($img_list as $mdl) {
-            $label = $mdl;
-            if ($pkey === 'openai' && $mdl === 'gpt-image-2') $label = __('GPT Image 2 — Recommended', 'cbiastudio-blogflow-ai');
-            if ($pkey === 'openai' && $mdl === 'gpt-image-1') $label = __('GPT Image 1', 'cbiastudio-blogflow-ai');
-            if ($pkey === 'openai' && $mdl === 'gpt-image-1-mini') $label = __('GPT Image 1 Mini', 'cbiastudio-blogflow-ai');
-            if ($mdl === 'imagen-3.0-generate-002') $label .= ' (Recomendado)';
-            echo '<option value="' . esc_attr($mdl) . '" ' . selected($saved_img, $mdl, false) . '>' . esc_html($label) . '</option>';
-        }
+        $render_model_options($pkey, $img_list, $saved_img);
     }
     echo '</select>';
     echo '</div>';

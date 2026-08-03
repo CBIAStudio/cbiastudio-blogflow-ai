@@ -287,21 +287,9 @@ if (!function_exists('cbia_providers_get_provider')) {
 
 if (!function_exists('cbia_providers_get_model_list')) {
     function cbia_providers_get_model_list(string $provider): array {
-        $stored = cbia_providers_get_model_lists_store();
-        if (!empty($stored[$provider]) && is_array($stored[$provider])) {
-            if ($provider === 'deepseek') return array('deepseek-v4-flash', 'deepseek-v4-pro');
-            return $stored[$provider];
-        }
-        $lists = array(
-            'openai' => array('gpt-5-mini', 'gpt-5.4-mini', 'gpt-5.4', 'gpt-5.5', 'gpt-5', 'gpt-5-nano', 'gpt-5.2', 'gpt-5.1', 'gpt-4.1-mini', 'gpt-4.1', 'gpt-4.1-nano'),
-            'google' => array(
-                'gemini-2.5-flash',
-                'gemini-2.5-pro',
-                'gemini-2.5-flash-lite',
-            ),
-            'deepseek' => array('deepseek-v4-flash', 'deepseek-v4-pro'),
-        );
-        return $lists[$provider] ?? array();
+        return function_exists('cbia_provider_catalog_model_ids')
+            ? cbia_provider_catalog_model_ids($provider, 'text')
+            : array();
     }
 }
 
@@ -317,19 +305,21 @@ if (!function_exists('cbia_providers_get_image_model_list')) {
      * Modelos de imagen por proveedor.
      */
     function cbia_providers_get_image_model_list(string $provider): array {
-        $lists = array(
-            // CAMBIO: modelos de imagen requeridos (manteniendo compatibilidad)
-            'openai' => array('gpt-image-2', 'gpt-image-1', 'gpt-image-1-mini'),
-            'google' => array('imagen-3.0-generate-002', 'imagen-4.0-generate-001'),
-            'deepseek' => array(),
-        );
-        return $lists[$provider] ?? array();
+        return function_exists('cbia_provider_catalog_model_ids')
+            ? cbia_provider_catalog_model_ids($provider, 'image')
+            : array();
     }
 }
 
 if (!function_exists('cbia_providers_get_image_capable_providers')) {
     function cbia_providers_get_image_capable_providers(): array {
-        return array('openai', 'google');
+        $providers = array();
+        if (function_exists('cbia_provider_model_catalog')) {
+            foreach (cbia_provider_model_catalog() as $provider => $definition) {
+                if (in_array('image', (array)($definition['capabilities'] ?? array()), true)) $providers[] = (string)$provider;
+            }
+        }
+        return $providers ?: array('openai', 'google');
     }
 }
 
@@ -343,17 +333,27 @@ if (!function_exists('cbia_providers_supports_image')) {
 if (!function_exists('cbia_providers_get_recommended_text_model')) {
     function cbia_providers_get_recommended_text_model(string $provider): string {
         $provider = sanitize_key($provider);
-        if ($provider === 'google') return 'gemini-2.5-flash';
-        if ($provider === 'deepseek') return 'deepseek-v4-flash';
-        return function_exists('cbia_get_recommended_text_model') ? cbia_get_recommended_text_model() : 'gpt-5-mini';
+        $recommended = function_exists('cbia_provider_catalog_recommended_model') ? cbia_provider_catalog_recommended_model($provider, 'text') : '';
+        return $recommended !== '' ? $recommended : 'gpt-5-mini';
     }
 }
 
 if (!function_exists('cbia_providers_get_recommended_image_model')) {
     function cbia_providers_get_recommended_image_model(string $provider): string {
         $provider = sanitize_key($provider);
-        if ($provider === 'google') return 'imagen-3.0-generate-002';
         if (!cbia_providers_supports_image($provider)) return '';
-        return 'gpt-image-2';
+        return function_exists('cbia_provider_catalog_recommended_model') ? cbia_provider_catalog_recommended_model($provider, 'image') : 'gpt-image-2';
+    }
+}
+
+if (!function_exists('cbia_providers_get_model_display')) {
+    function cbia_providers_get_model_display(string $provider, string $model): array {
+        $definition = function_exists('cbia_provider_catalog_model') ? cbia_provider_catalog_model($provider, $model) : array();
+        return array(
+            'label' => (string)($definition['display_name'] ?? $model),
+            'group' => sanitize_key((string)($definition['group'] ?? 'current')),
+            'status' => sanitize_key((string)($definition['status'] ?? '')),
+            'recommended' => !empty($definition['recommended']),
+        );
     }
 }

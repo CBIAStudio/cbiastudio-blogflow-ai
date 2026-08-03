@@ -54,6 +54,10 @@ if (!function_exists('cbia_merge_provider_attempts')) {
 if (!function_exists('cbia_openai_model_supports_temperature')) {
 	function cbia_openai_model_supports_temperature($model) {
 		$model = strtolower(trim((string)$model));
+		if (function_exists('cbia_provider_catalog_model')) {
+			$definition = cbia_provider_catalog_model('openai', $model);
+			if (!empty($definition)) return !empty($definition['supports_temperature']);
+		}
 		return !in_array($model, array('gpt-5', 'gpt-5-mini', 'gpt-5-nano'), true);
 	}
 }
@@ -277,15 +281,16 @@ if (!function_exists('cbia_google_generate_image_with_prompt')) {
 	 * Google imagen (Gemini o Imagen). Retorna [ok, attach_id, model, err]
 	 */
 	function cbia_google_generate_image_with_prompt($prompt, $section, $title, $alt_text = '', $idx = 0) {
+		$recommended = function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('google') : 'gemini-3.1-flash-image';
 		$model = function_exists('cbia_get_image_model_for_provider')
-			? cbia_get_image_model_for_provider('google', function_exists('cbia_providers_get_recommended_image_model') ? cbia_providers_get_recommended_image_model('google') : 'imagen-3.0-generate-002')
-			: 'imagen-3.0-generate-002';
+			? cbia_get_image_model_for_provider('google', $recommended)
+			: $recommended;
 		$model = cbia_google_imagen_model_id((string)$model);
 
 		// Fallback automÃƒÂ¡tico para cuota/disponibilidad.
 		$chain = array_values(array_unique(array_filter(array(
 			(string)$model,
-			'gemini-2.5-flash-image',
+			$recommended,
 		))));
 
 		$last_err = '';
@@ -496,7 +501,7 @@ if (!function_exists('cbia_openai_responses_call')) {
 					$payload['temperature'] = $temperature;
 				}
 				$capabilities = cbia_openai_text_model_capabilities($model);
-				if (!empty($capabilities['reasoning_effort_minimal'])) $payload['reasoning'] = array('effort' => 'minimal');
+				if (!empty($capabilities['reasoning_effort'])) $payload['reasoning'] = array('effort' => (string)$capabilities['reasoning_effort']);
 				if (!empty($capabilities['text_verbosity'])) $payload['text'] = array('verbosity' => 'high');
 
 				$request_started = microtime(true);

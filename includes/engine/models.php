@@ -60,10 +60,25 @@ if (!function_exists('cbia_openai_text_attempt_chain')) {
 if (!function_exists('cbia_openai_text_model_capabilities')) {
     function cbia_openai_text_model_capabilities($model) {
         $model = strtolower(trim((string)$model));
+        if (function_exists('cbia_provider_catalog_model')) {
+            $definition = cbia_provider_catalog_model('openai', $model);
+            if (!empty($definition)) {
+                $levels = (array)($definition['reasoning_levels'] ?? array());
+                $effort = in_array('minimal', $levels, true) ? 'minimal' : (in_array('none', $levels, true) ? 'none' : '');
+                return apply_filters('cbia_openai_text_model_capabilities', array(
+                    'reasoning_effort_minimal' => $effort === 'minimal',
+                    'reasoning_effort' => $effort,
+                    'text_verbosity' => !empty($definition['supports_verbosity']),
+                    'supports_temperature' => !empty($definition['supports_temperature']),
+                ), $model);
+            }
+        }
         $supports_controls = (bool)preg_match('/^gpt-5(?:-(?:mini|nano))?(?:-|$)/', $model);
         return apply_filters('cbia_openai_text_model_capabilities', array(
             'reasoning_effort_minimal' => $supports_controls,
+            'reasoning_effort' => $supports_controls ? 'minimal' : '',
             'text_verbosity' => $supports_controls,
+            'supports_temperature' => !$supports_controls,
         ), $model);
     }
 }

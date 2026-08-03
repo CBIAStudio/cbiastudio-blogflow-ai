@@ -104,10 +104,16 @@ if ( ! function_exists( 'cbia_deepseek_parse_usage' ) ) {
 
 if ( ! function_exists( 'cbia_deepseek_pricing_catalog' ) ) {
 	function cbia_deepseek_pricing_catalog() {
-		$catalog = array(
-			'deepseek-v4-flash' => array( 'cache_hit' => 2800, 'cache_miss' => 140000, 'output' => 280000 ),
-			'deepseek-v4-pro'   => array( 'cache_hit' => 3625, 'cache_miss' => 435000, 'output' => 870000 ),
-		);
+		$catalog = array();
+		foreach ( function_exists( 'cbia_provider_catalog_model_ids' ) ? cbia_provider_catalog_model_ids( 'deepseek', 'text', true ) : array() as $model ) {
+			$period = cbia_provider_catalog_price_period( 'deepseek', $model );
+			if ( empty( $period ) ) continue;
+			$catalog[ $model ] = array(
+				'cache_hit'  => (int) ( $period['cached_input_price_micro_usd_per_mtok'] ?? $period['input_price_micro_usd_per_mtok'] ),
+				'cache_miss' => (int) $period['input_price_micro_usd_per_mtok'],
+				'output'     => (int) $period['output_price_micro_usd_per_mtok'],
+			);
+		}
 		return apply_filters( 'cbia_deepseek_pricing_catalog', $catalog );
 	}
 }

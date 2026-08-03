@@ -33,6 +33,7 @@ $cbia_new_files = array(
     CBIA_INCLUDES_DIR . 'repositories/oldposts-repo.php',
     CBIA_INCLUDES_DIR . 'repositories/post-repo.php',
     CBIA_INCLUDES_DIR . 'repositories/settings-repo.php',
+    CBIA_INCLUDES_DIR . 'support/provider-model-catalog.php',
     CBIA_INCLUDES_DIR . 'domain/costs.php',
     CBIA_INCLUDES_DIR . 'domain/text.php',
     CBIA_INCLUDES_DIR . 'support/encoding.php',
