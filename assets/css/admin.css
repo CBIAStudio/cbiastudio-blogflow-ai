@@ -3174,23 +3174,34 @@ body.cbia-hide-external-notices #wpbody-content .cbia-shell #message{
 }
 
 .cbia-provider-connections-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
     margin-top: 14px;
 }
 
 .cbia-provider-connection-card {
     min-width: 0;
-    padding: 16px;
+    padding: 0;
     border: 1px solid #dbe4ee;
     border-radius: 12px;
     background: linear-gradient(145deg, #fff 0%, #f7fbfd 100%);
 }
 
+.cbia-provider-connection-summary {
+    display: grid;
+    grid-template-columns: minmax(190px, .8fr) minmax(240px, 1.2fr) auto;
+    align-items: center;
+    gap: 16px;
+    min-height: 68px;
+    padding: 10px 14px;
+}
+
 .cbia-provider-connection-heading,
 .cbia-provider-connection-meta,
-.cbia-provider-connection-actions {
+.cbia-provider-connection-actions,
+.cbia-provider-summary-actions,
+.cbia-provider-key-row {
     display: flex;
     align-items: center;
     gap: 10px;
@@ -3215,7 +3226,7 @@ body.cbia-hide-external-notices #wpbody-content .cbia-shell #message{
 }
 
 .cbia-provider-connection-meta {
-    margin: 12px 0;
+    margin: 0;
 }
 
 .cbia-connection-state,
@@ -3247,7 +3258,7 @@ body.cbia-hide-external-notices #wpbody-content .cbia-shell #message{
     color: #075985;
 }
 
-.cbia-provider-connection-card > label {
+.cbia-provider-connection-panel > label {
     display: block;
     margin: 0 0 6px;
     font-weight: 600;
@@ -3259,8 +3270,46 @@ body.cbia-hide-external-notices #wpbody-content .cbia-shell #message{
 }
 
 .cbia-provider-connection-actions {
-    margin-top: 10px;
+    margin-top: 12px;
 }
+
+.cbia-provider-summary-actions {
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+}
+
+.cbia-provider-details-toggle .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+    transition: transform .18s ease;
+}
+
+.cbia-provider-connection-card.is-expanded .cbia-provider-details-toggle .dashicons {
+    transform: rotate(180deg);
+}
+
+.cbia-provider-connection-panel {
+    padding: 14px;
+    border-top: 1px solid #dbe4ee;
+    background: #fff;
+}
+
+.cbia-provider-connection-panel[hidden] { display: none !important; }
+
+.cbia-provider-key-row { flex-wrap: nowrap; }
+.cbia-provider-key-row .cbia-provider-credential-input { flex: 1 1 auto; }
+
+.cbia-provider-technical-details {
+    margin-top: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 12px;
+}
+
+.cbia-provider-technical-details p { margin: 4px 0 0; }
 
 .cbia-provider-connection-card[aria-busy="true"] {
     opacity: 0.72;
@@ -3282,11 +3331,17 @@ body.cbia-hide-external-notices #wpbody-content .cbia-shell #message{
 }
 
 @media (max-width: 960px) {
-    .cbia-provider-connections-grid { grid-template-columns: 1fr; }
+    .cbia-provider-connection-summary { grid-template-columns: minmax(180px, 1fr) minmax(220px, 1fr); }
+    .cbia-provider-summary-actions { grid-column: 1 / -1; justify-content: flex-start; }
 }
 
 @media (max-width: 600px) {
     .cbia-provider-connections { padding: 12px; }
+    .cbia-provider-connection-summary { grid-template-columns: 1fr; gap: 10px; }
+    .cbia-provider-summary-actions { grid-column: auto; }
+    .cbia-provider-summary-actions .button,
+    .cbia-provider-key-row .button { width: 100%; justify-content: center; text-align: center; }
+    .cbia-provider-key-row { flex-direction: column; }
     .cbia-provider-connection-actions .button,
     .cbia-provider-connection-actions .button-link-delete { width: 100%; justify-content: center; text-align: center; }
 }

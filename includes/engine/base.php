@@ -184,7 +184,7 @@ if (!function_exists('cbia_get_provider_connection_status')) {
         $provider = sanitize_key($provider);
         $configured = in_array($provider, cbia_supported_credential_providers(), true) && cbia_has_provider_api_key($provider);
         if (!$configured) {
-            return array('status' => 'not_configured', 'configured' => false, 'verified' => false, 'last_checked' => '', 'last_success' => '');
+            return array('status' => 'not_configured', 'configured' => false, 'verified' => false, 'last_checked' => '', 'last_success' => '', 'models_count' => null);
         }
         $statuses = cbia_get_provider_connection_statuses();
         $status = isset($statuses[$provider]) && is_array($statuses[$provider]) ? $statuses[$provider] : array();
@@ -196,6 +196,7 @@ if (!function_exists('cbia_get_provider_connection_status')) {
             'verified' => $state === 'verified',
             'last_checked' => sanitize_text_field((string)($status['last_checked'] ?? '')),
             'last_success' => sanitize_text_field((string)($status['last_success'] ?? '')),
+            'models_count' => isset($status['models_count']) && is_numeric($status['models_count']) ? max(0, (int)$status['models_count']) : null,
         );
     }
 }
@@ -215,6 +216,9 @@ if (!function_exists('cbia_mark_provider_test_result')) {
             'last_success' => $state === 'verified'
                 ? $now
                 : (!empty($result['reset_success']) ? '' : sanitize_text_field((string)($previous['last_success'] ?? ''))),
+            'models_count' => isset($result['models_count']) && is_numeric($result['models_count'])
+                ? max(0, (int)$result['models_count'])
+                : (!empty($result['reset_success']) ? null : ($previous['models_count'] ?? null)),
         );
         return (bool)update_option(cbia_provider_connection_status_option_name(), $statuses, false);
     }

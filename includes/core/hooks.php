@@ -3797,6 +3797,8 @@ if (!function_exists('cbia_provider_connection_public_state')) {
             'statusLabel' => $labels[$state],
             'lastSuccess' => (string)($status['last_success'] ?? ''),
             'lastSuccessLabel' => !empty($status['last_success']) ? sprintf(__('Last successful check: %s', 'cbiastudio-blogflow-ai'), (string)$status['last_success']) : '',
+            'modelsCount' => isset($status['models_count']) ? (int)$status['models_count'] : null,
+            'modelsCountLabel' => isset($status['models_count']) ? sprintf(__('Models returned by the provider: %d', 'cbiastudio-blogflow-ai'), (int)$status['models_count']) : '',
             'connectLabel' => !empty($status['configured']) ? __('Update key', 'cbiastudio-blogflow-ai') : __('Connect', 'cbiastudio-blogflow-ai'),
             'disconnectLabel' => __('Disconnect', 'cbiastudio-blogflow-ai'),
             'placeholder' => !empty($status['configured']) ? __('Enter a new key to replace the current one', 'cbiastudio-blogflow-ai') : sprintf(__('Enter your %s API key', 'cbiastudio-blogflow-ai'), cbia_provider_connection_label($provider)),
@@ -3840,7 +3842,7 @@ if (!function_exists('cbia_test_provider_connection')) {
         }
         if (!is_array($data)) return array('ok' => false, 'code' => 'invalid_response', 'message' => __('The provider returned an invalid response.', 'cbiastudio-blogflow-ai'));
         $count = $provider === 'google' ? count((array)($data['models'] ?? array())) : count((array)($data['data'] ?? array()));
-        return array('ok' => true, 'code' => 'verified', 'message' => sprintf(__('Valid connection. Detected models: %d', 'cbiastudio-blogflow-ai'), $count));
+        return array('ok' => true, 'code' => 'verified', 'message' => __('Connection verified.', 'cbiastudio-blogflow-ai'), 'models_count' => $count);
     }
 }
 
@@ -3865,7 +3867,10 @@ if (!function_exists('cbia_ajax_provider_connection_test')) {
         $provider = isset($_POST['provider']) ? sanitize_key((string)wp_unslash($_POST['provider'])) : '';
         if (!in_array($provider, cbia_supported_credential_providers(), true)) wp_send_json_error(array('message' => __('Invalid provider.', 'cbiastudio-blogflow-ai')), 400);
         $result = cbia_test_provider_connection($provider);
-        cbia_mark_provider_test_result($provider, array('status' => !empty($result['ok']) ? 'verified' : (($result['code'] ?? '') === 'authentication_error' ? 'authentication_error' : 'not_tested')));
+        cbia_mark_provider_test_result($provider, array(
+            'status' => !empty($result['ok']) ? 'verified' : (($result['code'] ?? '') === 'authentication_error' ? 'authentication_error' : 'not_tested'),
+            'models_count' => $result['models_count'] ?? null,
+        ));
         $payload = array('message' => (string)$result['message'], 'connection' => cbia_provider_connection_public_state($provider));
         if (empty($result['ok'])) wp_send_json_error($payload, 400);
         wp_send_json_success($payload);

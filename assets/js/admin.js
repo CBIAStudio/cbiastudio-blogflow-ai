@@ -6136,6 +6136,25 @@
         var root = document.getElementById('cbia-provider-connections');
         if (!root || !window.CBIAAdmin || !CBIAAdmin.ajaxUrl || !CBIAAdmin.nonce) return;
 
+        function setPanel(card, open, focusInput) {
+            var panel = card.querySelector('.cbia-provider-connection-panel');
+            if (!panel) return;
+            if (open) {
+                root.querySelectorAll('.cbia-provider-connection-card.is-expanded').forEach(function (other) {
+                    if (other !== card) setPanel(other, false, false);
+                });
+            }
+            card.classList.toggle('is-expanded', open);
+            panel.hidden = !open;
+            card.querySelectorAll('[aria-controls="' + panel.id + '"]').forEach(function (button) {
+                button.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+            if (open && focusInput) {
+                var input = card.querySelector('.cbia-provider-credential-input');
+                if (input) input.focus();
+            }
+        }
+
         function setBusy(card, busy) {
             card.setAttribute('aria-busy', busy ? 'true' : 'false');
             card.querySelectorAll('button').forEach(function (button) {
@@ -6151,17 +6170,21 @@
             card.classList.add('is-' + connection.status);
             var stateNode = card.querySelector('[data-role="state"]');
             var lastNode = card.querySelector('[data-role="last-success"]');
+            var modelsNode = card.querySelector('[data-role="models-count"]');
             var input = card.querySelector('.cbia-provider-credential-input');
-            var connect = card.querySelector('[data-action="connect"]');
+            var openEditor = card.querySelector('[data-action="open-editor"]');
+            var saveKey = card.querySelector('[data-action="save-key"]');
             var test = card.querySelector('[data-action="test"]');
             var disconnect = card.querySelector('[data-action="disconnect"]');
             if (stateNode) stateNode.textContent = connection.statusLabel || '';
             if (lastNode) lastNode.textContent = connection.lastSuccessLabel || '';
+            if (modelsNode) modelsNode.textContent = connection.modelsCountLabel || '';
             if (input) {
                 input.value = '';
                 input.placeholder = connection.placeholder || '';
             }
-            if (connect) connect.textContent = connection.connectLabel || connect.textContent;
+            if (openEditor) openEditor.textContent = connection.connectLabel || openEditor.textContent;
+            if (saveKey) saveKey.textContent = connection.configured ? (saveKey.getAttribute('data-update-label') || 'Save new key') : (connection.connectLabel || 'Connect');
             if (test) test.disabled = !connection.configured;
             if (connection.configured && !disconnect) {
                 disconnect = document.createElement('button');
@@ -6205,6 +6228,7 @@
                     message.textContent = response.data.message || '';
                     message.classList.add('is-success');
                 }
+                if (action === 'cbia_provider_connection_disconnect') setPanel(card, false, false);
             }).catch(function (error) {
                 if (message) {
                     message.textContent = error && error.message ? error.message : root.getAttribute('data-network-error');
@@ -6223,9 +6247,20 @@
             event.preventDefault();
             var action = button.getAttribute('data-action');
             var input = card.querySelector('.cbia-provider-credential-input');
-            if (action === 'connect') request(card, 'cbia_provider_connection_save', input ? input.value : '');
+            if (action === 'open-editor') setPanel(card, true, true);
+            if (action === 'toggle-details') setPanel(card, !card.classList.contains('is-expanded'), false);
+            if (action === 'save-key') request(card, 'cbia_provider_connection_save', input ? input.value : '');
             if (action === 'test') request(card, 'cbia_provider_connection_test');
             if (action === 'disconnect' && window.confirm(card.getAttribute('data-disconnect-confirm') || '')) request(card, 'cbia_provider_connection_disconnect');
+        });
+
+        root.addEventListener('keydown', function (event) {
+            if (event.key !== 'Escape') return;
+            var card = event.target.closest('.cbia-provider-connection-card.is-expanded');
+            if (!card) return;
+            setPanel(card, false, false);
+            var toggle = card.querySelector('[data-action="toggle-details"]');
+            if (toggle) toggle.focus();
         });
     }
 
