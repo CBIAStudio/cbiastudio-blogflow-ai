@@ -29,6 +29,7 @@ $provider_key_urls = array(
     'openai' => 'https://platform.openai.com/api-keys',
     'google' => 'https://makersuite.google.com/app/apikey',
     'deepseek' => 'https://platform.deepseek.com/api_keys',
+	'anthropic' => 'https://console.anthropic.com/settings/keys',
 );
 
 // Defaults seguros
@@ -105,6 +106,7 @@ $diag_info = array(
     'OpenAI API key' => function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key('openai') ? 'Yes' : 'No',
     'DeepSeek API key' => function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key('deepseek') ? 'Yes' : 'No',
     'Google API key' => function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key('google') ? 'Yes' : 'No',
+	'Anthropic API key' => function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key('anthropic') ? 'Yes' : 'No',
     'Plugin dir writable' => wp_is_writable(CBIA_PLUGIN_DIR) ? 'Yes' : 'No',
     'WP content writable' => defined('WP_CONTENT_DIR') && wp_is_writable(WP_CONTENT_DIR) ? 'Yes' : 'No',
 );
@@ -128,7 +130,8 @@ if (!empty($warnings) && is_array($warnings)) {
 $connection_capabilities = array(
     'openai' => __('Text and images', 'cbiastudio-blogflow-ai'),
     'google' => __('Text and images', 'cbiastudio-blogflow-ai'),
-    'deepseek' => __('Text', 'cbiastudio-blogflow-ai'),
+	'deepseek' => __('Text', 'cbiastudio-blogflow-ai'),
+	'anthropic' => __('Text', 'cbiastudio-blogflow-ai'),
 );
 $connection_state_labels = array(
     'not_configured' => __('Not configured', 'cbiastudio-blogflow-ai'),
@@ -141,7 +144,7 @@ echo '<div class="cbia-section-header"><div class="cbia-section-title" id="cbia-
 echo '<p class="description">' . esc_html__('Connect the API keys for the providers CBIA will use to generate text and images.', 'cbiastudio-blogflow-ai') . '</p></div>';
 echo '<div class="cbia-provider-connections-grid">';
 foreach ($providers_list as $pkey => $pdef) {
-    if (!in_array($pkey, array('openai', 'google', 'deepseek'), true)) continue;
+	if (!in_array($pkey, array('openai', 'google', 'deepseek', 'anthropic'), true)) continue;
     $plabel = (string)($pdef['label'] ?? ucfirst($pkey));
     $status = function_exists('cbia_get_provider_connection_status') ? cbia_get_provider_connection_status((string)$pkey) : array('status' => 'not_configured', 'configured' => false, 'last_success' => '');
     $state = isset($connection_state_labels[$status['status'] ?? '']) ? (string)$status['status'] : 'not_tested';

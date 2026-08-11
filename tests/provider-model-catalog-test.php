@@ -27,5 +27,9 @@ catalog_check(cbia_provider_catalog_image_price_micro_usd('google', 'gemini-3.1-
 catalog_check(in_array('imagen-3.0-generate-002', cbia_provider_catalog_model_ids('google', 'image'), true), 'saved Imagen 3 compatibility');
 catalog_check(cbia_provider_catalog_model('google', 'imagen-3.0-generate-002')['status'] === 'deprecated', 'Imagen 3 status');
 catalog_check(cbia_provider_model_catalog_version() === 'providers-2026-08-03-v1', 'catalog version');
+catalog_check(cbia_provider_catalog_recommended_model('anthropic', 'text') === 'claude-sonnet-5', 'Anthropic recommendation');
+catalog_check(cbia_provider_catalog_get('anthropic')['capabilities'] === array('text'), 'Anthropic must be text-only');
+catalog_check(cbia_provider_catalog_price_period('anthropic', 'claude-sonnet-5', '2026-08-15')['input_price_micro_usd_per_mtok'] === 2000000, 'Sonnet promotional price');
+catalog_check(cbia_provider_catalog_price_period('anthropic', 'claude-sonnet-5', '2026-09-01')['input_price_micro_usd_per_mtok'] === 3000000, 'Sonnet standard price');
 
 echo "provider-model-catalog: {$cases}/{$cases} OK\n";

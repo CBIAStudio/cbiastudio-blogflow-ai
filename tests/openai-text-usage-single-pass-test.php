@@ -17,6 +17,7 @@ function cbia_get_settings() { return array(); }
 
 require dirname(__DIR__) . '/includes/engine/models.php';
 require dirname(__DIR__) . '/includes/engine/usage.php';
+require dirname(__DIR__) . '/includes/support/provider-model-catalog.php';
 require dirname(__DIR__) . '/includes/domain/costs.php';
 
 $count = 0;

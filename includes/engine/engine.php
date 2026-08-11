@@ -16,6 +16,7 @@ require_once __DIR__ . '/seo.php';
 require_once __DIR__ . '/taxonomy.php';
 require_once __DIR__ . '/content.php';
 require_once __DIR__ . '/images.php';
+require_once __DIR__ . '/anthropic.php';
 require_once __DIR__ . '/openai.php';
 require_once __DIR__ . '/posts.php';
 require_once __DIR__ . '/pending.php';

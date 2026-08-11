@@ -14,6 +14,7 @@ class CBIA_Image_Pricing_Service {
     }
 }
 require dirname(__DIR__) . '/includes/engine/usage.php';
+require dirname(__DIR__) . '/includes/support/provider-model-catalog.php';
 require dirname(__DIR__) . '/includes/domain/costs.php';
 
 function assert_same($expected, $actual, $message) {
@@ -91,6 +92,12 @@ assert_same('exact', $auto_with_usage['cost_status'], 'Auto with complete usage 
 $text = cbia_costes_calculate_row(array('type' => 'text', 'model' => 'gpt-5-mini', 'ok' => 1, 'in' => 1000, 'out' => 1000, 'cached_tokens_reported' => 1));
 assert_same('exact', $text['cost_status'], 'Text cost status');
 assert_same(2250, $text['cost_micro_usd'], 'Text micro-USD');
+
+$anthropic_promo = cbia_costes_calculate_row(array('type' => 'text', 'provider' => 'anthropic', 'model' => 'claude-sonnet-5', 'ts' => '2026-08-15 12:00:00', 'in' => 100, 'out' => 40, 'cache_creation_input_tokens' => 20, 'cache_creation_5m_input_tokens' => 8, 'cache_creation_1h_input_tokens' => 12, 'cache_read_input_tokens' => 30));
+assert_same('exact', $anthropic_promo['cost_status'], 'Anthropic promotional cost status');
+assert_same(674, $anthropic_promo['cost_micro_usd'], 'Anthropic promotional cache-aware micro-USD');
+$anthropic_standard = cbia_costes_calculate_row(array('type' => 'text', 'provider' => 'anthropic', 'model' => 'claude-sonnet-5', 'ts' => '2026-09-01 12:00:00', 'in' => 100, 'out' => 40, 'cache_creation_input_tokens' => 20, 'cache_creation_5m_input_tokens' => 8, 'cache_creation_1h_input_tokens' => 12, 'cache_read_input_tokens' => 30));
+assert_same(1011, $anthropic_standard['cost_micro_usd'], 'Anthropic standard cache-aware micro-USD');
 
 $auto = cbia_costes_calculate_row(array('type' => 'image', 'model' => 'gpt-image-2', 'ok' => 1, 'quality' => 'auto', 'size' => '1536x1024'));
 assert_same('unknown', $auto['cost_status'], 'Auto image without usage');

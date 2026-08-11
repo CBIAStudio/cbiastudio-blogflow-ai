@@ -10,6 +10,7 @@ function apply_filters( $hook, $value ) { return $value; }
 function sanitize_text_field( $value ) { return trim( (string) $value ); }
 function sanitize_key( $value ) { return preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $value ) ); }
 
+require dirname( __DIR__ ) . '/includes/support/provider-model-catalog.php';
 require dirname( __DIR__ ) . '/includes/support/image-pricing.php';
 
 function cbia_assert_same( $expected, $actual, $label ) {

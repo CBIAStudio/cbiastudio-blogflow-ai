@@ -1173,7 +1173,7 @@ $dashboard_payload['i18n'] = array(
 
                 <select id="cbia-usage-provider-filter" class="abb-select" aria-label="<?php echo esc_attr__('Provider', 'cbiastudio-blogflow-ai'); ?>">
                     <option value=""><?php echo esc_html__('All providers', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="openai">OpenAI</option><option value="google">Google</option><option value="deepseek">DeepSeek</option>
+					<option value="openai">OpenAI</option><option value="google">Google</option><option value="deepseek">DeepSeek</option><option value="anthropic">Anthropic</option>
                 </select>
                 <select id="cbia-usage-status-filter" class="abb-select" aria-label="<?php echo esc_attr__('Cost status', 'cbiastudio-blogflow-ai'); ?>">
                     <option value=""><?php echo esc_html__('All cost statuses', 'cbiastudio-blogflow-ai'); ?></option>

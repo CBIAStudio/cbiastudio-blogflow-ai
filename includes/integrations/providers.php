@@ -34,6 +34,13 @@ if (!function_exists('cbia_providers_defaults')) {
                     'base_url' => 'https://api.deepseek.com',
                     'api_version' => '',
                 ),
+				'anthropic' => array(
+					'label' => 'Anthropic',
+					'model' => 'claude-sonnet-5',
+					'image_model' => '',
+					'base_url' => 'https://api.anthropic.com',
+					'api_version' => 'v1',
+				),
             ),
         );
     }

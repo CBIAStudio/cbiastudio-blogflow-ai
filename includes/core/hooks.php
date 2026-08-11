@@ -3213,7 +3213,7 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
         $image_provider = function_exists('cbia_get_image_provider') ? cbia_get_image_provider() : 'openai';
         $text_api_ok = function_exists('cbia_get_provider_api_key') ? (cbia_get_provider_api_key((string)$text_provider) !== '') : true;
         $image_api_ok = function_exists('cbia_get_provider_api_key') ? (cbia_get_provider_api_key((string)$image_provider) !== '') : true;
-        $providers_supported = array('openai', 'google', 'deepseek');
+		$providers_supported = array('openai', 'google', 'deepseek', 'anthropic');
         $provider_key_state = array();
         $text_model_lists = array();
         $image_model_lists = array();
@@ -3775,7 +3775,7 @@ if (!function_exists('cbia_provider_connection_label')) {
     function cbia_provider_connection_label(string $provider): string {
         $provider = sanitize_key($provider);
         $definition = function_exists('cbia_providers_get_provider') ? cbia_providers_get_provider($provider) : array();
-        $fallbacks = array('openai' => 'OpenAI', 'google' => 'Google', 'deepseek' => 'DeepSeek');
+		$fallbacks = array('openai' => 'OpenAI', 'google' => 'Google', 'deepseek' => 'DeepSeek', 'anthropic' => 'Anthropic');
         return sanitize_text_field((string)($definition['label'] ?? ($fallbacks[$provider] ?? $provider)));
     }
 }
@@ -3827,6 +3827,9 @@ if (!function_exists('cbia_test_provider_connection')) {
         } elseif ($provider === 'deepseek') {
             $url = ($base_url !== '' ? $base_url : 'https://api.deepseek.com') . '/' . ($api_version !== '' ? $api_version : 'v1') . '/models';
             $args['headers'] = array('Authorization' => 'Bearer ' . $key);
+		} elseif ($provider === 'anthropic') {
+			$url = ($base_url !== '' ? $base_url : 'https://api.anthropic.com') . '/' . ($api_version !== '' ? $api_version : 'v1') . '/models';
+			$args['headers'] = function_exists('cbia_anthropic_headers') ? cbia_anthropic_headers($key) : array('x-api-key' => $key, 'anthropic-version' => '2023-06-01');
         }
         $response = wp_remote_get($url, $args);
         if (is_wp_error($response)) return array('ok' => false, 'code' => 'network_error', 'message' => cbia_sanitize_provider_error($provider, $response->get_error_message()));
@@ -3899,7 +3902,7 @@ if (!function_exists('cbia_ajax_ai_composer_save_api_key')) {
         $scope = isset($_POST['scope']) ? sanitize_key((string)wp_unslash($_POST['scope'])) : '';
         $model = isset($_POST['model']) ? sanitize_text_field((string)wp_unslash($_POST['model'])) : '';
         $use_existing_key = isset($_POST['use_existing_key']) ? absint(wp_unslash($_POST['use_existing_key'])) : 0;
-        if (!in_array($provider, array('openai', 'google', 'deepseek'), true)) {
+		if (!in_array($provider, array('openai', 'google', 'deepseek', 'anthropic'), true)) {
             wp_send_json_error(array('message' => __('Invalid provider.', 'cbiastudio-blogflow-ai')), 400);
         }
         if ($scope === 'image' && !in_array($provider, array('openai', 'google'), true)) {
@@ -3960,7 +3963,7 @@ if (!function_exists('cbia_ajax_ai_composer_test_api_key')) {
         $scope = isset($_POST['scope']) ? sanitize_key((string)wp_unslash($_POST['scope'])) : 'text';
         $key = isset($_POST['api_key']) ? (string)wp_unslash($_POST['api_key']) : '';
         $use_existing_key = isset($_POST['use_existing_key']) ? absint(wp_unslash($_POST['use_existing_key'])) : 0;
-        if (!in_array($provider, array('openai', 'google', 'deepseek'), true)) {
+		if (!in_array($provider, array('openai', 'google', 'deepseek', 'anthropic'), true)) {
             wp_send_json_error(array('message' => __('Invalid provider.', 'cbiastudio-blogflow-ai')), 400);
         }
         if ($scope === 'image' && !in_array($provider, array('openai', 'google'), true)) {
@@ -3975,6 +3978,7 @@ if (!function_exists('cbia_ajax_ai_composer_test_api_key')) {
                     'openai' => 'openai_api_key',
                     'google' => 'google_api_key',
                     'deepseek' => 'deepseek_api_key',
+					'anthropic' => 'anthropic_api_key',
                 );
                 $field = isset($map[$provider]) ? $map[$provider] : '';
                 if ($field !== '') {
@@ -4040,13 +4044,13 @@ if (!function_exists('cbia_ajax_ai_composer_test_api_key')) {
             wp_send_json_error(array('message' => 'HTTP ' . $code . ' | ' . cbia_sanitize_provider_error($provider, $message, $code)), 400);
         }
         $count = 0;
-        if ($provider === 'openai' || $provider === 'deepseek') {
+        if ($provider === 'openai' || $provider === 'deepseek' || $provider === 'anthropic') {
             $count = (is_array($data) && !empty($data['data']) && is_array($data['data'])) ? count($data['data']) : 0;
         } elseif ($provider === 'google') {
             $count = (is_array($data) && !empty($data['models']) && is_array($data['models'])) ? count($data['models']) : 0;
         }
         wp_send_json_success(array(
-            'message' => __('Valid connection. Detected models:', 'cbiastudio-blogflow-ai') . ' ' . (int)$count,
+            'message' => __('Connection verified.', 'cbiastudio-blogflow-ai'),
             'count' => (int)$count,
             'provider' => $provider,
             'scope' => $scope,

@@ -417,6 +417,10 @@ if (!function_exists('cbia_openai_responses_call')) {
 		if ($provider === 'google') {
 			return cbia_google_generate_content_call($prompt, $system, $tries, $max_output_override, $context);
 		}
+		if ($provider === 'anthropic') {
+			// Anthropic is intentionally isolated: never fall back to another provider.
+			return cbia_anthropic_messages_call($prompt, $system, $tries, $max_output_override, $context);
+		}
 		if ($provider === 'deepseek') {
 			$deepseek_result = cbia_deepseek_chat_call($prompt, $system, $tries, $max_output_override, $context);
 			if (!empty($deepseek_result[0])) {

@@ -237,6 +237,10 @@ if (!function_exists('cbia_usage_empty')) {
         return array(
             'input_tokens' => 0,
             'cached_input_tokens' => 0,
+			'cache_creation_input_tokens' => 0,
+			'cache_creation_5m_input_tokens' => 0,
+			'cache_creation_1h_input_tokens' => 0,
+			'cache_read_input_tokens' => 0,
             'cache_hit_tokens' => 0,
             'cache_miss_tokens' => 0,
             'cache_breakdown_available' => 0,
@@ -253,6 +257,10 @@ if (!function_exists('cbia_usage_normalize')) {
         if (is_array($usage)) {
             $u['input_tokens']  = (int)($usage['input_tokens'] ?? 0);
             $u['cached_input_tokens'] = (int)($usage['cached_input_tokens'] ?? ($usage['cache_hit_tokens'] ?? 0));
+			$u['cache_creation_input_tokens'] = (int)($usage['cache_creation_input_tokens'] ?? 0);
+			$u['cache_creation_5m_input_tokens'] = (int)($usage['cache_creation_5m_input_tokens'] ?? $u['cache_creation_input_tokens']);
+			$u['cache_creation_1h_input_tokens'] = (int)($usage['cache_creation_1h_input_tokens'] ?? 0);
+			$u['cache_read_input_tokens'] = (int)($usage['cache_read_input_tokens'] ?? $u['cached_input_tokens']);
             $u['cache_hit_tokens'] = (int)($usage['cache_hit_tokens'] ?? $u['cached_input_tokens']);
             $u['cache_miss_tokens'] = (int)($usage['cache_miss_tokens'] ?? 0);
             $u['cache_breakdown_available'] = !empty($usage['cache_breakdown_available']) ? 1 : 0;
@@ -294,6 +302,10 @@ if (!function_exists('cbia_usage_append_call')) {
             'model'        => $mdl,
             'input_tokens' => (int)$u['input_tokens'],
             'cached_input_tokens' => (int)$u['cached_input_tokens'],
+			'cache_creation_input_tokens' => (int)$u['cache_creation_input_tokens'],
+			'cache_creation_5m_input_tokens' => (int)$u['cache_creation_5m_input_tokens'],
+			'cache_creation_1h_input_tokens' => (int)$u['cache_creation_1h_input_tokens'],
+			'cache_read_input_tokens' => (int)$u['cache_read_input_tokens'],
             'cache_hit_tokens' => (int)$u['cache_hit_tokens'],
             'cache_miss_tokens' => (int)$u['cache_miss_tokens'],
             'cache_breakdown_available' => (int)$u['cache_breakdown_available'],

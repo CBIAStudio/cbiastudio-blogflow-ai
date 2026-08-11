@@ -36,12 +36,13 @@ if ( ! function_exists( 'cbia_provider_model_catalog' ) ) {
 				'source_reference' => $source, 'legacy_aliases' => $aliases,
 			);
 		};
-		$price = static function ( $in, $cached, $out, $from = null, $until = null, $cache_write = null ) {
+		$price = static function ( $in, $cached, $out, $from = null, $until = null, $cache_write = null, $cache_write_1h = null ) {
 			return array( array(
 				'effective_from' => $from, 'effective_until' => $until,
 				'input_price_micro_usd_per_mtok' => (int) $in,
 				'cached_input_price_micro_usd_per_mtok' => null === $cached ? null : (int) $cached,
 				'cache_write_price_micro_usd_per_mtok' => null === $cache_write ? null : (int) $cache_write,
+				'cache_write_1h_price_micro_usd_per_mtok' => null === $cache_write_1h ? null : (int) $cache_write_1h,
 				'output_price_micro_usd_per_mtok' => (int) $out,
 			) );
 		};
@@ -49,6 +50,7 @@ if ( ! function_exists( 'cbia_provider_model_catalog' ) ) {
 		$openai_source = 'https://developers.openai.com/api/docs/pricing';
 		$google_source = 'https://ai.google.dev/gemini-api/docs/pricing';
 		$deepseek_source = 'https://api-docs.deepseek.com/quick_start/pricing/';
+		$anthropic_source = 'https://docs.anthropic.com/en/docs/about-claude/pricing';
 		$openai_sizes = array( '1024x1024', '1024x1536', '1536x1024' );
 		$openai_qualities = array( 'auto', 'low', 'medium', 'high' );
 
@@ -114,6 +116,20 @@ if ( ! function_exists( 'cbia_provider_model_catalog' ) ) {
 				'models' => array(
 					'deepseek-v4-flash' => $text( 'DeepSeek V4 Flash', 'stable', true, true, 'openai_chat', true, array( 'disabled', 'low', 'medium', 'high' ), true, false, true, $price( 140000, 2800, 280000 ), '2026-07-14', $deepseek_source, 'recommended', array( 'deepseek-chat', 'deepseek-reasoner' ) ),
 					'deepseek-v4-pro' => $text( 'DeepSeek V4 Pro', 'stable', false, false, 'openai_chat', true, array( 'disabled', 'low', 'medium', 'high' ), true, false, true, $price( 435000, 3625, 870000 ), '2026-07-14', $deepseek_source, 'high_quality' ),
+				),
+			),
+			'anthropic' => array(
+				'label' => 'Anthropic', 'capabilities' => array( 'text' ),
+				'default_text_model' => 'claude-sonnet-5', 'recommended_text_model' => 'claude-sonnet-5',
+				'default_image_model' => '', 'recommended_image_model' => '',
+				'models' => array(
+					'claude-sonnet-5' => $text( 'Claude Sonnet 5', 'stable', true, true, 'messages', true, array( 'adaptive' ), false, false, true, array_merge(
+						$price( 2000000, 200000, 10000000, '2026-01-01', '2026-08-31 23:59:59', 2500000, 4000000 ),
+						$price( 3000000, 300000, 15000000, '2026-09-01', null, 3750000, 6000000 )
+					), '2026-08-03', $anthropic_source, 'recommended' ),
+					'claude-haiku-4-5-20251001' => $text( 'Claude Haiku 4.5', 'stable', false, false, 'messages', true, array( 'extended' ), false, false, true, $price( 1000000, 100000, 5000000, null, null, 1250000, 2000000 ), '2026-08-03', $anthropic_source, 'economic' ),
+					'claude-opus-5' => $text( 'Claude Opus 5', 'stable', false, false, 'messages', true, array( 'adaptive' ), false, false, true, $price( 5000000, 500000, 25000000, null, null, 6250000, 10000000 ), '2026-08-03', $anthropic_source, 'high_quality' ),
+					'claude-fable-5' => $text( 'Claude Fable 5', 'stable', false, false, 'messages', true, array( 'adaptive' ), false, false, true, $price( 10000000, 1000000, 50000000, null, null, 12500000, 20000000 ), '2026-08-03', $anthropic_source, 'high_quality' ),
 				),
 			),
 		);

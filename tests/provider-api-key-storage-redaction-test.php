@@ -29,9 +29,10 @@ $keys = array(
     'openai' => 'sk-openai-valid-project-key-1234567890',
     'deepseek' => 'deepseek-valid-provider-key-1234567890',
     'google' => 'google-valid-provider-key-1234567890',
+	'anthropic' => 'anthropic-valid-provider-key-1234567890',
 );
 
-check_case(cbia_supported_credential_providers() === array('openai', 'google', 'deepseek'), 'only implemented credential providers are exposed');
+check_case(cbia_supported_credential_providers() === array('openai', 'google', 'deepseek', 'anthropic'), 'only implemented credential providers are exposed');
 foreach ($keys as $provider => $key) check_case(cbia_sanitize_provider_api_key($provider, $key)['valid'], "valid {$provider} key");
 check_case(cbia_sanitize_provider_api_key('openai', "  {$keys['openai']}  ")['value'] === $keys['openai'], 'boundary spaces removed');
 check_case(cbia_sanitize_provider_api_key('openai', "\r\n{$keys['openai']}\r\n")['value'] === $keys['openai'], 'boundary CR/LF removed');
@@ -103,14 +104,14 @@ $main_path = is_file($root . '/cbiastudio-blogflow-ai.php') ? $root . '/cbiastud
 $main = file_get_contents($main_path);
 $runtime = substr($hooks, strpos($hooks, 'function cbia_ajax_start_generation()'), strpos($hooks, "if (!function_exists('cbia_ajax_get_oldposts_log'))") - strpos($hooks, 'function cbia_ajax_start_generation()'));
 
-foreach (array('openai', 'google', 'deepseek') as $provider) check_case(source_has($view, "'{$provider}'"), "{$provider} connection card source exists");
+foreach (array('openai', 'google', 'deepseek', 'anthropic') as $provider) check_case(source_has($view, "'{$provider}'"), "{$provider} connection card source exists");
 check_case(!source_has($view, "'freepik' =>"), 'unsupported Freepik card is absent');
 check_case(source_has($view, 'cbia-provider-credential-input') && source_has($view, 'type="password" value="" autocomplete="new-password"'), 'credential input is empty password field');
 check_case(!source_has($view, 'name="provider_api_key_text[') && !source_has($view, 'name="provider_api_key_image['), 'legacy credential fields are removed from general form');
 check_case(!source_has($view, 'cbia_config_save_api_keys'), 'legacy save API keys button removed');
 check_case(source_has($view, 'aria-live="polite"'), 'AJAX result is announced accessibly');
 check_case(source_has($view, 'data-disconnect-confirm='), 'disconnect requires explicit confirmation');
-check_case(source_has($view, 'data-action="connect"') && source_has($view, 'data-action="test"') && source_has($view, 'data-action="disconnect"'), 'connection actions render');
+check_case(source_has($view, 'data-action="open-editor"') && source_has($view, 'data-action="save-key"') && source_has($view, 'data-action="test"') && source_has($view, 'data-action="disconnect"'), 'connection actions render');
 check_case(source_has($view, 'In use for text') && source_has($view, 'In use for images'), 'usage badges derive from provider selections');
 check_case(source_has($js, "request(card, 'cbia_provider_connection_save', input ? input.value : '')") && source_has($js, "params.append('api_key', apiKey)"), 'save AJAX sends only provider credential payload');
 check_case(source_has($js, "window.confirm(card.getAttribute('data-disconnect-confirm')"), 'disconnect confirmation wired');

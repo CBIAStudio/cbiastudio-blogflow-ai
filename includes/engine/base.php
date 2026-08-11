@@ -121,7 +121,7 @@ if (!function_exists('cbia_provider_api_keys_option_name')) {
 
 if (!function_exists('cbia_supported_credential_providers')) {
     function cbia_supported_credential_providers(): array {
-        return array('openai', 'google', 'deepseek');
+        return array('openai', 'google', 'deepseek', 'anthropic');
     }
 }
 
@@ -440,6 +440,7 @@ if (!function_exists('cbia_get_provider_api_key')) {
             'openai'  => (string)($settings['openai_api_key'] ?? ''),
             'google'  => (string)($settings['google_api_key'] ?? ''),
             'deepseek'=> (string)($settings['deepseek_api_key'] ?? ''),
+			'anthropic'=> (string)($settings['anthropic_api_key'] ?? ''),
         );
         $main_key = (string)($map[$provider] ?? '');
 
@@ -726,7 +727,7 @@ if (!function_exists('cbia_run_test_configuration')) {
         $key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($provider);
         $image_key_configured = function_exists('cbia_has_provider_api_key') && cbia_has_provider_api_key($image_provider);
         $stop_before = cbia_is_stop_requested();
-        $endpoints = array('openai' => 'api.openai.com', 'deepseek' => 'api.deepseek.com', 'google' => 'generativelanguage.googleapis.com');
+		$endpoints = array('openai' => 'api.openai.com', 'deepseek' => 'api.deepseek.com', 'google' => 'generativelanguage.googleapis.com', 'anthropic' => 'api.anthropic.com');
         $endpoint = (string)($endpoints[$provider] ?? 'unknown');
         $thinking = sanitize_key((string)($settings['deepseek_thinking_mode'] ?? 'disabled'));
         if (!in_array($thinking, array('disabled', 'enabled'), true)) $thinking = 'disabled';
@@ -739,7 +740,7 @@ if (!function_exists('cbia_run_test_configuration')) {
         $log('TEST text: provider=' . $provider . ' model=' . $model . ' endpoint=' . $endpoint . ' api_key_configured=' . ($key_configured ? 'yes' : 'no') . ' fallback_allowed=no attempt=1/1 thinking=' . ($provider === 'deepseek' ? $thinking : 'n/a') . ' timeout=30 stop_flag_before=' . ($stop_before ? 'enabled' : 'disabled'));
         $log('TEST images: provider=' . $image_provider . ' model=' . $image_model . ' api_key_configured=' . ($image_key_configured ? 'yes' : 'no') . ' result=local_configuration_only paid_generation=no');
 
-        $allowed_providers = array('openai', 'deepseek', 'google');
+		$allowed_providers = array('openai', 'deepseek', 'google', 'anthropic');
         $allowed_models = function_exists('cbia_providers_get_text_model_list') ? (array)cbia_providers_get_text_model_list($provider) : array();
         $error_type = '';
         if (!in_array($provider, $allowed_providers, true)) $error_type = 'unsupported_provider';

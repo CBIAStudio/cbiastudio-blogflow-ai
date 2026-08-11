@@ -904,6 +904,10 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                     'input_tokens' => (int)($usage['input_tokens'] ?? 0),
                     'output_tokens' => (int)($usage['output_tokens'] ?? 0),
                     'cached_input_tokens' => (int)($usage['cached_input_tokens'] ?? 0),
+					'cache_creation_input_tokens' => (int)($usage['cache_creation_input_tokens'] ?? 0),
+					'cache_creation_5m_input_tokens' => (int)($usage['cache_creation_5m_input_tokens'] ?? ($usage['cache_creation_input_tokens'] ?? 0)),
+					'cache_creation_1h_input_tokens' => (int)($usage['cache_creation_1h_input_tokens'] ?? 0),
+					'cache_read_input_tokens' => (int)($usage['cache_read_input_tokens'] ?? ($usage['cached_input_tokens'] ?? 0)),
                     'ok' => 1,
                 )));
             }
@@ -937,6 +941,10 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                         'input_tokens' => (int)($call_usage['input_tokens'] ?? 0),
                         'output_tokens' => (int)($call_usage['output_tokens'] ?? 0),
                         'cached_input_tokens' => (int)($call_usage['cached_input_tokens'] ?? 0),
+						'cache_creation_input_tokens' => (int)($call_usage['cache_creation_input_tokens'] ?? 0),
+						'cache_creation_5m_input_tokens' => (int)($call_usage['cache_creation_5m_input_tokens'] ?? ($call_usage['cache_creation_input_tokens'] ?? 0)),
+						'cache_creation_1h_input_tokens' => (int)($call_usage['cache_creation_1h_input_tokens'] ?? 0),
+						'cache_read_input_tokens' => (int)($call_usage['cache_read_input_tokens'] ?? ($call_usage['cached_input_tokens'] ?? 0)),
                         'ok' => !empty($call['ok']) ? 1 : 0,
                         'error' => sanitize_text_field((string)($call['error'] ?? '')),
                     )));

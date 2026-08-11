@@ -216,6 +216,29 @@ if (!function_exists('cbia_costes_calculate_row')) {
 
         if ($type !== 'image') {
             $provider = sanitize_key((string)($row['provider'] ?? ''));
+			if ( $provider === 'anthropic' || strpos( $model, 'claude-' ) === 0 ) {
+				$event_timestamp = (string) ( $row['ts'] ?? '' );
+				$period = function_exists( 'cbia_provider_catalog_price_period' ) ? cbia_provider_catalog_price_period( 'anthropic', $model, $event_timestamp !== '' ? $event_timestamp : null ) : array();
+				if ( empty( $period ) || ( $in + $out ) <= 0 ) {
+					$result['cost_reason'] = empty( $period ) ? 'model_without_pricing' : 'missing_token_usage';
+					return $result;
+				}
+				$cache_creation = max( 0, (int) ( $row['cache_creation_input_tokens'] ?? 0 ) );
+				$cache_creation_5m = max( 0, (int) ( $row['cache_creation_5m_input_tokens'] ?? $cache_creation ) );
+				$cache_creation_1h = max( 0, (int) ( $row['cache_creation_1h_input_tokens'] ?? 0 ) );
+				$cache_read = max( 0, (int) ( $row['cache_read_input_tokens'] ?? $cin ) );
+				$input_rate = (int) $period['input_price_micro_usd_per_mtok'] / 1000000;
+				$cache_write_5m_rate = null === ( $period['cache_write_price_micro_usd_per_mtok'] ?? null ) ? $input_rate : (int) $period['cache_write_price_micro_usd_per_mtok'] / 1000000;
+				$cache_write_1h_rate = null === ( $period['cache_write_1h_price_micro_usd_per_mtok'] ?? null ) ? $cache_write_5m_rate : (int) $period['cache_write_1h_price_micro_usd_per_mtok'] / 1000000;
+				$cache_read_rate = null === ( $period['cached_input_price_micro_usd_per_mtok'] ?? null ) ? $input_rate : (int) $period['cached_input_price_micro_usd_per_mtok'] / 1000000;
+				$output_rate = (int) $period['output_price_micro_usd_per_mtok'] / 1000000;
+				$micro = ( $in * $input_rate ) + ( $cache_creation_5m * $cache_write_5m_rate ) + ( $cache_creation_1h * $cache_write_1h_rate ) + ( $cache_read * $cache_read_rate ) + ( $out * $output_rate );
+				$result['cost_micro_usd'] = max( 0, (int) round( $micro ) );
+				$result['cost_status'] = 'exact';
+				$result['cost_source'] = 'api_usage_local_catalog';
+				$result['cost_reason'] = 'api_usage';
+				return $result;
+			}
             if (($provider === 'deepseek' || strpos($model, 'deepseek-') === 0) && function_exists('cbia_deepseek_calculate_cost')) {
                 $deepseek_cost = cbia_deepseek_calculate_cost($model, array(
                     'input_tokens' => $in,
@@ -539,6 +562,10 @@ if (!function_exists('cbia_costes_record_usage')) {
             'model_effective' => sanitize_text_field((string)($usage['model_effective'] ?? $model)),
             'in' => max(0, $in_t),
             'cin' => max(0, $cin_t),
+			'cache_creation_input_tokens' => max(0, (int)($usage['cache_creation_input_tokens'] ?? 0)),
+			'cache_creation_5m_input_tokens' => max(0, (int)($usage['cache_creation_5m_input_tokens'] ?? ($usage['cache_creation_input_tokens'] ?? 0))),
+			'cache_creation_1h_input_tokens' => max(0, (int)($usage['cache_creation_1h_input_tokens'] ?? 0)),
+			'cache_read_input_tokens' => max(0, (int)($usage['cache_read_input_tokens'] ?? $cin_t)),
             'cache_hit_tokens' => max(0, (int)($usage['cache_hit_tokens'] ?? $cin_t)),
             'cache_miss_tokens' => max(0, (int)($usage['cache_miss_tokens'] ?? 0)),
             'cache_breakdown_available' => !empty($usage['cache_breakdown_available']) ? 1 : 0,
@@ -956,6 +983,10 @@ if (!function_exists('cbia_costes_record_failed_attempts')) {
                 'model_effective' => $model,
                 'input_tokens' => max(0, (int)($attempt['input_tokens'] ?? 0)),
                 'cached_input_tokens' => max(0, (int)($attempt['cached_input_tokens'] ?? 0)),
+				'cache_creation_input_tokens' => max(0, (int)($attempt['cache_creation_input_tokens'] ?? 0)),
+				'cache_creation_5m_input_tokens' => max(0, (int)($attempt['cache_creation_5m_input_tokens'] ?? ($attempt['cache_creation_input_tokens'] ?? 0))),
+				'cache_creation_1h_input_tokens' => max(0, (int)($attempt['cache_creation_1h_input_tokens'] ?? 0)),
+				'cache_read_input_tokens' => max(0, (int)($attempt['cache_read_input_tokens'] ?? ($attempt['cached_input_tokens'] ?? 0))),
                 'cached_tokens_reported' => !empty($attempt['cached_tokens_reported']) ? 1 : 0,
                 'cache_hit_tokens' => max(0, (int)($attempt['cache_hit_tokens'] ?? ($attempt['cached_input_tokens'] ?? 0))),
                 'cache_miss_tokens' => max(0, (int)($attempt['cache_miss_tokens'] ?? 0)),

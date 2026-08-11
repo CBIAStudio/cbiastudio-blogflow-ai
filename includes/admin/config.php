@@ -64,6 +64,7 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 		$api_key = cbia_get_provider_api_key('openai');
 		$google_api_key = cbia_get_provider_api_key('google');
 		$deepseek_api_key = cbia_get_provider_api_key('deepseek');
+		$anthropic_api_key = cbia_get_provider_api_key('anthropic');
 
 		// CAMBIO: modelos por proveedor (texto)
 		$text_model = isset($text_models_post[$text_provider]) ? sanitize_text_field((string)$text_models_post[$text_provider]) : '';
@@ -354,6 +355,7 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 			'openai'  => $api_key,
 			'google'  => $google_api_key,
 			'deepseek'=> $deepseek_api_key,
+			'anthropic'=> $anthropic_api_key,
 		];
 		if (empty($key_map[$text_provider] ?? '')) {
 			/* translators: %s: provider name */
