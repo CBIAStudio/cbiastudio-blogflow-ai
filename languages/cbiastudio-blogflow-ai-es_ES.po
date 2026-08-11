@@ -1,8 +1,9 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: CBIAStudio BlogFlow with AI 2.1.7\n"
-"Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-08-03 12:17+0200\n"
+"Project-Id-Version: CBIAStudio BlogFlow AI 2.2.0\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/cbiastudio-"
+"blogflow-ai/\n"
+"POT-Creation-Date: 2026-08-11 12:39+0200\n"
 "PO-Revision-Date: 2026-08-03 12:20+0200\n"
 "Last-Translator: CBIAStudio\n"
 "Language-Team: Spanish\n"
@@ -72,7 +73,7 @@ msgstr "No se pudo cargar la configuración."
 msgid "Costs"
 msgstr "Costos"
 
-#: includes/admin/costs-admin.php:40 includes/domain/costs.php:1675
+#: includes/admin/costs-admin.php:40 includes/domain/costs.php:1676
 msgid "Could not load Costs."
 msgstr "No se pudieron cargar los costos."
 
@@ -144,21 +145,21 @@ msgid "Could not load Usage."
 msgstr "No se pudo cargar Uso."
 
 #: includes/admin/views/blog.php:152 includes/admin/views/blog.php:169
-#: includes/core/hooks.php:5203 includes/core/hooks.php:5248
+#: includes/core/hooks.php:5212 includes/core/hooks.php:5257
 #: includes/services/blog-service.php:348
 #: includes/services/blog-service.php:381
 msgid "idle"
 msgstr "inactivo"
 
 #: includes/admin/views/blog.php:153 includes/admin/views/blog.php:171
-#: includes/admin/views/blog.php:172 includes/core/hooks.php:5204
-#: includes/core/hooks.php:5251 includes/core/hooks.php:5252
+#: includes/admin/views/blog.php:172 includes/core/hooks.php:5213
+#: includes/core/hooks.php:5260 includes/core/hooks.php:5261
 #: includes/services/blog-service.php:349
 #: includes/services/blog-service.php:384
 msgid "(no records)"
 msgstr "(sin registros)"
 
-#: includes/admin/views/blog.php:165 includes/core/hooks.php:5244
+#: includes/admin/views/blog.php:165 includes/core/hooks.php:5253
 #: includes/services/blog-service.php:377
 #, php-format
 msgid "RUNNING | idx %1$d of %2$d"
@@ -495,7 +496,7 @@ msgstr ""
 msgid "Save prompt settings"
 msgstr "Guardar ajustes del prompt"
 
-#: includes/admin/views/blog.php:441 includes/admin/views/config.php:423
+#: includes/admin/views/blog.php:441 includes/admin/views/config.php:449
 msgid "Close"
 msgstr "Cerca"
 
@@ -891,52 +892,52 @@ msgstr ""
 "Opciones personalizadas activas. El perfil de prompt permanece seleccionado, "
 "pero se están utilizando tus ajustes."
 
-#: includes/admin/views/config.php:116
+#: includes/admin/views/config.php:118
 msgid "Settings saved successfully."
 msgstr "La configuración se guardó correctamente."
 
-#: includes/admin/views/config.php:119
+#: includes/admin/views/config.php:121
 msgid "API keys saved successfully."
 msgstr "Las claves API se guardaron correctamente."
 
-#: includes/admin/views/config.php:129 includes/admin/views/config.php:130
+#: includes/admin/views/config.php:131 includes/admin/views/config.php:132
 msgid "Text and images"
 msgstr "Texto e imágenes"
 
-#: includes/admin/views/config.php:131 includes/admin/views/config.php:160
-#: includes/admin/views/usage.php:276 includes/admin/views/usage.php:467
-#: includes/admin/views/usage.php:937 includes/admin/views/usage.php:1050
-#: includes/admin/views/usage.php:1111 includes/admin/views/usage.php:1153
-#: includes/core/hooks.php:604 includes/core/hooks.php:1019
-#: includes/core/hooks.php:1918
+#: includes/admin/views/config.php:133 includes/admin/views/config.php:134
+#: includes/admin/views/config.php:165 includes/admin/views/usage.php:276
+#: includes/admin/views/usage.php:467 includes/admin/views/usage.php:937
+#: includes/admin/views/usage.php:1050 includes/admin/views/usage.php:1111
+#: includes/admin/views/usage.php:1153 includes/core/hooks.php:604
+#: includes/core/hooks.php:1019 includes/core/hooks.php:1918
 msgid "Text"
 msgstr "Texto"
 
-#: includes/admin/views/config.php:134 includes/core/hooks.php:3787
+#: includes/admin/views/config.php:137 includes/core/hooks.php:3787
 msgid "Not configured"
 msgstr "No configurado"
 
-#: includes/admin/views/config.php:135 includes/core/hooks.php:3788
+#: includes/admin/views/config.php:138 includes/core/hooks.php:3788
 msgid "Connection not checked"
 msgstr "Conexión no comprobada"
 
-#: includes/admin/views/config.php:136 includes/core/hooks.php:3789
+#: includes/admin/views/config.php:139 includes/core/hooks.php:3789
 msgid "Connection verified"
 msgstr "Conexión verificada"
 
-#: includes/admin/views/config.php:137 includes/core/hooks.php:3790
+#: includes/admin/views/config.php:140 includes/core/hooks.php:3790
 msgid "Key rejected"
 msgstr "Clave rechazada"
 
-#: includes/admin/views/config.php:139
+#: includes/admin/views/config.php:142
 msgid "The connection request could not be completed."
 msgstr "No se pudo completar la solicitud de conexión."
 
-#: includes/admin/views/config.php:140
+#: includes/admin/views/config.php:143
 msgid "AI connections"
 msgstr "Conexiones de IA"
 
-#: includes/admin/views/config.php:141
+#: includes/admin/views/config.php:144
 msgid ""
 "Connect the API keys for the providers CBIA will use to generate text and "
 "images."
@@ -944,28 +945,28 @@ msgstr ""
 "Conecta las claves API de los proveedores que utilizará CBIA para generar "
 "texto e imágenes."
 
-#: includes/admin/views/config.php:152
+#: includes/admin/views/config.php:155
 msgid "In use for text and images"
 msgstr "En uso para texto e imágenes"
 
-#: includes/admin/views/config.php:153
+#: includes/admin/views/config.php:156
 msgid "In use for text"
 msgstr "En uso para texto"
 
-#: includes/admin/views/config.php:154
+#: includes/admin/views/config.php:157
 msgid "In use for images"
 msgstr "En uso para imágenes"
 
-#: includes/admin/views/config.php:157 includes/core/hooks.php:3802
+#: includes/admin/views/config.php:160 includes/core/hooks.php:3804
 msgid "Enter a new key to replace the current one"
 msgstr "Introduce una nueva clave para sustituir la actual"
 
-#: includes/admin/views/config.php:157 includes/core/hooks.php:3802
+#: includes/admin/views/config.php:160 includes/core/hooks.php:3804
 #, php-format
 msgid "Enter your %s API key"
 msgstr "Introduce tu clave API de %s"
 
-#: includes/admin/views/config.php:158
+#: includes/admin/views/config.php:161
 #, php-format
 msgid ""
 "Do you want to disconnect %s? The saved key will be deleted, but all other "
@@ -974,163 +975,179 @@ msgstr ""
 "¿Quieres desconectar %s? La clave guardada se eliminará, pero el resto de "
 "ajustes se conservará."
 
-#: includes/admin/views/config.php:164
+#: includes/admin/views/config.php:170 includes/core/hooks.php:3802
+msgid "Update key"
+msgstr "Actualizar clave"
+
+#: includes/admin/views/config.php:170 includes/admin/views/config.php:176
+#: includes/core/hooks.php:3802
+msgid "Connect"
+msgstr "Conectar"
+
+msgid "Details"
+msgstr "Detalles"
+
+#: includes/admin/views/config.php:174
 #, php-format
 msgid "%s API key"
 msgstr "Clave API de %s"
 
-#: includes/admin/views/config.php:167 includes/core/hooks.php:3800
-msgid "Update key"
-msgstr "Actualizar clave"
+#: includes/admin/views/config.php:176
+msgid "Save new key"
+msgstr "Guardar nueva clave"
 
-#: includes/admin/views/config.php:167 includes/core/hooks.php:3800
-msgid "Connect"
-msgstr "Conectar"
-
-#: includes/admin/views/config.php:168 includes/core/hooks.php:3463
+#: includes/admin/views/config.php:178 includes/core/hooks.php:3463
 msgid "Test connection"
 msgstr "Probar conexión"
 
-#: includes/admin/views/config.php:169 includes/core/hooks.php:3801
+#: includes/admin/views/config.php:179
+msgid "Get API key"
+msgstr "Obtener clave API"
+
+#: includes/admin/views/config.php:180 includes/core/hooks.php:3803
 msgid "Disconnect"
 msgstr "Desconectar"
 
-#: includes/admin/views/config.php:172 includes/core/hooks.php:3799
+msgid "Technical details"
+msgstr "Detalles técnicos"
+
+#: includes/admin/views/config.php:184 includes/core/hooks.php:3799
 #, php-format
 msgid "Last successful check: %s"
 msgstr "Última comprobación correcta: %s"
 
-#: includes/admin/views/config.php:174
-msgid "Get API key"
-msgstr "Obtener clave API"
+#: includes/admin/views/config.php:186 includes/core/hooks.php:3801
+msgid "Models returned by the provider: %d"
+msgstr "Modelos devueltos por el proveedor: %d"
 
-#: includes/admin/views/config.php:185
+#: includes/admin/views/config.php:199
 msgid "Provider and model"
 msgstr "Proveedor y modelo"
 
-#: includes/admin/views/config.php:186
+#: includes/admin/views/config.php:200
 msgid "Configure the AI engines used for text and images."
 msgstr "Configure los motores de IA utilizados para texto e imágenes."
 
-#: includes/admin/views/config.php:197 includes/admin/views/config.php:205
-#: includes/admin/views/config.php:224 includes/admin/views/config.php:238
-#: includes/admin/views/config.php:261 includes/admin/views/config.php:275
+#: includes/admin/views/config.php:211 includes/admin/views/config.php:219
+#: includes/admin/views/config.php:238 includes/admin/views/config.php:252
+#: includes/admin/views/config.php:275 includes/admin/views/config.php:289
 msgid "connected"
 msgstr "conectado"
 
-#: includes/admin/views/config.php:197 includes/admin/views/config.php:205
-#: includes/admin/views/config.php:224 includes/admin/views/config.php:238
-#: includes/admin/views/config.php:261 includes/admin/views/config.php:275
+#: includes/admin/views/config.php:211 includes/admin/views/config.php:219
+#: includes/admin/views/config.php:238 includes/admin/views/config.php:252
+#: includes/admin/views/config.php:275 includes/admin/views/config.php:289
 msgid "not configured"
 msgstr "sin configurar"
 
-#: includes/admin/views/config.php:214
+#: includes/admin/views/config.php:228
 msgid "Provider (text)"
 msgstr "Proveedor (texto)"
 
-#: includes/admin/views/config.php:251
+#: includes/admin/views/config.php:265
 msgid "Provider (image)"
 msgstr "Proveedor (imagen)"
 
-#: includes/admin/views/config.php:296
+#: includes/admin/views/config.php:303 includes/admin/views/config.php:316
+msgid "Recommended"
+msgstr "Recomendado"
+
+#: includes/admin/views/config.php:304
+msgid "Current"
+msgstr "Actual"
+
+msgid "Economic"
+msgstr "Económico"
+
+#: includes/admin/views/config.php:306
+msgid "Maximum quality"
+msgstr "Máxima calidad"
+
+msgid "Preview"
+msgstr "Vista previa"
+
+msgid "Compatibility"
+msgstr "Compatibilidad"
+
+#: includes/admin/views/config.php:336
 msgid "Model (text)"
 msgstr "Modelo (texto)"
 
-#: includes/admin/views/config.php:302
-msgid "DeepSeek V4 Flash — Recommended"
-msgstr "Flash DeepSeek V4 — Recomendado"
-
-#: includes/admin/views/config.php:303
-msgid "DeepSeek V4 Pro — Maximum capability"
-msgstr "DeepSeek V4 Pro: capacidad máxima"
-
-#: includes/admin/views/config.php:318
+#: includes/admin/views/config.php:351
 msgid "Model (image)"
 msgstr "Modelo (imagen)"
 
-#: includes/admin/views/config.php:321 includes/admin/views/oldposts.php:436
+#: includes/admin/views/config.php:354 includes/admin/views/oldposts.php:436
 #: includes/admin/views/oldposts.php:589 includes/admin/views/oldposts.php:592
 msgid "Not available"
 msgstr "No disponible"
 
-#: includes/admin/views/config.php:325
-msgid "GPT Image 2 — Recommended"
-msgstr "GPT Imagen 2 — Recomendado"
-
-#: includes/admin/views/config.php:326
-msgid "GPT Image 1"
-msgstr "GPT Imagen 1"
-
-#: includes/admin/views/config.php:327
-msgid "GPT Image 1 Mini"
-msgstr "GPT Imagen 1 Mini"
-
-#: includes/admin/views/config.php:341 includes/admin/views/usage.php:15
+#: includes/admin/views/config.php:367 includes/admin/views/usage.php:15
 #: includes/admin/views/usage.php:867 includes/admin/views/usage.php:1160
 msgid "Automatic"
 msgstr "Automática"
 
-#: includes/admin/views/config.php:341 includes/admin/views/usage.php:15
+#: includes/admin/views/config.php:367 includes/admin/views/usage.php:15
 #: includes/admin/views/usage.php:868 includes/admin/views/usage.php:1074
 #: includes/admin/views/usage.php:1161
 msgid "Low"
 msgstr "Baja"
 
-#: includes/admin/views/config.php:341 includes/admin/views/usage.php:15
+#: includes/admin/views/config.php:367 includes/admin/views/usage.php:15
 #: includes/admin/views/usage.php:869 includes/admin/views/usage.php:1075
 #: includes/admin/views/usage.php:1162 includes/core/hooks.php:3304
 msgid "Medium"
 msgstr "Media"
 
-#: includes/admin/views/config.php:341 includes/admin/views/config.php:365
+#: includes/admin/views/config.php:367 includes/admin/views/config.php:391
 #: includes/admin/views/usage.php:15 includes/admin/views/usage.php:870
 #: includes/admin/views/usage.php:1076 includes/admin/views/usage.php:1163
 msgid "High"
 msgstr "Alta"
 
-#: includes/admin/views/config.php:342 includes/support/image-pricing.php:27
+#: includes/admin/views/config.php:368 includes/support/image-pricing.php:29
 msgid "Use default quality"
 msgstr "Usar calidad predeterminada"
 
-#: includes/admin/views/config.php:344
+#: includes/admin/views/config.php:370
 msgid "Default image quality"
 msgstr "Calidad de imagen predeterminada"
 
-#: includes/admin/views/config.php:344
+#: includes/admin/views/config.php:370
 msgid "This quality is used by default for images without a specific setting."
 msgstr ""
 "Esta calidad se utiliza de forma predeterminada para imágenes sin una "
 "configuración específica."
 
-#: includes/admin/views/config.php:345
+#: includes/admin/views/config.php:371
 msgid "Featured image quality"
 msgstr "Calidad de la imagen destacada"
 
-#: includes/admin/views/config.php:345
+#: includes/admin/views/config.php:371
 msgid "Allows a different quality for the article featured image."
 msgstr "Permite una calidad diferente para la imagen destacada del artículo."
 
-#: includes/admin/views/config.php:346
+#: includes/admin/views/config.php:372
 msgid "Content image quality"
 msgstr "Calidad de imagen del contenido"
 
-#: includes/admin/views/config.php:346
+#: includes/admin/views/config.php:372
 msgid "Applied to images inserted inside the article content."
 msgstr "Se aplica a imágenes insertadas dentro del contenido del artículo."
 
-#: includes/admin/views/config.php:354 includes/admin/views/usage.php:842
+#: includes/admin/views/config.php:380 includes/admin/views/usage.php:842
 msgid "Reasoning mode"
 msgstr "modo de razonamiento"
 
-#: includes/admin/views/config.php:356
+#: includes/admin/views/config.php:382
 msgid "Disabled — recommended for articles"
 msgstr "Deshabilitado: recomendado para artículos"
 
-#: includes/admin/views/config.php:357
+#: includes/admin/views/config.php:383
 msgid "Enabled — advanced reasoning"
 msgstr "Habilitado: razonamiento avanzado"
 
-#: includes/admin/views/config.php:358
+#: includes/admin/views/config.php:384
 msgid ""
 "When enabled, reasoning tokens consume part of the output-token budget and "
 "can leave less room for visible article text."
@@ -1139,7 +1156,7 @@ msgstr ""
 "presupuesto del token de salida y pueden dejar menos espacio para el texto "
 "visible del artículo."
 
-#: includes/admin/views/config.php:360
+#: includes/admin/views/config.php:386
 msgid ""
 "Thinking is enabled for a medium or long article with a low output-token "
 "limit. Increase the limit or disable thinking to reduce truncation and "
@@ -1149,19 +1166,19 @@ msgstr ""
 "límite de token de salida bajo. Aumente el límite o deshabilite el "
 "pensamiento para reducir el truncamiento y la expansión."
 
-#: includes/admin/views/config.php:363 includes/admin/views/usage.php:843
+#: includes/admin/views/config.php:389 includes/admin/views/usage.php:843
 msgid "Reasoning effort"
 msgstr "esfuerzo de razonamiento"
 
-#: includes/admin/views/config.php:366
+#: includes/admin/views/config.php:392
 msgid "Maximum"
 msgstr "Máximo"
 
-#: includes/admin/views/config.php:369
+#: includes/admin/views/config.php:395
 msgid "Indicative pricing"
 msgstr "Precios indicativos"
 
-#: includes/admin/views/config.php:370
+#: includes/admin/views/config.php:396
 msgid ""
 "Flash: cache hit $0.0028, cache miss $0.14, output $0.28 per 1M tokens. Pro: "
 "cache hit $0.003625, cache miss $0.435, output $0.87 per 1M tokens. Verified "
@@ -1172,7 +1189,7 @@ msgstr ""
 "0,435, genera $ 0,87 por 1 millón de tokens. Verificado el 14 de julio de "
 "2026."
 
-#: includes/admin/views/config.php:373
+#: includes/admin/views/config.php:399
 msgid ""
 "You can use different providers for text and image generation. DeepSeek is "
 "available only for text."
@@ -1180,49 +1197,49 @@ msgstr ""
 "Puede utilizar diferentes proveedores para la generación de texto e "
 "imágenes. DeepSeek está disponible solo para texto."
 
-#: includes/admin/views/config.php:379
+#: includes/admin/views/config.php:405
 msgid "Preferences"
 msgstr "Preferencias"
 
-#: includes/admin/views/config.php:382
+#: includes/admin/views/config.php:408
 msgid "Temperature"
 msgstr "Temperatura"
 
-#: includes/admin/views/config.php:384
+#: includes/admin/views/config.php:410
 msgid "Recommended range: 0.0 to 1.0 (max 2.0)."
 msgstr "Rango recomendado: 0,0 a 1,0 (máx. 2,0)."
 
-#: includes/admin/views/config.php:387
+#: includes/admin/views/config.php:413
 msgid "Max output tokens"
 msgstr "Fichas de salida máxima"
 
-#: includes/admin/views/config.php:389
+#: includes/admin/views/config.php:415
 msgid ""
 "Increase this value if the generated text is cut off. Recommended: 6000-8000."
 msgstr ""
 "Aumente este valor si el texto generado está cortado. Recomendado: 6000-8000."
 
-#: includes/admin/views/config.php:392
+#: includes/admin/views/config.php:418
 msgid "Post length"
 msgstr "Longitud de la entrada"
 
-#: includes/admin/views/config.php:394
+#: includes/admin/views/config.php:420
 msgid "Short (~1000 words)"
 msgstr "Corto (~1000 palabras)"
 
-#: includes/admin/views/config.php:395
+#: includes/admin/views/config.php:421
 msgid "Medium (~1800-2000 words)"
 msgstr "Medio (~1800-2000 palabras)"
 
-#: includes/admin/views/config.php:396
+#: includes/admin/views/config.php:422
 msgid "Long (~2000-2200 words)"
 msgstr "Largo (~2000-2200 palabras)"
 
-#: includes/admin/views/config.php:408
+#: includes/admin/views/config.php:434
 msgid "Featured image prompt"
 msgstr "Prompt de imagen destacada"
 
-#: includes/admin/views/config.php:409
+#: includes/admin/views/config.php:435
 msgid ""
 "The base prompt is already optimized. It is automatically combined with "
 "[IMAGE: ...] and the post title. You only need to edit it if you want to "
@@ -1232,52 +1249,52 @@ msgstr ""
 "[IMAGE: ...] y el título de la publicación. Sólo necesitas editarlo si "
 "quieres cambiar el estilo."
 
-#: includes/admin/views/config.php:410
+#: includes/admin/views/config.php:436
 msgid "Available placeholders: {title}, {desc}, {format}."
 msgstr "Marcadores de posición disponibles: {title}, {desc}, {format}."
 
-#: includes/admin/views/config.php:414
+#: includes/admin/views/config.php:440
 msgid "Edit featured prompt"
 msgstr "Editar destacado prompt"
 
-#: includes/admin/views/config.php:416
+#: includes/admin/views/config.php:442
 msgid "The post title is inserted automatically into {title}."
 msgstr "El título de la publicación se inserta automáticamente en {title}."
 
-#: includes/admin/views/config.php:422
+#: includes/admin/views/config.php:448
 msgid "Edit prompt"
 msgstr "Editar prompt"
 
-#: includes/admin/views/config.php:427
+#: includes/admin/views/config.php:453
 msgid "Save base prompt"
 msgstr "Guardar prompt base"
 
-#: includes/admin/views/config.php:436 includes/admin/views/usage.php:865
+#: includes/admin/views/config.php:462 includes/admin/views/usage.php:865
 #: includes/admin/views/usage.php:1158
 msgid "Image quality"
 msgstr "Calidad de imagen"
 
-#: includes/admin/views/config.php:447
+#: includes/admin/views/config.php:473
 msgid "Internal images (Pro)"
 msgstr "Imágenes internas (Pro)"
 
-#: includes/admin/views/config.php:449
+#: includes/admin/views/config.php:475
 msgid "0 internal images (featured only)"
 msgstr "0 imágenes internas (solo destacadas)"
 
-#: includes/admin/views/config.php:450
+#: includes/admin/views/config.php:476
 msgid "1 internal image"
 msgstr "1 imagen interna"
 
-#: includes/admin/views/config.php:451
+#: includes/admin/views/config.php:477
 msgid "2 internal images"
 msgstr "2 imágenes internas"
 
-#: includes/admin/views/config.php:452
+#: includes/admin/views/config.php:478
 msgid "3 internal images"
 msgstr "3 imágenes internas"
 
-#: includes/admin/views/config.php:461
+#: includes/admin/views/config.php:487
 msgid ""
 "The featured image is always generated. This selector controls only internal "
 "images."
@@ -1285,11 +1302,11 @@ msgstr ""
 "La imagen destacada siempre se genera. Este selector controla sólo imágenes "
 "internas."
 
-#: includes/admin/views/config.php:464
+#: includes/admin/views/config.php:490
 msgid "Estimated image output cost:"
 msgstr "Costo estimado de salida de imagen:"
 
-#: includes/admin/views/config.php:466
+#: includes/admin/views/config.php:492
 msgid ""
 "Indicative estimate based on OpenAI output prices verified on July 10, 2026. "
 "Actual cost may also include prompt tokens and, for edits, input images. "
@@ -1299,15 +1316,15 @@ msgstr ""
 "el 10 de julio de 2026. El costo real también puede incluir tokens prompt y, "
 "para ediciones, imágenes de entrada. OpenAI puede cambiar sus precios."
 
-#: includes/admin/views/config.php:470
+#: includes/admin/views/config.php:496
 msgid "Pro feature:"
 msgstr "Característica profesional:"
 
-#: includes/admin/views/config.php:470
+#: includes/admin/views/config.php:496
 msgid "internal images are available in Pro only."
 msgstr "Las imágenes internas solo están disponibles en Pro."
 
-#: includes/admin/views/config.php:471
+#: includes/admin/views/config.php:497
 msgid ""
 "This module generates and styles internal article images (up to 3 slots) "
 "with independent prompts and formats."
@@ -1315,17 +1332,17 @@ msgstr ""
 "Este módulo genera y diseña imágenes de artículos internos (hasta 3 "
 "espacios) con formatos y prompts independientes."
 
-#: includes/admin/views/config.php:486
+#: includes/admin/views/config.php:512
 #, php-format
 msgid "Internal image %d format"
 msgstr "Formato de la imagen interior %d"
 
-#: includes/admin/views/config.php:495
+#: includes/admin/views/config.php:521
 #, php-format
 msgid "Edit internal prompt %d"
 msgstr "Editar prompt interno %d"
 
-#: includes/admin/views/config.php:498
+#: includes/admin/views/config.php:524
 #, php-format
 msgid ""
 "This format applies only to internal image %d. The base prompt is already "
@@ -1334,11 +1351,11 @@ msgstr ""
 "Este formato se aplica únicamente a la imagen interna %d. La base prompt ya "
 "está optimizada."
 
-#: includes/admin/views/config.php:502
+#: includes/admin/views/config.php:528
 msgid "Internal banner CSS"
 msgstr "CSS del banner interior"
 
-#: includes/admin/views/config.php:504
+#: includes/admin/views/config.php:530
 msgid ""
 "Applied to img.cbia-banner. You can adjust it for your theme without "
 "touching plugin code."
@@ -1346,11 +1363,11 @@ msgstr ""
 "Aplicado a img.cbia-banner. Puedes ajustarlo para tu tema sin tocar el "
 "código del complemento."
 
-#: includes/admin/views/config.php:507
+#: includes/admin/views/config.php:533
 msgid "Internal image slots (Pro)"
 msgstr "Ranuras de imagen internas (Pro)"
 
-#: includes/admin/views/config.php:508
+#: includes/admin/views/config.php:534
 msgid ""
 "Slot formats, per-slot prompts and internal image CSS are available in Pro "
 "only."
@@ -1358,7 +1375,7 @@ msgstr ""
 "Los formatos de ranura, prompts por ranura y CSS de imagen interna solo "
 "están disponibles en Pro."
 
-#: includes/admin/views/config.php:509
+#: includes/admin/views/config.php:535
 msgid ""
 "Activate CBIAStudio BlogFlow Pro to configure internal image 1/2/3 and their "
 "prompt templates."
@@ -1366,33 +1383,33 @@ msgstr ""
 "Active CBIAStudio BlogFlow Pro para configurar la imagen interna 1/2/3 y sus "
 "plantillas prompt."
 
-#: includes/admin/views/config.php:513
+#: includes/admin/views/config.php:539
 msgid "If an image model fails"
 msgstr "Si un modelo de imagen falla"
 
-#: includes/admin/views/config.php:516
+#: includes/admin/views/config.php:542
 msgid "Continue with the next model"
 msgstr "Continuar con el siguiente modelo."
 
-#: includes/admin/views/config.php:517
+#: includes/admin/views/config.php:543
 msgid "Stop post creation"
 msgstr "Detener la creación de la entrada"
 
-#: includes/admin/views/config.php:519
+#: includes/admin/views/config.php:545
 msgid "By default, the next model is tried if there is an error."
 msgstr ""
 "De forma predeterminada, se prueba el siguiente modelo si hay un error."
 
-#: includes/admin/views/config.php:526
+#: includes/admin/views/config.php:552
 msgid "Integrations"
 msgstr "Integraciones"
 
-#: includes/admin/views/config.php:530 includes/admin/views/config.php:532
-#: includes/admin/views/config.php:634 includes/admin/views/config.php:636
+#: includes/admin/views/config.php:556 includes/admin/views/config.php:558
+#: includes/admin/views/config.php:660 includes/admin/views/config.php:662
 msgid "Yoast SEO:"
 msgstr "Yoast SEO:"
 
-#: includes/admin/views/config.php:530
+#: includes/admin/views/config.php:556
 msgid ""
 "not detected. If you install it, the plugin can automatically update the "
 "meta description, keyphrase and SEO/readability scores when each post is "
@@ -1402,7 +1419,7 @@ msgstr ""
 "la meta descripción, la frase clave y las puntuaciones de legibilidad/SEO "
 "cuando se crea cada publicación."
 
-#: includes/admin/views/config.php:532
+#: includes/admin/views/config.php:558
 msgid ""
 "detected. The meta description, keyphrase and SEO/readability scores are "
 "updated automatically when each post is created."
@@ -1411,33 +1428,33 @@ msgstr ""
 "legibilidad/SEO se actualizan automáticamente cuando se crea cada "
 "publicación."
 
-#: includes/admin/views/config.php:537
+#: includes/admin/views/config.php:563
 msgid "Save settings"
 msgstr "Guardar configuración"
 
-#: includes/admin/views/config.php:553
+#: includes/admin/views/config.php:579
 msgid "Price varies: OpenAI will select the quality automatically."
 msgstr "El precio varía: OpenAI seleccionará la calidad automáticamente."
 
-#: includes/admin/views/config.php:554
+#: includes/admin/views/config.php:580
 msgid "Price is not available for this custom size."
 msgstr "El precio no está disponible para este tamaño personalizado."
 
-#: includes/admin/views/config.php:555
+#: includes/admin/views/config.php:581
 #, php-format
 msgid "%s per article"
 msgstr "%s por artículo"
 
-#: includes/admin/views/config.php:556
+#: includes/admin/views/config.php:582
 #, php-format
 msgid "Featured: %1$s (%2$s). Content: %3$d × %4$s (%5$s)."
 msgstr "Destacado: %1$s (%2$s). Contenido: %3$d × %4$s (%5$s)."
 
-#: includes/admin/views/config.php:626
+#: includes/admin/views/config.php:652
 msgid "Support and advanced tools"
 msgstr "Soporte y herramientas avanzadas"
 
-#: includes/admin/views/config.php:627
+#: includes/admin/views/config.php:653
 msgid ""
 "Maintenance and support tools. They no longer need their own tabs because "
 "the normal plugin flow covers most daily work."
@@ -1446,22 +1463,22 @@ msgstr ""
 "pestañas porque el flujo normal de complementos cubre la mayor parte del "
 "trabajo diario."
 
-#: includes/admin/views/config.php:631
+#: includes/admin/views/config.php:657
 msgid "Yoast legacy"
 msgstr "legado de Yoast"
 
-#: includes/admin/views/config.php:631
+#: includes/admin/views/config.php:657
 msgid "Occasional maintenance"
 msgstr "Mantenimiento ocasional"
 
-#: includes/admin/views/config.php:634
+#: includes/admin/views/config.php:660
 msgid ""
 "not detected. These actions only make sense if Yoast is installed and active."
 msgstr ""
 "no detectado. Estas acciones sólo tienen sentido si Yoast está instalado y "
 "activo."
 
-#: includes/admin/views/config.php:636
+#: includes/admin/views/config.php:662
 msgid ""
 "detected. Use these actions only for legacy maintenance, one-off "
 "recalculations or old content migrations."
@@ -1469,68 +1486,68 @@ msgstr ""
 "detectado. Utilice estas acciones solo para mantenimiento heredado, "
 "recálculos únicos o migraciones de contenido antiguo."
 
-#: includes/admin/views/config.php:641
+#: includes/admin/views/config.php:667
 msgid "Batch"
 msgstr "Lote"
 
-#: includes/admin/views/config.php:642
+#: includes/admin/views/config.php:668
 msgid "Offset"
 msgstr "Desplazamiento"
 
-#: includes/admin/views/config.php:645
+#: includes/admin/views/config.php:671
 msgid "Force (overwrite metas/scores even if they already exist)"
 msgstr "Forzar (sobrescribir metas/puntuaciones incluso si ya existen)"
 
-#: includes/admin/views/config.php:646
+#: includes/admin/views/config.php:672
 msgid "Include non-CBIA posts"
 msgstr "Incluir publicaciones que no sean de CBIA"
 
-#: includes/admin/views/config.php:649
+#: includes/admin/views/config.php:675
 msgid "Recalculate metas"
 msgstr "Recalcular metas"
 
-#: includes/admin/views/config.php:650
+#: includes/admin/views/config.php:676
 msgid "Refresh traffic lights"
 msgstr "Actualizar semáforos"
 
-#: includes/admin/views/config.php:651
+#: includes/admin/views/config.php:677
 msgid "Metas + traffic lights"
 msgstr "Metas + semáforos"
 
-#: includes/admin/views/config.php:652
+#: includes/admin/views/config.php:678
 msgid "Clear Yoast log"
 msgstr "Borrar registro de Yoast"
 
-#: includes/admin/views/config.php:655 includes/admin/views/config.php:664
+#: includes/admin/views/config.php:681 includes/admin/views/config.php:690
 msgid "Mark older posts as CBIA"
 msgstr "Marcar publicaciones antiguas como CBIA"
 
-#: includes/admin/views/config.php:657
+#: includes/admin/views/config.php:683
 msgid "From (optional)"
 msgstr "Desde (opcional)"
 
-#: includes/admin/views/config.php:658
+#: includes/admin/views/config.php:684
 msgid "To (optional)"
 msgstr "A (opcional)"
 
-#: includes/admin/views/config.php:661
+#: includes/admin/views/config.php:687
 msgid "Mark only if CBIA signals are detected"
 msgstr "Marcar solo si se detectan señales CBIA"
 
-#: includes/admin/views/config.php:666
+#: includes/admin/views/config.php:692
 msgid "CBIA signals: FAQ/JSON-LD, pending markers or content markers."
 msgstr ""
 "Señales CBIA: FAQ/JSON-LD, marcadores pendientes o marcadores de contenido."
 
-#: includes/admin/views/config.php:673
+#: includes/admin/views/config.php:699
 msgid "Environment diagnostics"
 msgstr "Diagnóstico ambiental"
 
-#: includes/admin/views/config.php:673
+#: includes/admin/views/config.php:699
 msgid "Support"
 msgstr "Apoyo"
 
-#: includes/admin/views/config.php:675
+#: includes/admin/views/config.php:701
 msgid ""
 "Quick environment summary for support and debugging. It no longer needs its "
 "own tab."
@@ -1538,7 +1555,7 @@ msgstr ""
 "Resumen rápido del entorno para soporte y depuración. Ya no necesita su "
 "propia pestaña."
 
-#: includes/admin/views/config.php:684 includes/admin/views/diagnostics.php:51
+#: includes/admin/views/config.php:710 includes/admin/views/diagnostics.php:51
 msgid "Latest log lines"
 msgstr "Últimas líneas de registro"
 
@@ -2972,7 +2989,7 @@ msgid "Auto"
 msgstr "Automático"
 
 #: includes/core/hooks.php:307 includes/core/hooks.php:3602
-#: includes/core/hooks.php:3603 includes/core/hooks.php:4061
+#: includes/core/hooks.php:3603 includes/core/hooks.php:4070
 msgid "Unauthorized."
 msgstr "No autorizado."
 
@@ -3013,7 +3030,7 @@ msgstr "Las palabras objetivo se actualizarán según la longitud seleccionada."
 msgid "Number of internal images"
 msgstr "Número de imágenes internas"
 
-#: includes/core/hooks.php:3317 includes/core/hooks.php:4288
+#: includes/core/hooks.php:3317 includes/core/hooks.php:4297
 msgid "Internal images are available in Pro only."
 msgstr "Las imágenes internas solo están disponibles en Pro."
 
@@ -3184,27 +3201,27 @@ msgid "Save key"
 msgstr "Guardar clave"
 
 #: includes/core/hooks.php:3506 includes/core/hooks.php:3686
-#: includes/core/hooks.php:3850 includes/core/hooks.php:3864
-#: includes/core/hooks.php:3878 includes/core/hooks.php:3890
-#: includes/core/hooks.php:3952 includes/core/hooks.php:4241
-#: includes/core/hooks.php:4244 includes/core/hooks.php:4277
-#: includes/core/hooks.php:4280 includes/core/hooks.php:4443
-#: includes/core/hooks.php:4638 includes/core/hooks.php:4789
-#: includes/core/hooks.php:4806 includes/core/hooks.php:5069
-#: includes/core/hooks.php:5092 includes/core/hooks.php:5130
-#: includes/core/hooks.php:5142 includes/core/hooks.php:5169
-#: includes/core/hooks.php:5198 includes/core/hooks.php:5275
-#: includes/core/hooks.php:5485 includes/core/hooks.php:6091
-#: includes/core/hooks.php:6168 includes/core/hooks.php:6231
-#: includes/core/hooks.php:6248 includes/core/hooks.php:6293
-#: includes/core/hooks.php:6335 includes/core/hooks.php:6359
-#: includes/core/hooks.php:6413 includes/core/hooks.php:6459
-#: includes/core/hooks.php:6624 includes/core/hooks.php:6663
+#: includes/core/hooks.php:3855 includes/core/hooks.php:3869
+#: includes/core/hooks.php:3886 includes/core/hooks.php:3898
+#: includes/core/hooks.php:3960 includes/core/hooks.php:4250
+#: includes/core/hooks.php:4253 includes/core/hooks.php:4286
+#: includes/core/hooks.php:4289 includes/core/hooks.php:4452
+#: includes/core/hooks.php:4647 includes/core/hooks.php:4798
+#: includes/core/hooks.php:4815 includes/core/hooks.php:5078
+#: includes/core/hooks.php:5101 includes/core/hooks.php:5139
+#: includes/core/hooks.php:5151 includes/core/hooks.php:5178
+#: includes/core/hooks.php:5207 includes/core/hooks.php:5284
+#: includes/core/hooks.php:5494 includes/core/hooks.php:6100
+#: includes/core/hooks.php:6177 includes/core/hooks.php:6240
+#: includes/core/hooks.php:6257 includes/core/hooks.php:6302
+#: includes/core/hooks.php:6344 includes/core/hooks.php:6368
+#: includes/core/hooks.php:6422 includes/core/hooks.php:6468
+#: includes/core/hooks.php:6633 includes/core/hooks.php:6672
 msgid "Unauthorized"
 msgstr "No autorizado"
 
 #: includes/core/hooks.php:3550 includes/core/hooks.php:3702
-#: includes/core/hooks.php:5115
+#: includes/core/hooks.php:5124
 msgid "Preview service unavailable"
 msgstr "Servicio de vista previa no disponible"
 
@@ -3216,111 +3233,106 @@ msgstr "Servicio de vista previa no disponible."
 msgid "Starting preview..."
 msgstr "Iniciando vista previa..."
 
-#: includes/core/hooks.php:3690 includes/core/hooks.php:5097
+#: includes/core/hooks.php:3690 includes/core/hooks.php:5106
 msgid "Preview token is required."
 msgstr "Se requiere token de vista previa."
 
-#: includes/core/hooks.php:3810 includes/core/hooks.php:3854
-#: includes/core/hooks.php:3866 includes/core/hooks.php:3880
-#: includes/core/hooks.php:3898 includes/core/hooks.php:3959
+#: includes/core/hooks.php:3812 includes/core/hooks.php:3859
+#: includes/core/hooks.php:3871 includes/core/hooks.php:3888
+#: includes/core/hooks.php:3906 includes/core/hooks.php:3967
 msgid "Invalid provider."
 msgstr "Proveedor no válido."
 
-#: includes/core/hooks.php:3812 includes/core/hooks.php:3920
+#: includes/core/hooks.php:3814 includes/core/hooks.php:3928
 msgid "That provider has no saved API key."
 msgstr "Ese proveedor no tiene una clave API guardada."
 
-#: includes/core/hooks.php:3838
+#: includes/core/hooks.php:3843
 #, php-format
 msgid "%s rejected the configured API key."
 msgstr "%s rechazó la clave API configurada."
 
-#: includes/core/hooks.php:3838
+#: includes/core/hooks.php:3843
 #, php-format
 msgid "The provider connection failed with HTTP %d."
 msgstr "La conexión con el proveedor falló con HTTP %d."
 
-#: includes/core/hooks.php:3841
+#: includes/core/hooks.php:3846
 msgid "The provider returned an invalid response."
 msgstr "El proveedor devolvió una respuesta no válida."
 
-#: includes/core/hooks.php:3843
-#, php-format
-msgid "Valid connection. Detected models: %d"
-msgstr "Conexión válida. Modelos detectados: %d"
+#: includes/core/hooks.php:3848 includes/core/hooks.php:4053
+msgid "Connection verified."
+msgstr "Conexión verificada."
 
-#: includes/core/hooks.php:3852
+#: includes/core/hooks.php:3857
 msgid "API key is required."
 msgstr "La clave API es obligatoria."
 
-#: includes/core/hooks.php:3857
+#: includes/core/hooks.php:3862
 #, php-format
 msgid "The %s API key was saved successfully."
 msgstr "La clave API de %s se ha guardado correctamente."
 
-#: includes/core/hooks.php:3882
+#: includes/core/hooks.php:3890
 #, php-format
 msgid "%s was disconnected."
 msgstr "%s se ha desconectado."
 
-#: includes/core/hooks.php:3901 includes/core/hooks.php:3962
+#: includes/core/hooks.php:3909 includes/core/hooks.php:3970
 msgid "The image provider does not support image generation."
 msgstr "El proveedor de imágenes no admite la generación de imágenes."
 
-#: includes/core/hooks.php:3913 includes/core/hooks.php:3988
+#: includes/core/hooks.php:3921 includes/core/hooks.php:3997
 msgid "API key cannot be empty."
 msgstr "La clave API no puede estar vacía."
 
-#: includes/core/hooks.php:3934
+#: includes/core/hooks.php:3942
 msgid "API key saved."
 msgstr "Clave API guardada."
 
-#: includes/core/hooks.php:4017
+#: includes/core/hooks.php:4026
 msgid "Could not build provider validation URL."
 msgstr "No se pudo crear la URL de validación del proveedor."
 
-#: includes/core/hooks.php:4044
-msgid "Valid connection. Detected models:"
-msgstr "Conexión válida. Modelos detectados:"
-
-#: includes/core/hooks.php:4058
+#: includes/core/hooks.php:4067
 msgid "Invalid post."
 msgstr "Publicación no válida."
 
-#: includes/core/hooks.php:4250
+#: includes/core/hooks.php:4259
 msgid "Empty snapshot."
 msgstr "Instantánea vacía."
 
-#: includes/core/hooks.php:4255
+#: includes/core/hooks.php:4264
 msgid "Invalid snapshot."
 msgstr "Instantánea no válida."
 
-#: includes/core/hooks.php:4285
+#: includes/core/hooks.php:4294
 msgid "Invalid slot."
 msgstr "Ranura no válida."
 
-#: includes/core/hooks.php:4745
+#: includes/core/hooks.php:4754
 msgid "Title or content is missing."
 msgstr "Falta título o contenido."
 
-#: includes/core/hooks.php:4816
+#: includes/core/hooks.php:4825
 msgid "Could not create draft."
 msgstr "No se pudo crear el borrador."
 
-#: includes/core/hooks.php:5235 includes/services/blog-service.php:368
+#: includes/core/hooks.php:5244 includes/services/blog-service.php:368
 #, php-format
 msgid "PAUSED | idx %1$d of %2$d | %3$s"
 msgstr "EN PAUSA | idx %1$d de %2$d | %3$s"
 
-#: includes/core/hooks.php:5279
+#: includes/core/hooks.php:5288
 msgid "cbia_set_stop_flag unavailable"
 msgstr "cbia_set_stop_flag no disponible"
 
-#: includes/core/hooks.php:5448
+#: includes/core/hooks.php:5457
 msgid "cbia_run_generate_blogs unavailable"
 msgstr "cbia_run_generate_blogs no disponible"
 
-#: includes/core/hooks.php:5708
+#: includes/core/hooks.php:5717
 #, php-format
 msgid ""
 "START v3 AJAX | batch=%1$d | scope=%2$s | filter=%3$s | older_than_days=%4$d "
@@ -3331,7 +3343,7 @@ msgstr ""
 "older_than_days=%4$d | de=%5$s | a=%6$s | images_limit=%7$d | ids=%8$s | "
 "categoría=%9$d | autor=%10$d | dry_run=%11$s"
 
-#: includes/core/hooks.php:5725 includes/engine/oldposts.php:1393
+#: includes/core/hooks.php:5734 includes/engine/oldposts.php:1393
 #, php-format
 msgid ""
 "ACTIONS | note=%1$s(force=%2$s) | "
@@ -3352,19 +3364,19 @@ msgstr ""
 "featured_only=%19$s(fuerza=%20$s,remove_old=%21$s) | "
 "categorías=%22$s(fuerza=%23$s) | etiquetas=%24$s(fuerza=%25$s)"
 
-#: includes/core/hooks.php:5754 includes/engine/oldposts.php:1423
+#: includes/core/hooks.php:5763 includes/engine/oldposts.php:1423
 msgid ""
 "NOTE: specific IDs were provided. Date/category/author filters are ignored."
 msgstr ""
 "NOTA: se proporcionaron identificaciones específicas. Se ignoran los filtros "
 "de fecha/categoría/autor."
 
-#: includes/core/hooks.php:6012 includes/core/hooks.php:6199
+#: includes/core/hooks.php:6021 includes/core/hooks.php:6208
 #, php-format
 msgid "TRAMO AJAX | ids=%1$s | size=%2$d"
 msgstr "TRAMO AJAX | ids=%1$s | tamaño = %2$d"
 
-#: includes/core/hooks.php:6030 includes/core/hooks.php:6205
+#: includes/core/hooks.php:6039 includes/core/hooks.php:6214
 #, php-format
 msgid ""
 "FIN TRAMO AJAX | ids=%1$s | processed=%2$d | ok=%3$d | skip=%4$d | fail=%5$d"
@@ -3372,11 +3384,11 @@ msgstr ""
 "FIN TRAMO AJAX | ids=%1$s | procesado=%2$d | ok=%3$d | saltar=%4$d | "
 "falla=%5$d"
 
-#: includes/core/hooks.php:6098
+#: includes/core/hooks.php:6107
 msgid "Unsupported action"
 msgstr "Acción no admitida"
 
-#: includes/core/hooks.php:6104
+#: includes/core/hooks.php:6113
 msgid ""
 "There is already an old posts batch running. Wait for it to finish or stop "
 "it first."
@@ -3384,36 +3396,36 @@ msgstr ""
 "Ya hay un lote de publicaciones antiguas en ejecución. Espere a que termine "
 "o deténgalo primero."
 
-#: includes/core/hooks.php:6170
+#: includes/core/hooks.php:6179
 msgid "Old posts runner unavailable"
 msgstr "Corredor de publicaciones antiguas no disponible"
 
-#: includes/core/hooks.php:6190
+#: includes/core/hooks.php:6199
 msgid "Chunk without valid IDs"
 msgstr "Fragmento sin ID válidos"
 
-#: includes/core/hooks.php:6633
+#: includes/core/hooks.php:6642
 msgid "Invalid provider"
 msgstr "Proveedor no válido"
 
-#: includes/core/hooks.php:6664
+#: includes/core/hooks.php:6673
 msgid "Recalculation unavailable."
 msgstr "Nuevo cálculo no disponible."
 
-#: includes/core/hooks.php:6666
+#: includes/core/hooks.php:6675
 msgid "Explicit confirmation is required."
 msgstr "Se requiere confirmación explícita."
 
-#: includes/domain/costs.php:1547 includes/services/oldposts-service.php:141
+#: includes/domain/costs.php:1548 includes/services/oldposts-service.php:141
 msgid "Settings saved."
 msgstr "Configuración guardada."
 
-#: includes/domain/costs.php:1555 includes/engine/oldposts.php:2068
+#: includes/domain/costs.php:1556 includes/engine/oldposts.php:2068
 #: includes/services/oldposts-service.php:322
 msgid "Log cleared manually."
 msgstr "Registro borrado manualmente."
 
-#: includes/domain/costs.php:1571
+#: includes/domain/costs.php:1572
 #, php-format
 msgid ""
 "Last %1$d calculation: posts=%2$d real=%3$d est=%4$d real_calls=%5$d "
@@ -3422,12 +3434,12 @@ msgstr ""
 "Último cálculo de %1$d: posts=%2$d real=%3$d est=%4$d real_calls=%5$d "
 "real_fails=%6$d tokens_in=%7$d tokens_out=%8$d total EUR=%9$s"
 
-#: includes/domain/costs.php:1585
+#: includes/domain/costs.php:1586
 #, php-format
 msgid "Last %d calculation: no results."
 msgstr "Último cálculo %d: sin resultados."
 
-#: includes/domain/costs.php:1599
+#: includes/domain/costs.php:1600
 #, php-format
 msgid ""
 "REAL-only last %1$d calculation: posts=%2$d real=%3$d real_calls=%4$d "
@@ -3436,20 +3448,52 @@ msgstr ""
 "Último cálculo de %1$d solo REAL: posts=%2$d real=%3$d real_calls=%4$d "
 "real_fails=%5$d tokens_in=%6$d tokens_out=%7$d total EUR=%8$s"
 
-#: includes/domain/costs.php:1612
+#: includes/domain/costs.php:1613
 #, php-format
 msgid "REAL-only last %d calculation: no results."
 msgstr "Último cálculo de %d solo REAL: sin resultados."
 
-#: includes/domain/costs.php:1643
+#: includes/domain/costs.php:1644
 #, php-format
 msgid "REAL calibration applied: billing=%1$s EUR real_calc=%2$s EUR mult=%3$s"
 msgstr ""
 "Calibración REAL aplicada: facturación=%1$s EUR real_calc=%2$s EUR mult=%3$s"
 
-#: includes/domain/costs.php:1651
+#: includes/domain/costs.php:1652
 msgid "REAL calibration: insufficient data to calculate."
 msgstr "Calibración REAL: datos insuficientes para calcular."
+
+#: includes/engine/anthropic.php:82
+msgid "No API key (Anthropic)"
+msgstr "Sin clave API (Anthropic)"
+
+#: includes/engine/anthropic.php:96 includes/engine/openai.php:412
+#: includes/engine/openai.php:431 includes/engine/openai.php:1397
+#: includes/engine/openai.php:1443
+msgid "Could not get a response."
+msgstr "No se pudo obtener una respuesta."
+
+#: includes/engine/anthropic.php:101 includes/engine/openai.php:479
+#: includes/engine/openai.php:644 includes/engine/openai.php:944
+#: includes/engine/openai.php:974 includes/engine/openai.php:1103
+#: includes/engine/openai.php:1130 includes/engine/openai.php:1320
+#: includes/engine/openai.php:1449
+msgid "Stop enabled"
+msgstr "Detención activada"
+
+#: includes/engine/anthropic.php:121
+msgid "Anthropic returned invalid JSON."
+msgstr "Anthropic devolvió JSON no válido."
+
+msgid "Anthropic returned tool use instead of article text."
+msgstr "Anthropic devolvió una llamada de herramienta en lugar del texto del artículo."
+
+msgid "Anthropic reached the output token limit."
+msgstr "Anthropic alcanzó el límite de tokens de salida."
+
+#: includes/engine/anthropic.php:140
+msgid "Anthropic returned no text content."
+msgstr "Anthropic no devolvió contenido de texto."
 
 #: includes/engine/base.php:68
 msgid "The OpenAI API key was rejected. Save it again in Settings."
@@ -3465,17 +3509,17 @@ msgstr "La clave API %s fue rechazada. Guárdalo nuevamente en Configuración."
 msgid "The provider returned an error."
 msgstr "El proveedor devolvió un error."
 
-#: includes/engine/base.php:279
+#: includes/engine/base.php:283
 msgid ""
 "The visual mask was not saved as an API key. The previous key was preserved."
 msgstr ""
 "La máscara visual no se guardó como clave API. Se conservó la clave anterior."
 
-#: includes/engine/base.php:280
+#: includes/engine/base.php:284
 msgid "The API key field was empty. The previous key was preserved."
 msgstr "El campo de clave API estaba vacío. Se conservó la clave anterior."
 
-#: includes/engine/base.php:281
+#: includes/engine/base.php:285
 #, php-format
 msgid ""
 "The %s API key contains spaces, control characters or a mask. The previous "
@@ -3484,20 +3528,20 @@ msgstr ""
 "La clave API %s contiene espacios, caracteres de control o una máscara. Se "
 "conservó la clave anterior."
 
-#: includes/engine/base.php:749
+#: includes/engine/base.php:754
 #, php-format
 msgid "Missing %s API key."
 msgstr "Falta la clave API %s."
 
-#: includes/engine/base.php:750
+#: includes/engine/base.php:755
 msgid "The selected text configuration is not valid."
 msgstr "La configuración de texto seleccionada no es válida."
 
-#: includes/engine/base.php:767
+#: includes/engine/base.php:772
 msgid "DeepSeek connection or authentication test failed."
 msgstr "Error en la prueba de autenticación o conexión DeepSeek."
 
-#: includes/engine/base.php:770
+#: includes/engine/base.php:775
 msgid ""
 "DeepSeek connection and authentication are valid, but the selected model is "
 "not available."
@@ -3505,16 +3549,16 @@ msgstr ""
 "La conexión y autenticación DeepSeek son válidas, pero el modelo "
 "seleccionado no está disponible."
 
-#: includes/engine/base.php:781
+#: includes/engine/base.php:786
 msgid "Reply only with OK."
 msgstr "Responda sólo con OK."
 
-#: includes/engine/base.php:816
+#: includes/engine/base.php:821
 #, php-format
 msgid "%1$s configured correctly. Model tested: %2$s."
 msgstr "%1$s configurado correctamente. Modelo probado: %2$s."
 
-#: includes/engine/base.php:820
+#: includes/engine/base.php:825
 msgid ""
 "DeepSeek responded correctly, but the reasoning test did not produce final "
 "content. The connection and API key are valid."
@@ -3522,12 +3566,12 @@ msgstr ""
 "DeepSeek respondió correctamente, pero la prueba de razonamiento no arrojó "
 "contenido final. La conexión y la clave API son válidas."
 
-#: includes/engine/base.php:822
+#: includes/engine/base.php:827
 #, php-format
 msgid "%s rejected the API key."
 msgstr "%s rechazó la clave API."
 
-#: includes/engine/base.php:823
+#: includes/engine/base.php:828
 #, php-format
 msgid "Could not validate %s."
 msgstr "No se pudo validar %s."
@@ -3909,110 +3953,98 @@ msgstr "Lote ejecutado. Consulta el registro."
 msgid "Quick action executed. Check the log."
 msgstr "Acción rápida ejecutada. Consulta el registro."
 
-#: includes/engine/openai.php:115
+#: includes/engine/openai.php:119
 msgid "Missing Google API key for image generation (Gemini)."
 msgstr "Falta la clave API de Google para la generación de imágenes (Gemini)."
 
-#: includes/engine/openai.php:116 includes/engine/openai.php:206
-#: includes/engine/openai.php:1270
+#: includes/engine/openai.php:120 includes/engine/openai.php:210
+#: includes/engine/openai.php:1279
 msgid "No API key (Google)"
 msgstr "Sin clave API (Google)"
 
-#: includes/engine/openai.php:205
+#: includes/engine/openai.php:209
 msgid "Missing Google API key for image generation (Imagen)."
 msgstr "Falta la clave API de Google para la generación de imágenes (Imagen)."
 
-#: includes/engine/openai.php:303
+#: includes/engine/openai.php:308
 msgid "Could not generate image (Google)."
 msgstr "No se pudo generar la imagen (Google)."
 
-#: includes/engine/openai.php:387 includes/engine/openai.php:608
-#: includes/engine/openai.php:933 includes/engine/openai.php:1093
+#: includes/engine/openai.php:392 includes/engine/openai.php:617
+#: includes/engine/openai.php:942 includes/engine/openai.php:1102
 msgid "OpenAI consent not accepted"
 msgstr "No se acepta el consentimiento de OpenAI"
 
-#: includes/engine/openai.php:406
+#: includes/engine/openai.php:411
 msgid "Could not get a streaming response."
 msgstr "No se pudo obtener una respuesta de transmisión."
 
-#: includes/engine/openai.php:407 includes/engine/openai.php:422
-#: includes/engine/openai.php:1388 includes/engine/openai.php:1434
-msgid "Could not get a response."
-msgstr "No se pudo obtener una respuesta."
-
-#: includes/engine/openai.php:458 includes/engine/openai.php:621
+#: includes/engine/openai.php:467 includes/engine/openai.php:630
 msgid "Missing OpenAI API key for text generation."
 msgstr "Falta la clave API de OpenAI para la generación de texto."
 
-#: includes/engine/openai.php:459 includes/engine/openai.php:622
-#: includes/engine/openai.php:929 includes/engine/openai.php:1089
+#: includes/engine/openai.php:468 includes/engine/openai.php:631
+#: includes/engine/openai.php:938 includes/engine/openai.php:1098
 msgid "No API key"
 msgstr "Sin clave API"
 
-#: includes/engine/openai.php:470 includes/engine/openai.php:635
-#: includes/engine/openai.php:935 includes/engine/openai.php:965
-#: includes/engine/openai.php:1094 includes/engine/openai.php:1121
-#: includes/engine/openai.php:1311 includes/engine/openai.php:1440
-msgid "Stop enabled"
-msgstr "Detención activada"
-
-#: includes/engine/openai.php:894
+#: includes/engine/openai.php:903
 msgid ""
 "Image request skipped after an OpenAI authentication failure in this batch."
 msgstr ""
 "La solicitud de imagen se omitió después de un error de autenticación de "
 "OpenAI en este lote."
 
-#: includes/engine/openai.php:920
+#: includes/engine/openai.php:929
 #, php-format
 msgid "Image provider \"%s\" is not supported."
 msgstr "El proveedor de imágenes \"%s\" no es compatible."
 
-#: includes/engine/openai.php:921
+#: includes/engine/openai.php:930
 msgid "Unsupported image provider"
 msgstr "Proveedor de imágenes no compatible"
 
-#: includes/engine/openai.php:988 includes/engine/openai.php:1144
+#: includes/engine/openai.php:997 includes/engine/openai.php:1153
 msgid "AI image HTTP error: "
 msgstr "Error HTTP de imagen AI:"
 
-#: includes/engine/openai.php:1005 includes/engine/openai.php:1160
+#: includes/engine/openai.php:1014 includes/engine/openai.php:1169
 #, php-format
 msgid "AI image HTTP %d error"
 msgstr "Error de HTTP %d de imagen AI"
 
-#: includes/engine/openai.php:1017 includes/engine/openai.php:1171
+#: includes/engine/openai.php:1026 includes/engine/openai.php:1180
 msgid "AI image payload error: "
 msgstr "Error de carga útil de la imagen AI:"
 
-#: includes/engine/openai.php:1037 includes/engine/openai.php:1191
+#: includes/engine/openai.php:1046 includes/engine/openai.php:1200
 #, php-format
 msgid "AI image: response without bytes (model=%s)"
 msgstr "Imagen AI: respuesta sin bytes (modelo=%s)"
 
-#: includes/engine/openai.php:1038 includes/engine/openai.php:1192
+#: includes/engine/openai.php:1047 includes/engine/openai.php:1201
 msgid "Response without bytes"
 msgstr "Respuesta sin bytes"
 
-#: includes/engine/openai.php:1045 includes/engine/openai.php:1199
+#: includes/engine/openai.php:1054 includes/engine/openai.php:1208
 #, php-format
 msgid "AI image: upload to Media Library failed: %s"
 msgstr "Imagen AI: falló la carga en la biblioteca multimedia: %s"
 
-#: includes/engine/openai.php:1057 includes/engine/openai.php:1211
+#: includes/engine/openai.php:1066 includes/engine/openai.php:1220
 #, php-format
 msgid "AI image: model=%s failed; process stopped by configuration."
 msgstr "Imagen de IA: modelo=%s falló; Proceso detenido por configuración."
 
-#: includes/engine/openai.php:1058 includes/engine/openai.php:1212
+#: includes/engine/openai.php:1067 includes/engine/openai.php:1221
 msgid "Stopped by failover configuration"
 msgstr "Detenido por la configuración de conmutación por error"
 
-#: includes/engine/openai.php:1062 includes/engine/openai.php:1216
+#: includes/engine/openai.php:1071 includes/engine/openai.php:1225
 msgid "Image generation failed after retries"
 msgstr "La generación de imágenes falló después de reintentar"
 
-#: includes/engine/openai.php:1080
+#: includes/engine/openai.php:1089
 #, php-format
 msgid ""
 "Image provider \"%s\" not supported for this flow; using OpenAI fallback."
@@ -4020,33 +4052,33 @@ msgstr ""
 "El proveedor de imágenes \"%s\" no es compatible con este flujo; utilizando "
 "el respaldo de OpenAI."
 
-#: includes/engine/openai.php:1269
+#: includes/engine/openai.php:1278
 msgid "Missing Google API key for text generation."
 msgstr "Falta la clave API de Google para la generación de texto."
 
-#: includes/engine/openai.php:1315
+#: includes/engine/openai.php:1324
 #, php-format
 msgid "Google Gemini: model=%1$s attempt %2$d/%3$d"
 msgstr "Google Gemini: modelo=%1$s intento %2$d/%3$d"
 
-#: includes/engine/openai.php:1403
+#: includes/engine/openai.php:1412
 msgid "Missing DeepSeek API key for text generation."
 msgstr "Falta la clave API DeepSeek para la generación de texto."
 
-#: includes/engine/openai.php:1404
+#: includes/engine/openai.php:1413
 msgid "No API key (DeepSeek)"
 msgstr "Sin clave API (DeepSeek)"
 
-#: includes/engine/openai.php:1490
+#: includes/engine/openai.php:1499
 msgid "DeepSeek returned invalid JSON."
 msgstr "DeepSeek devolvió JSON no válido."
 
-#: includes/engine/openai.php:1502
+#: includes/engine/openai.php:1511
 msgid "DeepSeek temporarily lacked resources to complete the response."
 msgstr ""
 "DeepSeek careció temporalmente de recursos para completar la respuesta."
 
-#: includes/engine/openai.php:1516
+#: includes/engine/openai.php:1525
 msgid "DeepSeek returned an empty content response."
 msgstr "DeepSeek devolvió una respuesta de contenido vacío."
 
@@ -4063,29 +4095,51 @@ msgstr "La publicación \"%s\" ya existe."
 msgid "Preparing prompt..."
 msgstr "Preparando prompt..."
 
-#: includes/support/image-pricing.php:18
+#: includes/support/image-pricing.php:20
 msgctxt "image quality"
 msgid "Automatic"
 msgstr "Automática"
 
-#: includes/support/image-pricing.php:19
+#: includes/support/image-pricing.php:21
 msgctxt "image quality"
 msgid "Low"
 msgstr "Baja"
 
-#: includes/support/image-pricing.php:20
+#: includes/support/image-pricing.php:22
 msgctxt "image quality"
 msgid "Medium"
 msgstr "Media"
 
-#: includes/support/image-pricing.php:21
+#: includes/support/image-pricing.php:23
 msgctxt "image quality"
 msgid "High"
 msgstr "Alta"
 
-#: includes/support/image-pricing.php:160
+#: includes/support/image-pricing.php:151
 msgid "GPT Image 2 does not support a transparent background; opaque was used."
 msgstr "GPT La imagen 2 no admite un fondo transparente; Se utilizó opaco."
+
+#~ msgid "DeepSeek V4 Flash — Recommended"
+#~ msgstr "Flash DeepSeek V4 — Recomendado"
+
+#~ msgid "DeepSeek V4 Pro — Maximum capability"
+#~ msgstr "DeepSeek V4 Pro: capacidad máxima"
+
+#~ msgid "GPT Image 2 — Recommended"
+#~ msgstr "GPT Imagen 2 — Recomendado"
+
+#~ msgid "GPT Image 1"
+#~ msgstr "GPT Imagen 1"
+
+#~ msgid "GPT Image 1 Mini"
+#~ msgstr "GPT Imagen 1 Mini"
+
+#, php-format
+#~ msgid "Valid connection. Detected models: %d"
+#~ msgstr "Conexión válida. Modelos detectados: %d"
+
+#~ msgid "Valid connection. Detected models:"
+#~ msgstr "Conexión válida. Modelos detectados:"
 
 #~ msgid "API key (text)"
 #~ msgstr "Clave API (texto)"
@@ -4105,9 +4159,6 @@ msgstr "GPT La imagen 2 no admite un fondo transparente; Se utilizó opaco."
 #~ msgstr ""
 #~ "Guarda las claves del proveedor sin cambiar prompts, longitudes, "
 #~ "categorías u otras configuraciones de generación."
-
-#~ msgid "Current model"
-#~ msgstr "Modelo actual"
 
 #~ msgid "Real cost by month"
 #~ msgstr "Coste real por mes"

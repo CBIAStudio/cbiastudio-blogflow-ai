@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.0
-Stable tag: 2.1.7
+Stable tag: 2.2.0
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -101,7 +101,7 @@ If Yoast SEO is active, the plugin can synchronize:
 No. This plugin works with your own API key from supported AI providers. You pay the provider directly for your usage.
 
 = Which AI providers are supported? =
-CBIAStudio BlogFlow with AI supports OpenAI, Google Gemini / Imagen, and DeepSeek, depending on the task. Text and image availability depends on the provider and model you configure in the plugin settings.
+CBIAStudio BlogFlow with AI supports OpenAI, Google Gemini / Imagen, DeepSeek, and Anthropic for text. Image generation remains limited to image-capable providers and models configured in the plugin settings.
 
 = Do I need another plugin to use CBIAStudio BlogFlow with AI? =
 No. CBIAStudio BlogFlow with AI works as a standalone plugin and does not require another CBIA plugin.
@@ -154,7 +154,22 @@ This plugin can connect to third-party AI services only when the site administra
 - Terms: https://platform.deepseek.com/terms
 - Privacy: https://platform.deepseek.com/privacy
 
+= Anthropic API =
+- Service purpose: text generation through the Anthropic Messages API.
+- Data sent: post title, system prompt, prompt/template text, and generation parameters.
+- When sent: only when Anthropic is selected and an administrator starts preview or post generation.
+- API domain used by the plugin: `api.anthropic.com`
+- Terms: https://www.anthropic.com/legal/commercial-terms
+- Privacy: https://www.anthropic.com/legal/privacy
+
 == Changelog ==
+
+= 2.2.0 =
+* Replaced tall provider panels with compact, accessible connection rows and on-demand credential/details panels.
+* Centralized approved OpenAI, Google, DeepSeek and Anthropic models, capabilities and dated prices in one server-side catalog.
+* Added Anthropic as a text-only provider through its native Messages API, with isolated credentials and no cross-provider fallback.
+* Added Anthropic Usage accounting for input, output, cache reads and 5-minute/1-hour cache writes using the event-time price period.
+* Preserved `gpt-5-mini` as the global default/recommended model and preserved existing provider, model and credential selections.
 
 = 2.1.7 =
 * Added dedicated OpenAI, Google and DeepSeek connection cards with explicit connect, test and disconnect actions.

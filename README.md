@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.1.7
+# CBIAStudio BlogFlow with AI (WordPress) v2.2.0
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,20 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.2.0
+
+- AI connections now use compact, accessible provider rows with credentials and technical details hidden until requested.
+- OpenAI, Google, DeepSeek and Anthropic models, capabilities and dated prices come from one canonical server-side catalog.
+- Anthropic is available as a text-only provider through the native Messages API, with isolated credentials and no cross-provider fallback.
+- Usage records Anthropic input, output, cache-read and 5-minute/1-hour cache-write tokens with the price period active at the event time.
+- `gpt-5-mini` remains the global default and recommended text model; existing provider, model and credential selections are preserved.
+
+## Comparative: 2.2.0 vs 2.1.7
+
+2.2.0 adds a compact connection workflow, a maintainable provider catalog and full Anthropic text support while preserving the established generation, image, scheduling and credential behavior.
+
+## Previous: 2.1.7
 
 ## What's New in 2.1.7
 
