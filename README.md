@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.2.0
+# CBIAStudio BlogFlow with AI (WordPress) v2.2.1
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,22 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.2.1
+
+- Medium generation now targets 1900-2050 visible words in the first request while retaining the public 1800-2000 nominal range.
+- FAQ and practical-example combinations receive explicit word budgets inside the same first response.
+- The normal tolerance band is 20%; complete articles below it are accepted down to a separate 1200-word critical floor and flagged for review instead of being expanded solely for length.
+- Expansion is reserved for critically short, truncated, incomplete, malformed or abruptly ended content.
+- Drafts requiring manual review no longer pause the remaining checkpoint queue; provider, authentication and configuration errors remain blocking.
+- Blog and Preview use the same target, tolerance, critical floor and validation rules.
+- Usage reconciles its fast event store with historical post metadata after an update, preserving legacy, orphaned and trashed-post events.
+
+## Comparative: 2.2.1 vs 2.2.0
+
+2.2.1 reduces avoidable second text requests and queue interruptions while preserving nominal length choices, required modules, provider safety checks, images, scheduling and Usage accounting.
+
+## Previous: 2.2.0
 
 ## What's New in 2.2.0
 

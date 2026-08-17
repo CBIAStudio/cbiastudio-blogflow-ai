@@ -870,7 +870,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
 
 if (!function_exists('cbia_usage_overview_cache_key')) {
     function cbia_usage_overview_cache_key($days) {
-        return 'cbia_pro_usage_overview_v10_' . get_current_blog_id() . '_' . (int) $days;
+        return 'cbia_pro_usage_overview_v11_' . get_current_blog_id() . '_' . (int) $days;
     }
 }
 
@@ -1073,6 +1073,12 @@ if (!function_exists('cbia_usage_dashboard_format_row')) {
     }
 }
 
+if (!function_exists('cbia_usage_event_store_schema_version')) {
+    function cbia_usage_event_store_schema_version() {
+        return 3;
+    }
+}
+
 if (!function_exists('cbia_usage_event_row_identity')) {
     function cbia_usage_event_row_identity($row) {
         if (!is_array($row)) {
@@ -1086,7 +1092,22 @@ if (!function_exists('cbia_usage_event_row_identity')) {
         if ($request_id !== '') {
             return 'request:' . $request_id;
         }
-        return '';
+        return 'legacy:' . md5(wp_json_encode(array(
+            (int) ($row['post_id'] ?? 0),
+            (string) ($row['ts'] ?? ''),
+            (string) ($row['type'] ?? ''),
+            (string) ($row['provider'] ?? ''),
+            (string) ($row['model'] ?? ''),
+            (int) ($row['tokens_in'] ?? 0),
+            (int) ($row['cached_in'] ?? 0),
+            (int) ($row['tokens_out'] ?? 0),
+            (string) ($row['section'] ?? ''),
+            (int) ($row['attach_id'] ?? 0),
+            (int) ($row['attempt'] ?? 1),
+            (int) ($row['parent_attempt'] ?? 0),
+            (int) ($row['http_code'] ?? 0),
+            (string) ($row['status'] ?? ''),
+        )));
     }
 }
 
@@ -1146,6 +1167,7 @@ if (!function_exists('cbia_usage_save_event_store_rows')) {
         $payload = array(
             'rows' => cbia_usage_compact_event_rows($rows),
             'updated_at' => time(),
+            'schema_version' => cbia_usage_event_store_schema_version(),
         );
         update_option(cbia_usage_event_store_option_key(), $payload, false);
         cbia_usage_invalidate_dashboard_cache();
@@ -1154,7 +1176,7 @@ if (!function_exists('cbia_usage_save_event_store_rows')) {
 }
 
 if (!function_exists('cbia_usage_rebuild_event_store_rows')) {
-    function cbia_usage_rebuild_event_store_rows() {
+    function cbia_usage_rebuild_event_store_rows($preserved_rows = array()) {
         $cost_settings = function_exists('cbia_costes_get_settings') ? cbia_costes_get_settings() : array();
         $cost_table = function_exists('cbia_costes_price_table_usd_per_million') ? cbia_costes_price_table_usd_per_million() : array();
         $real_adjust_multiplier = isset($cost_settings['real_adjust_multiplier']) ? (float) $cost_settings['real_adjust_multiplier'] : 1.0;
@@ -1166,7 +1188,7 @@ if (!function_exists('cbia_usage_rebuild_event_store_rows')) {
         do {
             $q = new WP_Query(array(
                 'post_type' => 'post',
-                'post_status' => array('publish', 'future', 'draft', 'pending', 'private'),
+                'post_status' => array('publish', 'future', 'draft', 'pending', 'private', 'trash'),
                 'posts_per_page' => $per_page,
                 'paged' => $paged,
                 'fields' => 'ids',
@@ -1200,7 +1222,9 @@ if (!function_exists('cbia_usage_rebuild_event_store_rows')) {
             $formatted = cbia_usage_dashboard_format_row(0, $usage_row, $cost_settings, $cost_table, $real_adjust_multiplier);
             if ($formatted) $rebuilt_rows[] = $formatted;
         }
-        return cbia_usage_save_event_store_rows($rebuilt_rows);
+        // Keep store-only rows (for example attempts whose post was permanently deleted)
+        // while canonical post meta wins when the same event exists in both sources.
+        return cbia_usage_save_event_store_rows(array_merge((array) $preserved_rows, $rebuilt_rows));
     }
 }
 
@@ -1208,6 +1232,10 @@ if (!function_exists('cbia_usage_get_event_store_rows')) {
     function cbia_usage_get_event_store_rows($build_if_missing = true) {
         $opt = get_option(cbia_usage_event_store_option_key(), array());
         $rows = is_array($opt) && !empty($opt['rows']) && is_array($opt['rows']) ? $opt['rows'] : array();
+        $schema_version = is_array($opt) ? (int) ($opt['schema_version'] ?? 0) : 0;
+        if ($schema_version !== cbia_usage_event_store_schema_version()) {
+            return cbia_usage_rebuild_event_store_rows($rows);
+        }
         if (!empty($rows)) {
             $compacted = cbia_usage_compact_event_rows($rows);
             if ($compacted !== $rows) {
@@ -1227,7 +1255,8 @@ if (!function_exists('cbia_usage_store_append_row')) {
         if (!is_array($row)) return;
         $formatted = cbia_usage_dashboard_format_row((int) $post_id, $row);
         if (!$formatted) return;
-        $rows = cbia_usage_get_event_store_rows(false);
+        // On the first event after an update, rebuild legacy sources before append.
+        $rows = cbia_usage_get_event_store_rows(true);
         $identity = cbia_usage_event_row_identity($formatted);
         $replaced = false;
         if ($identity !== '') {

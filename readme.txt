@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.0
-Stable tag: 2.2.0
+Stable tag: 2.2.1
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -163,6 +163,15 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://www.anthropic.com/legal/privacy
 
 == Changelog ==
+
+= 2.2.1 =
+* Raised the Medium first-pass target to 1900-2050 words while retaining the 1800-2000 nominal setting.
+* Added explicit in-response word budgets for enabled FAQ and practical-example modules.
+* Added a 20% normal tolerance band and a separate 1200-word critical floor for complete Medium articles.
+* Limited length-based expansion to critically short output; truncation, incomplete output and structural errors remain expansion triggers.
+* Allowed checkpoint batches to continue after a manual-review draft while keeping provider and configuration failures blocking.
+* Aligned Blog and Preview length acceptance, telemetry and final validation.
+* Rebuilds and reconciles the Usage event store after an update so historical post, orphan and trashed-post events remain visible.
 
 = 2.2.0 =
 * Replaced tall provider panels with compact, accessible connection rows and on-demand credential/details panels.

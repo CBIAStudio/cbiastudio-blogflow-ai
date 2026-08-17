@@ -30,18 +30,23 @@ function article_with_words($count, $valid = true) {
 
 $policy = cbia_get_length_policy('medium');
 verify_case($policy['nominal_min_words'] === 1800 && $policy['nominal_max_words'] === 2000, 'Medium nominal range');
-verify_case($policy['effective_min_words'] === 1530 && $policy['tolerance_percent'] === 15, 'Medium effective floor');
-verify_case($policy['first_pass_preferred_min'] === 1650 && $policy['first_pass_preferred_max'] === 1850, 'Preferred first-pass range');
+verify_case($policy['effective_min_words'] === 1440 && $policy['tolerance_percent'] === 20, 'Medium tolerance floor');
+verify_case($policy['critical_min_words'] === 1200, 'Medium critical floor');
+verify_case($policy['first_pass_preferred_min'] === 1900 && $policy['first_pass_preferred_max'] === 2050, 'Preferred first-pass range');
 verify_case(cbia_get_length_policy('short')['nominal_min_words'] === 950, 'Short preserved');
 verify_case(cbia_get_length_policy('long')['nominal_min_words'] === 2000, 'Long preserved');
 
-foreach (array(1120, 1529) as $words) {
+foreach (array(1120, 1199) as $words) {
     $decision = cbia_decide_text_expansion($words, $policy, 'complete', array('valid'=>true,'issues'=>array()));
-    verify_case($decision['expansion_required'] && $decision['expansion_reason'] === 'below_effective_minimum', "{$words} expands");
+    verify_case($decision['expansion_required'] && $decision['expansion_reason'] === 'below_critical_minimum', "{$words} expands");
 }
-foreach (array(1530, 1600, 1799) as $words) {
+foreach (array(1200, 1379, 1439) as $words) {
     $decision = cbia_decide_text_expansion($words, $policy, 'complete', array('valid'=>true,'issues'=>array()));
-    verify_case($decision['first_pass_accepted'] && $decision['accepted_with_tolerance'] && !$decision['expansion_required'], "{$words} accepted with tolerance");
+    verify_case($decision['first_pass_accepted'] && $decision['accepted_with_tolerance'] && $decision['accepted_below_tolerance'] && $decision['review_recommended'] && !$decision['expansion_required'], "{$words} accepted without expansion with review flag");
+}
+foreach (array(1440, 1600, 1799) as $words) {
+    $decision = cbia_decide_text_expansion($words, $policy, 'complete', array('valid'=>true,'issues'=>array()));
+    verify_case($decision['first_pass_accepted'] && $decision['accepted_with_tolerance'] && !$decision['accepted_below_tolerance'] && !$decision['expansion_required'], "{$words} accepted with tolerance");
 }
 foreach (array(1800, 2000) as $words) {
     $decision = cbia_decide_text_expansion($words, $policy, 'complete', array('valid'=>true,'issues'=>array()));
@@ -57,7 +62,7 @@ verify_case($placeholder['expansion_required'], 'Incomplete placeholder rejected
 $opts = array('post_length_variant'=>'medium','include_faq'=>0,'include_practical_examples'=>0,'search_intent_strength'=>'balanced');
 foreach (array('how_to','discover_editorial','seo_balanced') as $profile) {
     $prompt = strtolower(cbia_build_prompt_profile_block($profile, $opts, 'English'));
-    verify_case(strpos($prompt, '1650-1850') !== false, "{$profile} gets central target");
+    verify_case(strpos($prompt, '1900-2050') !== false, "{$profile} gets central target");
     verify_case(strpos($prompt, 'faq') === false && strpos($prompt, 'frequently asked') === false, "{$profile} omits disabled FAQ");
     verify_case(strpos($prompt, 'practical examples') === false, "{$profile} omits disabled examples");
 }
@@ -65,6 +70,8 @@ $faq_prompt = strtolower(cbia_build_prompt_profile_block('how_to', array_merge($
 $examples_prompt = strtolower(cbia_build_prompt_profile_block('how_to', array_merge($opts, array('include_practical_examples'=>1)), 'English'));
 verify_case(strpos($faq_prompt, 'faq') !== false, 'Enabled FAQ appears');
 verify_case(strpos($examples_prompt, 'practical') !== false, 'Enabled practical examples appear');
+verify_case(strpos($faq_prompt, '420-520') !== false, 'Medium FAQ word budget appears');
+verify_case(strpos($examples_prompt, '280-360') !== false, 'Medium examples word budget appears');
 
 verify_case(cbia_normalize_openai_completion_status('completed', '') === 'complete', 'OpenAI completed normalized');
 verify_case(cbia_normalize_openai_completion_status('incomplete', 'max_output_tokens') === 'output_limit', 'OpenAI output limit normalized');
@@ -81,7 +88,10 @@ verify_case(strpos($posts_source, "'strict_max_output_override' => true") !== fa
 verify_case(strpos($posts_source, "'result' => 'sufficient'") === false, 'Result is not used as expansion reason');
 
 $fixture = json_decode(file_get_contents(__DIR__ . '/fixtures/text-single-pass-cases.json'), true);
-verify_case($fixture['observed_short']['expected_reason'] === 'below_effective_minimum', 'Observed fixture retained');
+verify_case($fixture['observed_short']['expected_reason'] === 'below_critical_minimum', 'Observed fixture retained');
 verify_case($fixture['accepted_with_tolerance']['expected_remote_text_requests'] === 1, 'Tolerance fixture uses one request');
+
+$blog_source = file_get_contents(dirname(__DIR__) . '/includes/engine/blog.php');
+verify_case(strpos($blog_source, "'needs_manual_review_length'") !== false, 'Manual-review drafts do not block the remaining queue');
 
 echo "text-single-pass-length-policy: {$count}/{$count} OK\n";

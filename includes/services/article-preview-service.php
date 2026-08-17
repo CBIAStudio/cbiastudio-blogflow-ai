@@ -265,6 +265,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 ? (int)cbia_count_visible_words((string)$text_html)
                 : (int)$this->word_count((string)$text_html);
             $effective_min_words = (int)$length_policy['effective_min_words'];
+            $critical_min_words = max(1, (int)($length_policy['critical_min_words'] ?? $effective_min_words));
             $first_validation = cbia_validate_generated_article_html((string)$text_html);
             $first_decision = cbia_decide_text_expansion($first_pass_words, $length_policy, $completion_status, $first_validation, $faq_words_removed + $examples_words_removed);
             $first_pass_success = !empty($first_decision['first_pass_accepted']);
@@ -301,7 +302,7 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
                 }
                 $text_html = $this->enforce_length_ceiling((string)$text_html, (int)$max_words, !empty($settings['include_faq']));
                 $preview_final_validation = cbia_validate_generated_article_html((string)$text_html);
-                if ((int)cbia_count_visible_words((string)$text_html) < $effective_min_words || $expansion_failed || empty($preview_final_validation['valid'])) {
+                if ((int)cbia_count_visible_words((string)$text_html) < $critical_min_words || $expansion_failed || empty($preview_final_validation['valid'])) {
                     return new WP_Error('preview_length_insufficient', 'Generated text remains below the selected minimum. Images were not generated.');
                 }
             }

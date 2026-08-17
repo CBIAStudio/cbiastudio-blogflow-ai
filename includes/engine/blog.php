@@ -477,7 +477,7 @@ if (!function_exists('cbia_blog_should_pause_queue_on_error')) {
     function cbia_blog_should_pause_queue_on_error($error): bool {
         $error_l = strtolower(trim((string)$error));
         if ($error_l === '') return true;
-        if (in_array($error_l, array('already exists', 'empty title'), true)) return false;
+        if (in_array($error_l, array('already exists', 'empty title', 'needs_manual_review_length', 'needs_manual_review_expansion', 'needs_manual_review_html'), true)) return false;
         return true;
     }
 }

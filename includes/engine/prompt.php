@@ -633,30 +633,39 @@ if (!function_exists('cbia_prompt_build_length_policy_block')) {
         $variant = sanitize_key((string)($opts['post_length_variant'] ?? 'medium'));
         $policy = function_exists('cbia_get_length_policy')
             ? cbia_get_length_policy($variant, $opts)
-            : array('first_pass_preferred_min' => 1650, 'first_pass_preferred_max' => 1850, 'nominal_max_words' => 2000);
+            : array('first_pass_preferred_min' => 1900, 'first_pass_preferred_max' => 2050, 'nominal_max_words' => 2000, 'variant' => 'medium');
         $preferred_min = (int)$policy['first_pass_preferred_min'];
         $preferred_max = (int)$policy['first_pass_preferred_max'];
         $nominal_max = (int)$policy['nominal_max_words'];
+        $variant = sanitize_key((string)($policy['variant'] ?? $variant));
+        $module_budgets = array(
+            'short' => array('faq' => '300-360', 'examples' => '180-240'),
+            'medium' => array('faq' => '420-520', 'examples' => '280-360'),
+            'long' => array('faq' => '480-600', 'examples' => '320-420'),
+        );
+        $module_budget = $module_budgets[$variant] ?? $module_budgets['medium'];
         $lines = $is_spanish ? array(
             'POLITICA DE LONGITUD PARA UNA SOLA PASADA',
             "- Objetivo preferente aproximado: {$preferred_min}-{$preferred_max} palabras visibles.",
             '- Escribe un articulo completo en esta respuesta y no termines prematuramente.',
             '- Usa entre 6 y 10 apartados segun lo que requiera el tema; desarrolla varios parrafos cuando una idea lo necesite.',
             '- Evita apartados de dos o tres frases, relleno y repeticion de ideas.',
-            "- No superes {$nominal_max} palabras salvo que sea imprescindible para cerrar una idea.",
+            "- Manten el total cerca de {$nominal_max} palabras, pero no cierres prematuramente una idea esencial.",
         ) : array(
             'SINGLE-PASS LENGTH POLICY',
             "- Preferred approximate target: {$preferred_min}-{$preferred_max} visible words.",
             '- Write a complete article in this response and do not finish prematurely.',
             '- Use 6 to 10 sections according to the topic; develop several paragraphs when an idea needs it.',
             '- Avoid two- or three-sentence sections, padding, and repeated ideas.',
-            "- Do not exceed {$nominal_max} words unless needed to complete an essential idea.",
+            "- Keep the total near {$nominal_max} words, but do not end an essential idea prematurely.",
         );
         if (!empty($opts['include_faq'])) {
             $lines[] = $is_spanish ? '- Integra la seccion de preguntas frecuentes dentro de ese objetivo total.' : '- Include the FAQ section within that total target.';
+            $lines[] = $is_spanish ? "- Reserva aproximadamente {$module_budget['faq']} palabras del total para las seis preguntas y respuestas." : "- Reserve about {$module_budget['faq']} words of the total for the six questions and answers.";
         }
         if (!empty($opts['include_practical_examples'])) {
             $lines[] = $is_spanish ? '- Integra los ejemplos practicos dentro de ese objetivo total.' : '- Include practical examples within that total target.';
+            $lines[] = $is_spanish ? "- Reserva aproximadamente {$module_budget['examples']} palabras del total para dos o tres aplicaciones con contexto, accion y resultado." : "- Reserve about {$module_budget['examples']} words of the total for two or three applications with context, action, and outcome.";
         }
         return implode("\n", $lines);
     }

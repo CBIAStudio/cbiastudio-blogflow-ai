@@ -13,7 +13,7 @@
     "completion_status": "complete",
     "faq_words_removed": 0,
     "examples_words_removed": 0,
-    "expected_reason": "below_effective_minimum",
+    "expected_reason": "below_critical_minimum",
     "expanded_visible_words": 1813,
     "expected_expansion_result": "sufficient"
   },

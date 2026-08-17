@@ -75,7 +75,7 @@ verify_case(contains_text($source['openai'], 'cbia_normalize_chat_completion_sta
 verify_case(contains_text($source['posts'], 'output_limit_reached'), 'output-limit expansion reason');
 verify_case(contains_text($source['posts'], '$force_completion') && contains_text($source['posts'], 'needs_manual_review_length'), 'token-limit response requires completion before publication');
 verify_case(contains_text($source['preview'], 'preview_length_insufficient'), 'Preview rejects unresolved truncation before images');
-verify_case(contains_text($source['posts'], 'below_effective_minimum'), 'short response expansion reason');
+verify_case(contains_text($source['posts'], 'below_critical_minimum'), 'critically short response expansion reason');
 
 $base_settings = array('responses_max_output_tokens'=>6000);
 $budget = cbia_resolve_text_token_budget($base_settings, 1800, 2000, 'Spanish', false, false, 'deepseek', 'deepseek-v4-flash', 'disabled');
