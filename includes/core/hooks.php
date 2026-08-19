@@ -2820,9 +2820,7 @@ if (!function_exists('cbia_ai_composer_build_snapshot_from_post')) {
             'updated_at' => time(),
         );
 
-        return function_exists('cbia_ai_composer_sanitize_snapshot')
-            ? cbia_ai_composer_sanitize_snapshot($snapshot)
-            : $snapshot;
+        return cbia_ai_composer_sanitize_snapshot($snapshot);
     }
 }
 
@@ -3293,6 +3291,10 @@ if (!function_exists('cbia_render_ai_composer_metabox')) {
                 $initial_snapshot = $post_snapshot;
             }
         }
+        if (!empty($initial_snapshot)) {
+            $initial_snapshot = cbia_ai_composer_sanitize_snapshot($initial_snapshot);
+        }
+
         $initial_snapshot_json = (string) wp_json_encode($initial_snapshot);
         ?>
         <div id="cbia-ai-composer-modal" class="cbia-modal cbia-composer-modal" style="display:none;" tabindex="0">
@@ -4118,7 +4120,9 @@ if (!function_exists('cbia_ajax_ai_composer_load_snapshot')) {
             }
         }
 
-        if (empty($snapshot)) {
+        $snapshot_built_from_post = empty($snapshot);
+
+        if ($snapshot_built_from_post) {
             $snapshot = cbia_ai_composer_build_snapshot_from_post(
                 $post_id,
                 (string)$default_language,
@@ -4126,11 +4130,14 @@ if (!function_exists('cbia_ajax_ai_composer_load_snapshot')) {
                 (string)$default_length,
                 (int)$default_internal_images
             );
-            if (!empty($snapshot)) {
+        }
+
+        if (!empty($snapshot)) {
+            $snapshot = cbia_ai_composer_sanitize_snapshot($snapshot);
+
+            if ($snapshot_built_from_post) {
                 update_post_meta($post_id, '_cbia_ai_composer_snapshot', $snapshot);
             }
-        } else {
-            $snapshot = cbia_ai_composer_sanitize_snapshot($snapshot);
         }
 
         if (empty($snapshot)) {
