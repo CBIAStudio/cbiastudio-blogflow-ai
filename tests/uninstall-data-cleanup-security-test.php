@@ -12,6 +12,13 @@ $cbia_test_is_pro = file_exists($cbia_test_root . '/ai-blog-builder-pro.php');
 $cbia_test_cases = 0;
 $cbia_test_http_calls = 0;
 $cbia_test_deleted_metadata = array();
+$cbia_test_cleared_hooks = array();
+$cbia_test_cron_events = array(
+    'cbia_pending_fill_event' => array(array(), array()),
+    'cbia_generation_event' => array(array(), array()),
+    'cbia_oldposts_process_background_run' => array(array(), array()),
+    'unrelated_plugin_cron_event' => array(array()),
+);
 
 function cbia_uninstall_assert($condition, $message)
 {
@@ -170,6 +177,17 @@ class Cbia_Uninstall_Test_Wpdb
 
 $wpdb = new Cbia_Uninstall_Test_Wpdb();
 
+function get_option($name, $default = false)
+{
+    global $cbia_test_options;
+
+    if ('active_plugins' === $name) {
+        return array();
+    }
+
+    return array_key_exists($name, $cbia_test_options) ? $cbia_test_options[$name] : $default;
+}
+
 function delete_option($name)
 {
     global $cbia_test_options;
@@ -221,6 +239,14 @@ function wp_remote_request()
     $cbia_test_http_calls++;
 }
 
+function wp_clear_scheduled_hook($hook)
+{
+    global $cbia_test_cleared_hooks, $cbia_test_cron_events;
+    $cbia_test_cleared_hooks[] = $hook;
+    unset($cbia_test_cron_events[$hook]);
+    return true;
+}
+
 require $cbia_test_root . '/uninstall.php';
 
 foreach ($cbia_test_common_options as $cbia_test_option) {
@@ -260,6 +286,17 @@ cbia_uninstall_assert(
     'only the exact internal user-meta key must be deleted across users'
 );
 cbia_uninstall_assert(0 === $cbia_test_http_calls, 'uninstall must not make remote requests');
+
+$cbia_test_owned_cron_hooks = array(
+    'cbia_pending_fill_event',
+    'cbia_generation_event',
+    'cbia_oldposts_process_background_run',
+);
+foreach ($cbia_test_owned_cron_hooks as $cbia_test_cron_hook) {
+    cbia_uninstall_assert(!isset($cbia_test_cron_events[$cbia_test_cron_hook]), "cron hook {$cbia_test_cron_hook} must be cleared on uninstall");
+}
+cbia_uninstall_assert(isset($cbia_test_cron_events['unrelated_plugin_cron_event']), 'unrelated cron hooks must be preserved on uninstall');
+cbia_uninstall_assert($cbia_test_owned_cron_hooks === $cbia_test_cleared_hooks, 'uninstall must clear only the audited CBIA cron hooks');
 
 $cbia_test_allowed_prefixes = array('cbia_usage_recalc_backup_');
 foreach (array(
@@ -306,6 +343,9 @@ foreach (array(
 
 $cbia_test_main_file = $cbia_test_root . ($cbia_test_is_pro ? '/ai-blog-builder-pro.php' : '/cbiastudio-blogflow-ai.php');
 $cbia_test_main_source = file_get_contents($cbia_test_main_file);
-cbia_uninstall_assert(false === strpos($cbia_test_main_source, 'register_deactivation_hook'), 'FIX 2.4 must not add deactivation cleanup');
+$cbia_test_lifecycle_source = file_get_contents($cbia_test_root . '/includes/lifecycle.php');
+cbia_uninstall_assert(false !== strpos($cbia_test_main_source, 'register_deactivation_hook'), 'entrypoint must register lifecycle cleanup');
+cbia_uninstall_assert(false === strpos($cbia_test_lifecycle_source, 'delete_option('), 'deactivation cleanup must not delete options');
+cbia_uninstall_assert(false === strpos($cbia_test_lifecycle_source, 'wp_remote_'), 'deactivation cleanup must not make HTTP requests');
 
 echo 'uninstall-data-cleanup-security: ' . $cbia_test_cases . '/' . $cbia_test_cases . ' OK' . PHP_EOL;

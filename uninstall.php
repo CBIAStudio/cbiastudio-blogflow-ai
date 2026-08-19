@@ -7,6 +7,9 @@ if (!defined('WP_UNINSTALL_PLUGIN')) {
     exit;
 }
 
+require_once __DIR__ . '/includes/lifecycle.php';
+CBIA_Lifecycle::clear_scheduled_events();
+
 // Per-site options owned exclusively by the plugin.
 $cbia_options = array(
     // Core configuration, state, and legacy data.

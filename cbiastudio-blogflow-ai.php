@@ -41,6 +41,9 @@ if (!defined('CBIA_OPTION_LOG_COUNTER')) define('CBIA_OPTION_LOG_COUNTER', 'cbia
 if (!defined('CBIA_OPTION_STOP')) define('CBIA_OPTION_STOP', 'cbia_stop_generation');
 if (!defined('CBIA_OPTION_CHECKPOINT')) define('CBIA_OPTION_CHECKPOINT', 'cbia_checkpoint');
 
+require_once CBIA_BASE_INCLUDES_DIR . 'lifecycle.php';
+register_deactivation_hook(__FILE__, array('CBIA_Lifecycle', 'clear_scheduled_events'));
+
 add_filter('cbia_pro_upgrade_url', function ($url) {
 	return CBIA_PRO_UPGRADE_URL_DEFAULT;
 }, 10, 1);
