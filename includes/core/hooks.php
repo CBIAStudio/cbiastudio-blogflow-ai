@@ -4761,8 +4761,8 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
         check_ajax_referer('cbia_ajax_nonce');
 
         $post_id = isset($_POST['post_id']) ? absint(wp_unslash($_POST['post_id'])) : 0;
-        $title = isset($_POST['title']) ? sanitize_text_field((string)wp_unslash($_POST['title'])) : '';
-        $html = isset($_POST['content_html']) ? wp_kses_post((string)wp_unslash($_POST['content_html'])) : '';
+        $title = isset($_POST['title']) ? (string)wp_unslash($_POST['title']) : '';
+        $html = isset($_POST['content_html']) ? (string)wp_unslash($_POST['content_html']) : '';
         $featured_attach_id = isset($_POST['featured_attach_id']) ? absint(wp_unslash($_POST['featured_attach_id'])) : 0;
         $focus = isset($_POST['focus_keyphrase']) ? sanitize_text_field((string)wp_unslash($_POST['focus_keyphrase'])) : '';
         $metad = isset($_POST['meta_description']) ? sanitize_text_field((string)wp_unslash($_POST['meta_description'])) : '';
@@ -4815,6 +4815,16 @@ if (!function_exists('cbia_ajax_ai_composer_apply_full_post')) {
         }
         if (!$internal_images_enabled) {
             $html = preg_replace('/<img\b[^>]*>/i', '', (string)$html);
+        }
+
+        $safe_fields = cbia_sanitize_ai_post_data(array(
+            'post_title' => $title,
+            'post_content' => $html,
+        ));
+        $title = $safe_fields['post_title'];
+        $html = $safe_fields['post_content'];
+        if ($title === '' || $html === '') {
+            wp_send_json_error(array('message' => __('Title or content is missing.', 'cbiastudio-blogflow-ai')), 400);
         }
 
         if ($post_id > 0) {

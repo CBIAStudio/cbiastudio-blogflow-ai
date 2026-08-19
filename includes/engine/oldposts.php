@@ -698,8 +698,7 @@ if (!function_exists('cbia_oldposts_ai_optimize_title')) {
             return false;
         }
 
-        $new_title = trim(wp_strip_all_tags((string)$text));
-        $new_title = preg_replace('/\s+/', ' ', $new_title);
+        $new_title = cbia_sanitize_ai_post_title((string)$text);
 
         if ($new_title === '' || mb_strlen($new_title) < 12) {
             /* translators: %d is the post ID. */
@@ -833,6 +832,7 @@ if (!function_exists('cbia_oldposts_ai_regenerate_content')) {
         if (function_exists('cbia_cleanup_post_html')) {
             $final_html = cbia_cleanup_post_html($final_html);
         }
+        $final_html = cbia_sanitize_ai_post_content($final_html);
 
         $updated = wp_update_post(array(
             'ID'           => $post_id,

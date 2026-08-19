@@ -624,12 +624,14 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
             $post_id = (int)($payload['post_id'] ?? 0);
             if ($post_id && $this->is_preview_draft($post_id)) {
-                $update = array(
+                $update = cbia_sanitize_ai_post_data(array(
                     'ID' => $post_id,
                     'post_title' => $title,
                     'post_content' => $html,
                     'post_status' => $post_status,
-                );
+                ));
+                $title = $update['post_title'];
+                $html = $update['post_content'];
                 if ($post_status === 'future') {
                     $update['post_date'] = $post_date_mysql;
                     $update['post_date_gmt'] = get_gmt_from_date($post_date_mysql);
@@ -747,25 +749,29 @@ if (!class_exists('CBIA_Article_Preview_Service')) {
 
         private function upsert_preview_draft($title, $final_html, $featured_attach_id, array $seo, array $settings = array()) {
             $title = trim((string)$title);
+            $final_html = cbia_strip_document_wrappers((string)$final_html);
+            $final_html = cbia_strip_h1_to_h2($final_html);
+
+            $safe_fields = cbia_sanitize_ai_post_data(array(
+                'post_title' => $title,
+                'post_content' => $final_html,
+            ));
+            $title = $safe_fields['post_title'];
+            $final_html = $safe_fields['post_content'];
             if ($title === '') {
                 return new WP_Error('missing_title', 'Empty title to create draft.');
             }
-
-            $final_html = cbia_strip_document_wrappers((string)$final_html);
-            $final_html = cbia_strip_h1_to_h2($final_html);
 
             $existing_id = $this->find_existing_post_by_title($title);
             if ($existing_id && !$this->is_preview_draft($existing_id)) {
                 return new WP_Error('duplicate_title', "Post '{$title}' already exists.");
             }
 
-            $postarr = array(
+            $postarr = array_merge($safe_fields, array(
                 'post_type' => 'post',
-                'post_title' => $title,
-                'post_content' => $final_html,
                 'post_status' => 'draft',
                 'post_author' => function_exists('cbia_pick_post_author_id') ? cbia_pick_post_author_id() : get_current_user_id(),
-            );
+            ));
 
             if ($existing_id) {
                 $postarr['ID'] = (int)$existing_id;

@@ -490,12 +490,14 @@ if (!function_exists('cbia_create_post_in_wp_engine')) {
 		$final_html = cbia_strip_document_wrappers($final_html);
 		$final_html = cbia_strip_h1_to_h2($final_html);
 
-		$postarr = [
+		$postarr = cbia_sanitize_ai_post_data([
 			'post_type'    => 'post',
 			'post_title'   => $title,
 			'post_content' => $final_html,
 			'post_author'  => cbia_pick_post_author_id(),
-		];
+		]);
+		$title = $postarr['post_title'];
+		$final_html = $postarr['post_content'];
 		$post_date_is_past = false;
 		if ($post_date_mysql) {
 			try {
