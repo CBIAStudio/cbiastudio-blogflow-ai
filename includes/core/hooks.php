@@ -3817,8 +3817,12 @@ if (!function_exists('cbia_provider_connection_public_state')) {
             'not_tested' => __('Connection not checked', 'cbiastudio-blogflow-ai'),
             'verified' => __('Connection verified', 'cbiastudio-blogflow-ai'),
             'authentication_error' => __('Key rejected', 'cbiastudio-blogflow-ai'),
+            'configuration_error' => __('Provider URL must be corrected', 'cbiastudio-blogflow-ai'),
         );
         $state = isset($labels[$status['status']]) ? (string)$status['status'] : 'not_tested';
+        $definition = function_exists('cbia_providers_get_provider') ? cbia_providers_get_provider($provider) : array();
+        $base_check = cbia_validate_provider_base_url($provider, (string)($definition['base_url'] ?? ''), null, false);
+        if (empty($base_check['valid'])) $state = 'configuration_error';
         return array(
             'provider' => sanitize_key($provider),
             'configured' => !empty($status['configured']),
@@ -3849,18 +3853,14 @@ if (!function_exists('cbia_test_provider_connection')) {
         $args = array('timeout' => 20, 'headers' => array());
         if ($provider === 'openai') {
             $url = ($base_url !== '' ? $base_url : 'https://api.openai.com') . '/' . ($api_version !== '' ? $api_version : 'v1') . '/models';
-            $args['headers'] = function_exists('cbia_http_headers_openai') ? cbia_http_headers_openai($key) : array('Authorization' => 'Bearer ' . $key);
         } elseif ($provider === 'google') {
             $url = ($base_url !== '' ? $base_url : 'https://generativelanguage.googleapis.com') . '/' . ($api_version !== '' ? $api_version : 'v1beta') . '/models';
-            $args['headers'] = array('x-goog-api-key' => $key);
         } elseif ($provider === 'deepseek') {
             $url = ($base_url !== '' ? $base_url : 'https://api.deepseek.com') . '/' . ($api_version !== '' ? $api_version : 'v1') . '/models';
-            $args['headers'] = array('Authorization' => 'Bearer ' . $key);
 		} elseif ($provider === 'anthropic') {
 			$url = ($base_url !== '' ? $base_url : 'https://api.anthropic.com') . '/' . ($api_version !== '' ? $api_version : 'v1') . '/models';
-			$args['headers'] = function_exists('cbia_anthropic_headers') ? cbia_anthropic_headers($key) : array('x-api-key' => $key, 'anthropic-version' => '2023-06-01');
         }
-        $response = wp_remote_get($url, $args);
+        $response = cbia_provider_safe_remote_get($provider, $url, $args, $key);
         if (is_wp_error($response)) return array('ok' => false, 'code' => 'network_error', 'message' => cbia_sanitize_provider_error($provider, $response->get_error_message()));
         $http_code = (int)wp_remote_retrieve_response_code($response);
         $data = json_decode((string)wp_remote_retrieve_body($response), true);
@@ -4037,24 +4037,19 @@ if (!function_exists('cbia_ajax_ai_composer_test_api_key')) {
             $base_url = $base_url !== '' ? $base_url : 'https://api.openai.com';
             $api_version = $api_version !== '' ? $api_version : 'v1';
             $url = $base_url . '/' . $api_version . '/models';
-            $args['headers'] = function_exists('cbia_http_headers_openai')
-                ? cbia_http_headers_openai($key)
-                : array('Authorization' => 'Bearer ' . $key);
         } elseif ($provider === 'google') {
             $base_url = $base_url !== '' ? $base_url : 'https://generativelanguage.googleapis.com';
             $api_version = $api_version !== '' ? $api_version : 'v1beta';
             $url = $base_url . '/' . $api_version . '/models';
-            $args['headers'] = array('x-goog-api-key' => $key);
         } elseif ($provider === 'deepseek') {
             $base_url = $base_url !== '' ? $base_url : 'https://api.deepseek.com';
             $api_version = $api_version !== '' ? $api_version : 'v1';
             $url = $base_url . '/' . $api_version . '/models';
-            $args['headers'] = array('Authorization' => 'Bearer ' . $key);
         }
         if ($url === '') {
             wp_send_json_error(array('message' => __('Could not build provider validation URL.', 'cbiastudio-blogflow-ai')), 400);
         }
-        $resp = wp_remote_get($url, $args);
+        $resp = cbia_provider_safe_remote_get($provider, $url, $args, $key);
         if (is_wp_error($resp)) {
             wp_send_json_error(array('message' => cbia_sanitize_provider_error($provider, $resp->get_error_message())), 400);
         }

@@ -102,11 +102,10 @@ if ( ! function_exists( 'cbia_anthropic_messages_call' ) ) {
 			}
 			cbia_log( sprintf( 'Anthropic Messages: model=%s attempt %d/%d', $model, $attempt, $tries ), 'INFO' );
 			$started = microtime( true );
-			$response = wp_remote_post( 'https://api.anthropic.com/v1/messages', array(
-				'headers' => cbia_anthropic_headers( $api_key ),
+			$response = cbia_provider_safe_remote_post( 'anthropic', 'https://api.anthropic.com/v1/messages', array(
 				'body' => wp_json_encode( $payload ),
 				'timeout' => 'configuration_test' === $phase ? 30 : ( 'expand' === $phase ? 150 : 90 ),
-			) );
+			), $api_key );
 			$elapsed_ms = max( 0, (int) round( ( microtime( true ) - $started ) * 1000 ) );
 			if ( is_wp_error( $response ) ) {
 				$last_error = function_exists( 'cbia_mask_sensitive_log_text' ) ? cbia_mask_sensitive_log_text( $response->get_error_message() ) : sanitize_text_field( $response->get_error_message() );

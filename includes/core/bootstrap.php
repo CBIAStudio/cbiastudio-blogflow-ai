@@ -10,6 +10,7 @@ $cbia_new_files = array(
     CBIA_INCLUDES_DIR . 'core/loader.php',
     CBIA_INCLUDES_DIR . 'core/container.php',
     CBIA_INCLUDES_DIR . 'core/wiring.php',
+    CBIA_INCLUDES_DIR . 'support/provider-http-security.php',
     CBIA_INCLUDES_DIR . 'core/hooks.php',
     CBIA_INCLUDES_DIR . 'admin/admin-router.php',
     CBIA_INCLUDES_DIR . 'admin/admin-tab.php',

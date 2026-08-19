@@ -144,14 +144,13 @@ if (!function_exists('cbia_google_generate_image_gemini')) {
 			$payload['generationConfig']['imageConfig'] = ['aspectRatio' => $aspect];
 		}
 
-		$resp = wp_remote_post($url, [
+		$resp = cbia_provider_safe_remote_post('google', $url, [
 			'headers' => [
 				'Content-Type' => 'application/json',
-				'x-goog-api-key' => $api_key,
 			],
 			'body' => wp_json_encode($payload),
 			'timeout' => 60,
-		]);
+		], $api_key);
 		if (is_wp_error($resp)) {
 			cbia_log(('Google Gemini Image HTTP error: ') . $resp->get_error_message(), 'ERROR');
 			return [false, 0, (string)$model, $resp->get_error_message()];
@@ -213,7 +212,7 @@ if (!function_exists('cbia_google_generate_image_imagen')) {
 		$base_url = rtrim((string)($cfg['base_url'] ?? 'https://generativelanguage.googleapis.com'), '/');
 		$api_version = trim((string)($cfg['api_version'] ?? 'v1beta'), '/');
 		$imagen_model = cbia_google_imagen_model_id((string)$model);
-		$url = $base_url . '/' . $api_version . '/models/' . rawurlencode($imagen_model) . ':predict?key=' . rawurlencode($api_key);
+		$url = $base_url . '/' . $api_version . '/models/' . rawurlencode($imagen_model) . ':predict';
 
 		$size = cbia_image_size_for_section($section, $idx);
 		$aspect = cbia_google_image_aspect_ratio_from_size($size);
@@ -230,13 +229,13 @@ if (!function_exists('cbia_google_generate_image_imagen')) {
 			],
 		];
 
-		$resp = wp_remote_post($url, [
+		$resp = cbia_provider_safe_remote_post('google', $url, [
 			'headers' => [
 				'Content-Type' => 'application/json',
 			],
 			'body' => wp_json_encode($payload),
 			'timeout' => 60,
-		]);
+		], $api_key);
 		if (is_wp_error($resp)) {
 			cbia_log(('Google Imagen HTTP error: ') . $resp->get_error_message(), 'ERROR');
 			return [false, 0, (string)$model, $resp->get_error_message()];
@@ -509,11 +508,10 @@ if (!function_exists('cbia_openai_responses_call')) {
 				if (!empty($capabilities['text_verbosity'])) $payload['text'] = array('verbosity' => 'high');
 
 				$request_started = microtime(true);
-				$resp = wp_remote_post('https://api.openai.com/v1/responses', [
-					'headers' => cbia_http_headers_openai($api_key),
+				$resp = cbia_provider_safe_remote_post('openai', 'https://api.openai.com/v1/responses', [
 					'body'    => wp_json_encode($payload),
 					'timeout' => cbia_openai_text_timeout($context),
-				]);
+				], $api_key);
 				$elapsed_ms = (int)round((microtime(true) - $request_started) * 1000);
 
 				if (is_wp_error($resp)) {
@@ -669,14 +667,10 @@ if (!function_exists('cbia_openai_responses_stream_call')) {
 				$last_event = [];
 				$line_buffer = '';
 
-				$resp = wp_remote_post('https://api.openai.com/v1/responses', [
-					'headers' => [
-						'Authorization' => 'Bearer ' . $api_key,
-						'Content-Type'  => 'application/json',
-					],
+				$resp = cbia_provider_safe_remote_post('openai', 'https://api.openai.com/v1/responses', [
 					'body'    => wp_json_encode($payload),
 					'timeout' => 120,
-				]);
+				], $api_key);
 				if (is_wp_error($resp)) {
 					$last_error = $resp->get_error_message();
 					if (function_exists('cbia_mask_sensitive_log_text')) $last_error = cbia_mask_sensitive_log_text((string)$last_error);
@@ -982,11 +976,10 @@ if (!function_exists('cbia_generate_image_openai')) {
 				$payload = (array)$request_config['payload'];
 
 				$request_started = microtime(true);
-				$resp = wp_remote_post('https://api.openai.com/v1/images/generations', [
-					'headers' => cbia_http_headers_openai($api_key),
+				$resp = cbia_provider_safe_remote_post('openai', 'https://api.openai.com/v1/images/generations', [
 					'body'    => wp_json_encode($payload),
 					'timeout' => cbia_image_api_timeout_seconds(),
-				]);
+				], $api_key);
 				$elapsed_ms = (int)round((microtime(true) - $request_started) * 1000);
 
 				if (is_wp_error($resp)) {
@@ -1138,11 +1131,10 @@ if (!function_exists('cbia_generate_image_openai_with_prompt')) {
 				$payload = (array)$request_config['payload'];
 
 				$request_started = microtime(true);
-				$resp = wp_remote_post('https://api.openai.com/v1/images/generations', [
-					'headers' => cbia_http_headers_openai($api_key),
+				$resp = cbia_provider_safe_remote_post('openai', 'https://api.openai.com/v1/images/generations', [
 					'body'    => wp_json_encode($payload),
 					'timeout' => cbia_image_api_timeout_seconds(),
-				]);
+				], $api_key);
 				$elapsed_ms = (int)round((microtime(true) - $request_started) * 1000);
 
 				if (is_wp_error($resp)) {
@@ -1324,14 +1316,13 @@ if (!function_exists('cbia_google_generate_content_call')) {
 			cbia_log((sprintf(__('Google Gemini: model=%1$s attempt %2$d/%3$d', 'cbiastudio-blogflow-ai'), (string)$model, (int)$t, (int)$tries)), 'INFO');
 
 			$started = microtime(true);
-			$resp = wp_remote_post($url, [
+			$resp = cbia_provider_safe_remote_post('google', $url, [
 				'headers' => [
 					'Content-Type' => 'application/json',
-					'x-goog-api-key' => $api_key,
 				],
 				'body'    => wp_json_encode($payload),
 				'timeout' => sanitize_key((string)($context['phase'] ?? '')) === 'configuration_test' ? 30 : 60,
-			]);
+			], $api_key);
 			$elapsed_ms = max(0, (int)round((microtime(true) - $started) * 1000));
 
 			if (is_wp_error($resp)) {
@@ -1451,11 +1442,11 @@ if (!function_exists('cbia_deepseek_chat_call')) {
 
 			cbia_log(sprintf('DeepSeek: model=%s thinking=%s effort=%s attempt %d/%d', $model, $config['thinking'], $config['thinking'] === 'enabled' ? $config['reasoning_effort'] : 'n/a', $t, $tries), 'INFO');
 			$started = microtime(true);
-			$resp = wp_remote_post($url, array(
-				'headers' => array('Content-Type' => 'application/json', 'Authorization' => 'Bearer ' . $api_key),
+			$resp = cbia_provider_safe_remote_post('deepseek', $url, array(
+				'headers' => array('Content-Type' => 'application/json'),
 				'body' => wp_json_encode($payload),
 				'timeout' => $timeout,
-			));
+			), $api_key);
 			$elapsed_ms = max(0, (int)round((microtime(true) - $started) * 1000));
 
 			if (is_wp_error($resp)) {

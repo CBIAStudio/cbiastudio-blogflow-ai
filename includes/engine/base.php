@@ -694,7 +694,7 @@ if (!function_exists('cbia_deepseek_test_models_connection')) {
         if ($key === '') return array('ok'=>false,'status'=>'missing_api_key','http_code'=>0,'request_sent'=>0,'model_available'=>false,'request_id'=>'','elapsed_ms'=>0);
         $base = rtrim((string)($cfg['base_url'] ?? 'https://api.deepseek.com'), '/');
         $started = microtime(true);
-        $resp = wp_remote_get($base . '/models', array('timeout'=>30,'headers'=>array('Authorization'=>'Bearer ' . $key)));
+        $resp = cbia_provider_safe_remote_get('deepseek', $base . '/models', array('timeout'=>30), $key);
         $elapsed = max(0, (int)round((microtime(true) - $started) * 1000));
         if (is_wp_error($resp)) {
             $message = function_exists('cbia_mask_sensitive_log_text') ? cbia_mask_sensitive_log_text($resp->get_error_message()) : sanitize_text_field($resp->get_error_message());

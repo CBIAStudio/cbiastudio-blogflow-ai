@@ -126,6 +126,11 @@ if (!empty($warnings) && is_array($warnings)) {
     echo '<div class="notice notice-warning"><p>' . esc_html(implode(' ', $warnings)) . '</p></div>';
     delete_transient('cbia_config_warnings');
 }
+$config_errors = get_transient('cbia_config_errors');
+if (!empty($config_errors) && is_array($config_errors)) {
+    echo '<div class="notice notice-error"><p>' . esc_html(implode(' ', $config_errors)) . '</p></div>';
+    delete_transient('cbia_config_errors');
+}
 
 $connection_capabilities = array(
     'openai' => __('Text and images', 'cbiastudio-blogflow-ai'),
@@ -138,6 +143,7 @@ $connection_state_labels = array(
     'not_tested' => __('Connection not checked', 'cbiastudio-blogflow-ai'),
     'verified' => __('Connection verified', 'cbiastudio-blogflow-ai'),
     'authentication_error' => __('Key rejected', 'cbiastudio-blogflow-ai'),
+    'configuration_error' => __('Provider URL must be corrected', 'cbiastudio-blogflow-ai'),
 );
 echo '<section class="cbia-provider-connections" id="cbia-provider-connections" aria-labelledby="cbia-provider-connections-title" data-network-error="' . esc_attr__('The connection request could not be completed.', 'cbiastudio-blogflow-ai') . '">';
 echo '<div class="cbia-section-header"><div class="cbia-section-title" id="cbia-provider-connections-title">' . esc_html__('AI connections', 'cbiastudio-blogflow-ai') . '</div>';
@@ -148,6 +154,8 @@ foreach ($providers_list as $pkey => $pdef) {
     $plabel = (string)($pdef['label'] ?? ucfirst($pkey));
     $status = function_exists('cbia_get_provider_connection_status') ? cbia_get_provider_connection_status((string)$pkey) : array('status' => 'not_configured', 'configured' => false, 'last_success' => '');
     $state = isset($connection_state_labels[$status['status'] ?? '']) ? (string)$status['status'] : 'not_tested';
+    $base_check = cbia_validate_provider_base_url((string)$pkey, (string)($pdef['base_url'] ?? ''), null, false);
+    if (empty($base_check['valid'])) $state = 'configuration_error';
     $configured = !empty($status['configured']);
     $in_text = sanitize_key((string)($s['text_provider'] ?? 'openai')) === $pkey;
     $in_image = sanitize_key((string)($s['image_provider'] ?? 'openai')) === $pkey;

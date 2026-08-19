@@ -37,6 +37,10 @@ function wp_remote_post( $url, $args ) {
 	if ( empty( $GLOBALS['test_http_queue'] ) ) return new WP_Error( 'empty_queue', 'No mocked response' );
 	return array_shift( $GLOBALS['test_http_queue'] );
 }
+function cbia_provider_safe_remote_post( $provider, $url, $args, $api_key ) {
+	$args['headers']['Authorization'] = 'Bearer ' . $api_key;
+	return wp_remote_post( $url, $args );
+}
 function cbia_get_settings() { return $GLOBALS['test_settings']; }
 function cbia_get_provider_config( $provider ) { return array( 'base_url' => 'https://api.deepseek.com', 'api_key' => 'test-key' ); }
 function cbia_get_provider_api_key( $provider ) { return 'test-key'; }

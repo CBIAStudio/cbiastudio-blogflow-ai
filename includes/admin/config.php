@@ -136,6 +136,7 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 			if (!isset($providers_list[$current_provider])) $current_provider = 'openai';
 
 			$providers_new = is_array($provider_settings['providers'] ?? null) ? $provider_settings['providers'] : [];
+			$base_url_errors = array();
 			foreach ($providers_list as $pkey => $pdef) {
 				$mdl = isset($text_models_post[$pkey]) ? sanitize_text_field((string)$text_models_post[$pkey]) : (string)($providers_new[$pkey]['model'] ?? ($pdef['models'][0] ?? ''));
 				if ($pkey === 'deepseek' && function_exists('cbia_deepseek_normalize_runtime_config')) {
@@ -146,7 +147,21 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 				if (function_exists('cbia_providers_supports_image') && !cbia_providers_supports_image($pkey)) {
 					$img = '';
 				}
-				$base = isset($provider_base_url_post[$pkey]) ? sanitize_text_field((string)$provider_base_url_post[$pkey]) : (string)($providers_new[$pkey]['base_url'] ?? ($pdef['base_url'] ?? ''));
+				$base = (string)($providers_new[$pkey]['base_url'] ?? ($pdef['base_url'] ?? ''));
+				if (array_key_exists($pkey, $provider_base_url_post)) {
+					$candidate_base = esc_url_raw((string)$provider_base_url_post[$pkey], array('https'));
+					$base_result = cbia_validate_provider_base_url((string)$pkey, $candidate_base);
+					if (!empty($base_result['valid'])) {
+						$base = (string)$base_result['url'];
+					} else {
+						$provider_label = sanitize_text_field((string)($pdef['label'] ?? ucfirst((string)$pkey)));
+						$base_url_errors[] = sprintf(
+							/* translators: %s: provider name. */
+							__('The %s provider URL was not saved. Use the official HTTPS endpoint.', 'cbiastudio-blogflow-ai'),
+							$provider_label
+						);
+					}
+				}
 				if (!isset($providers_new[$pkey]) || !is_array($providers_new[$pkey])) $providers_new[$pkey] = array();
 				$providers_new[$pkey]['model'] = $mdl;
 				$providers_new[$pkey]['image_model'] = $img;
@@ -159,6 +174,11 @@ if (!function_exists('cbia_pro_config_handle_post')) {
 					'current_provider' => $current_provider,
 					'providers' => $providers_new,
 				]);
+			}
+			if (!empty($base_url_errors)) {
+				set_transient('cbia_config_errors', $base_url_errors, 60);
+			} else {
+				delete_transient('cbia_config_errors');
 			}
 		}
 

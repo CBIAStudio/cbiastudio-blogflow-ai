@@ -12,6 +12,7 @@ function wp_remote_retrieve_response_code($response) { return (int)($response['r
 function wp_remote_retrieve_body($response) { return (string)($response['body'] ?? ''); }
 function wp_remote_retrieve_header($response, $name) { return (string)($response['headers'][strtolower($name)] ?? ''); }
 function wp_remote_post($url, $args) { $GLOBALS['anthropic_http_calls']++; $GLOBALS['anthropic_url'] = $url; $GLOBALS['anthropic_args'] = $args; return $GLOBALS['anthropic_response']; }
+function cbia_provider_safe_remote_post($provider, $url, $args, $api_key) { $args['headers'] = array_merge($args['headers'] ?? array(), cbia_anthropic_headers($api_key)); return wp_remote_post($url, $args); }
 function cbia_get_provider_api_key($provider) { return 'test-anthropic-key'; }
 function cbia_get_text_model_for_provider($provider, $fallback = '') { return 'claude-sonnet-5'; }
 function cbia_get_settings() { return array('responses_max_output_tokens' => 6000); }

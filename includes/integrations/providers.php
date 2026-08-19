@@ -4,6 +4,9 @@
  */
 
 if ( ! defined( 'ABSPATH' ) ) { exit; }
+if ( ! function_exists( 'cbia_provider_default_base_url' ) ) {
+    require_once dirname( __DIR__ ) . '/support/provider-http-security.php';
+}
 
 if (!function_exists('cbia_providers_defaults')) {
     function cbia_providers_defaults(): array {
@@ -15,7 +18,7 @@ if (!function_exists('cbia_providers_defaults')) {
                     'model' => 'gpt-5-mini',
                     // CAMBIO: modelo de imagen por proveedor (persistencia)
                     'image_model' => 'gpt-image-2',
-                    'base_url' => 'https://api.openai.com',
+                    'base_url' => cbia_provider_default_base_url('openai'),
                     'api_version' => 'v1',
                 ),
                 'google' => array(
@@ -23,7 +26,7 @@ if (!function_exists('cbia_providers_defaults')) {
                     'model' => 'gemini-2.5-flash',
                     // CAMBIO: modelo de imagen por proveedor (persistencia)
                     'image_model' => 'imagen-3.0-generate-002',
-                    'base_url' => 'https://generativelanguage.googleapis.com',
+                    'base_url' => cbia_provider_default_base_url('google'),
                     'api_version' => 'v1beta',
                 ),
                 'deepseek' => array(
@@ -31,14 +34,14 @@ if (!function_exists('cbia_providers_defaults')) {
                     'model' => 'deepseek-v4-flash',
                     // CAMBIO: sin modelo de imagen por defecto
                     'image_model' => '',
-                    'base_url' => 'https://api.deepseek.com',
+                    'base_url' => cbia_provider_default_base_url('deepseek'),
                     'api_version' => '',
                 ),
 				'anthropic' => array(
 					'label' => 'Anthropic',
 					'model' => 'claude-sonnet-5',
 					'image_model' => '',
-					'base_url' => 'https://api.anthropic.com',
+					'base_url' => cbia_provider_default_base_url('anthropic'),
 					'api_version' => 'v1',
 				),
             ),
@@ -60,6 +63,14 @@ if (!function_exists('cbia_providers_save_settings')) {
         if (!empty($settings['providers']) && is_array($settings['providers'])) {
             foreach ($settings['providers'] as $provider => $provider_settings) {
                 if (!is_array($provider_settings)) continue;
+                if (array_key_exists('base_url', $provider_settings)) {
+                    $base_result = cbia_validate_provider_base_url((string)$provider, (string)$provider_settings['base_url']);
+                    if (!empty($base_result['valid'])) {
+                        $settings['providers'][$provider]['base_url'] = (string)$base_result['url'];
+                    } else {
+                        unset($settings['providers'][$provider]['base_url']);
+                    }
+                }
                 $new_key = (string)($provider_settings['api_key'] ?? '');
                 $result = function_exists('cbia_sanitize_provider_api_key')
                     ? cbia_sanitize_provider_api_key((string)$provider, $new_key)
@@ -140,14 +151,9 @@ if (!function_exists('cbia_providers_fetch_openai_models')) {
         $api_version = trim((string)($provider_cfg['api_version'] ?? 'v1'), '/');
         $url = $base_url . '/' . $api_version . '/models';
 
-        $headers = function_exists('cbia_http_headers_openai')
-            ? cbia_http_headers_openai($api_key)
-            : array('Authorization' => 'Bearer ' . $api_key);
-
-        $resp = wp_remote_get($url, array(
-            'headers' => $headers,
+        $resp = cbia_provider_safe_remote_get('openai', $url, array(
             'timeout' => 30,
-        ));
+        ), $api_key);
         if (is_wp_error($resp)) return array();
 
         $code = (int)wp_remote_retrieve_response_code($resp);
@@ -179,12 +185,9 @@ if (!function_exists('cbia_providers_fetch_google_models')) {
         $api_version = trim((string)($provider_cfg['api_version'] ?? 'v1beta'), '/');
         $url = $base_url . '/' . $api_version . '/models';
 
-        $resp = wp_remote_get($url, array(
-            'headers' => array(
-                'x-goog-api-key' => $api_key,
-            ),
+        $resp = cbia_provider_safe_remote_get('google', $url, array(
             'timeout' => 30,
-        ));
+        ), $api_key);
         if (is_wp_error($resp)) return array();
 
         $code = (int)wp_remote_retrieve_response_code($resp);
@@ -224,12 +227,9 @@ if (!function_exists('cbia_providers_fetch_deepseek_models')) {
         $path = $api_version !== '' ? '/' . $api_version . '/models' : '/models';
         $url = $base_url . $path;
 
-        $resp = wp_remote_get($url, array(
-            'headers' => array(
-                'Authorization' => 'Bearer ' . $api_key,
-            ),
+        $resp = cbia_provider_safe_remote_get('deepseek', $url, array(
             'timeout' => 30,
-        ));
+        ), $api_key);
         if (is_wp_error($resp)) return array();
 
         $code = (int)wp_remote_retrieve_response_code($resp);
