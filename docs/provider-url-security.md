@@ -1,6 +1,6 @@
 # Provider URL security policy
 
-Provider API requests use a strict allowlist because custom proxies and third-party API hosts are not a documented product feature. The canonical destinations are derived from the providers supported by the plugin:
+Provider API requests use only the official endpoints supported by the plugin. Custom proxies and arbitrary OpenAI-compatible endpoints are not supported:
 
 - OpenAI: `api.openai.com`
 - Google Gemini: `generativelanguage.googleapis.com`

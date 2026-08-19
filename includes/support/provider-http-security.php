@@ -140,8 +140,7 @@ if ( ! function_exists( 'cbia_provider_security_wp_error' ) ) {
 	function cbia_provider_security_wp_error( $code ) {
 		$message = 'The provider destination is not allowed. Review the provider configuration.';
 		if ( function_exists( '__' ) ) {
-			$domain = defined( 'CBIA_BASE_VERSION' ) ? 'cbiastudio-blogflow-ai' : 'cbiastudio-blogflow-ai-pro';
-			$message = __( $message, $domain );
+			$message = __( 'The provider destination is not allowed. Review the provider configuration.', 'cbiastudio-blogflow-ai' );
 		}
 		return new WP_Error( 'cbia_provider_destination_blocked', $message, array( 'reason' => (string) $code ) );
 	}

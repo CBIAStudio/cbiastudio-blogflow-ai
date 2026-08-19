@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.0
-Stable tag: 2.2.1
+Stable tag: 2.2.2
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -163,6 +163,13 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://www.anthropic.com/legal/privacy
 
 == Changelog ==
+
+= 2.2.2 =
+* Hardened validation for supported AI provider endpoints.
+* Improved sanitization of AI-generated WordPress content.
+* Improved AI Composer snapshot sanitization.
+* Improved cleanup of plugin credentials and internal data on uninstall.
+* Improved cleanup of scheduled background events during plugin lifecycle changes.
 
 = 2.2.1 =
 * Raised the Medium first-pass target to 1900-2050 words while retaining the 1800-2000 nominal setting.
