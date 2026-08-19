@@ -1,9 +1,10 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: CBIAStudio BlogFlow AI 2.2.2\n"
-"Report-Msgid-Bugs-To: \n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/cbiastudio-"
+"blogflow-ai/\n"
 "POT-Creation-Date: 2026-08-19 16:04+0200\n"
-"PO-Revision-Date: 2026-08-03 12:20+0200\n"
+"PO-Revision-Date: 2026-08-19 16:18+0200\n"
 "Last-Translator: CBIAStudio\n"
 "Language-Team: Spanish\n"
 "Language: es\n"
@@ -63,7 +64,7 @@ msgstr "No se pudo cargar el blog."
 #: includes/admin/config.php:160
 #, php-format
 msgid "The %s provider URL was not saved. Use the official HTTPS endpoint."
-msgstr ""
+msgstr "La URL del proveedor %s no se guardó. Usa el endpoint HTTPS oficial."
 
 #: includes/admin/config-admin.php:21 includes/admin/views/usage.php:899
 msgid "Settings"
@@ -935,7 +936,7 @@ msgstr "Clave rechazada"
 
 #: includes/admin/views/config.php:146 includes/core/hooks.php:3822
 msgid "Provider URL must be corrected"
-msgstr ""
+msgstr "La URL del proveedor debe corregirse"
 
 #: includes/admin/views/config.php:148
 msgid "The connection request could not be completed."
@@ -4141,3 +4142,5 @@ msgstr "GPT La imagen 2 no admite un fondo transparente; Se utilizó opaco."
 msgid ""
 "The provider destination is not allowed. Review the provider configuration."
 msgstr ""
+"El destino del proveedor no está permitido. Revisa la configuración del "
+"proveedor."
