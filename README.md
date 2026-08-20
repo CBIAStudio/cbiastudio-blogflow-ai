@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.2.2
+# CBIAStudio BlogFlow with AI (WordPress) v2.2.3
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,17 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.2.3
+
+- Declared compatibility with WordPress 7.1 after completing the automated compatibility and regression gates.
+- Refreshed release metadata while preserving existing generation, scheduling, provider, and security behavior.
+
+## Comparative: 2.2.3 vs 2.2.2
+
+2.2.3 is a maintenance release that updates WordPress compatibility metadata without changing existing plugin behavior.
+
+## Previous: 2.2.2
 
 ## What's New in 2.2.2
 

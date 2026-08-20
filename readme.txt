@@ -1,8 +1,8 @@
 === CBIAStudio BlogFlow with AI ===
 Contributors: webgoh
 Requires at least: 6.9.2
-Tested up to: 7.0
-Stable tag: 2.2.2
+Tested up to: 7.1
+Stable tag: 2.2.3
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -163,6 +163,10 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://www.anthropic.com/legal/privacy
 
 == Changelog ==
+
+= 2.2.3 =
+* Declared compatibility with WordPress 7.1 after completing the automated compatibility and regression gates.
+* Refreshed release metadata while preserving existing generation, scheduling, provider, and security behavior.
 
 = 2.2.2 =
 * Hardened validation for supported AI provider endpoints.
