@@ -2,7 +2,7 @@
 Contributors: webgoh
 Requires at least: 6.9.2
 Tested up to: 7.1
-Stable tag: 2.2.3
+Stable tag: 2.3.0
 Requires PHP: 8.2
 Network: true
 License: GPLv2 or later
@@ -163,6 +163,15 @@ This plugin can connect to third-party AI services only when the site administra
 - Privacy: https://www.anthropic.com/legal/privacy
 
 == Changelog ==
+
+= 2.3.0 =
+* Improved automatic category selection when several categories match.
+* Added stronger weighting for central title entities and deterministic configured-priority resolution.
+* The monthly cost chart now always covers the latest 12 calendar months, including zero-usage months.
+* The general Usage range now defaults to Last year; Last 2 years remains available.
+* Moved Usage filters above the results they affect.
+* The general Usage range does not change the monthly chart's rolling 12-month window.
+* Retained WordPress 7.1 compatibility and existing security hardening.
 
 = 2.2.3 =
 * Declared compatibility with WordPress 7.1 after completing the automated compatibility and regression gates.

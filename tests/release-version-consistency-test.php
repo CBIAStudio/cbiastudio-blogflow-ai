@@ -4,7 +4,7 @@ $root = dirname(__DIR__);
 $plugin = file_get_contents($root . '/cbiastudio-blogflow-ai.php');
 $readme = file_get_contents($root . '/readme.txt');
 $project_readme = file_get_contents($root . '/README.md');
-$expected = '2.2.3';
+$expected = '2.3.0';
 
 $count = 0;
 function release_consistency_check($condition, string $message): void {
@@ -30,9 +30,9 @@ $stable = $stable_match[1] ?? '';
 $documented = release_consistency_readme_version($project_readme);
 
 $readme_fixtures = [
-    ['LF with the expected version', "# CBIAStudio BlogFlow with AI (WordPress) v2.2.3\n", true],
-    ['CRLF with the expected version', "# CBIAStudio BlogFlow with AI (WordPress) v2.2.3\r\n", true],
-    ['CRLF with an incorrect version', "# CBIAStudio BlogFlow with AI (WordPress) v2.2.2\r\n", false],
+    ['LF with the expected version', "# CBIAStudio BlogFlow with AI (WordPress) v2.3.0\n", true],
+    ['CRLF with the expected version', "# CBIAStudio BlogFlow with AI (WordPress) v2.3.0\r\n", true],
+    ['CRLF with an incorrect version', "# CBIAStudio BlogFlow with AI (WordPress) v2.2.3\r\n", false],
 ];
 
 foreach ($readme_fixtures as [$description, $contents, $should_match]) {

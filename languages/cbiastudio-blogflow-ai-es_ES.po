@@ -1,10 +1,10 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: CBIAStudio BlogFlow AI 2.2.3\n"
+"Project-Id-Version: CBIAStudio BlogFlow AI 2.3.0\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/cbiastudio-"
 "blogflow-ai/\n"
-"POT-Creation-Date: 2026-08-19 16:04+0200\n"
-"PO-Revision-Date: 2026-08-19 16:18+0200\n"
+"POT-Creation-Date: 2026-08-24 11:14+0200\n"
+"PO-Revision-Date: 2026-08-24 11:15+0200\n"
 "Last-Translator: CBIAStudio\n"
 "Language-Team: Spanish\n"
 "Language: es\n"
@@ -66,7 +66,7 @@ msgstr "No se pudo cargar el blog."
 msgid "The %s provider URL was not saved. Use the official HTTPS endpoint."
 msgstr "La URL del proveedor %s no se guardó. Usa el endpoint HTTPS oficial."
 
-#: includes/admin/config-admin.php:21 includes/admin/views/usage.php:899
+#: includes/admin/config-admin.php:21 includes/admin/views/usage.php:903
 msgid "Settings"
 msgstr "Ajustes"
 
@@ -97,7 +97,7 @@ msgid "Update older posts"
 msgstr "Actualizar antiguos"
 
 #: includes/admin/oldposts-admin.php:37 includes/admin/oldposts-admin.php:53
-#: includes/admin/views/usage.php:924
+#: includes/admin/views/usage.php:928
 msgid "Upgrade to Pro"
 msgstr "Actualízate a Pro"
 
@@ -150,21 +150,21 @@ msgid "Could not load Usage."
 msgstr "No se pudo cargar Uso."
 
 #: includes/admin/views/blog.php:152 includes/admin/views/blog.php:169
-#: includes/core/hooks.php:5253 includes/core/hooks.php:5298
+#: includes/core/hooks.php:5252 includes/core/hooks.php:5297
 #: includes/services/blog-service.php:348
 #: includes/services/blog-service.php:381
 msgid "idle"
 msgstr "inactivo"
 
 #: includes/admin/views/blog.php:153 includes/admin/views/blog.php:171
-#: includes/admin/views/blog.php:172 includes/core/hooks.php:5254
-#: includes/core/hooks.php:5301 includes/core/hooks.php:5302
+#: includes/admin/views/blog.php:172 includes/core/hooks.php:5253
+#: includes/core/hooks.php:5300 includes/core/hooks.php:5301
 #: includes/services/blog-service.php:349
 #: includes/services/blog-service.php:384
 msgid "(no records)"
 msgstr "(sin registros)"
 
-#: includes/admin/views/blog.php:165 includes/core/hooks.php:5294
+#: includes/admin/views/blog.php:165 includes/core/hooks.php:5293
 #: includes/services/blog-service.php:377
 #, php-format
 msgid "RUNNING | idx %1$d of %2$d"
@@ -553,107 +553,107 @@ msgstr "Configuración editorial"
 msgid "Post language"
 msgstr "Idioma de la entrada"
 
-#: includes/admin/views/blog.php:502 includes/core/hooks.php:2879
+#: includes/admin/views/blog.php:502 includes/core/hooks.php:2878
 msgid "Spanish"
 msgstr "Español"
 
-#: includes/admin/views/blog.php:503 includes/core/hooks.php:2880
+#: includes/admin/views/blog.php:503 includes/core/hooks.php:2879
 msgid "Portuguese"
 msgstr "portugués"
 
-#: includes/admin/views/blog.php:504 includes/core/hooks.php:2881
+#: includes/admin/views/blog.php:504 includes/core/hooks.php:2880
 msgid "English"
 msgstr "Inglés"
 
-#: includes/admin/views/blog.php:505 includes/core/hooks.php:2882
+#: includes/admin/views/blog.php:505 includes/core/hooks.php:2881
 msgid "French"
 msgstr "Francés"
 
-#: includes/admin/views/blog.php:506 includes/core/hooks.php:2883
+#: includes/admin/views/blog.php:506 includes/core/hooks.php:2882
 msgid "Italian"
 msgstr "italiano"
 
-#: includes/admin/views/blog.php:507 includes/core/hooks.php:2884
+#: includes/admin/views/blog.php:507 includes/core/hooks.php:2883
 msgid "German"
 msgstr "Alemán"
 
-#: includes/admin/views/blog.php:508 includes/core/hooks.php:2885
+#: includes/admin/views/blog.php:508 includes/core/hooks.php:2884
 msgid "Dutch"
 msgstr "Holandés"
 
-#: includes/admin/views/blog.php:509 includes/core/hooks.php:2886
+#: includes/admin/views/blog.php:509 includes/core/hooks.php:2885
 msgid "Swedish"
 msgstr "sueco"
 
-#: includes/admin/views/blog.php:510 includes/core/hooks.php:2887
+#: includes/admin/views/blog.php:510 includes/core/hooks.php:2886
 msgid "Danish"
 msgstr "danés"
 
-#: includes/admin/views/blog.php:511 includes/core/hooks.php:2888
+#: includes/admin/views/blog.php:511 includes/core/hooks.php:2887
 msgid "Norwegian"
 msgstr "noruego"
 
-#: includes/admin/views/blog.php:512 includes/core/hooks.php:2889
+#: includes/admin/views/blog.php:512 includes/core/hooks.php:2888
 msgid "Finnish"
 msgstr "finlandés"
 
-#: includes/admin/views/blog.php:513 includes/core/hooks.php:2890
+#: includes/admin/views/blog.php:513 includes/core/hooks.php:2889
 msgid "Polish"
 msgstr "Polaco"
 
-#: includes/admin/views/blog.php:514 includes/core/hooks.php:2891
+#: includes/admin/views/blog.php:514 includes/core/hooks.php:2890
 msgid "Czech"
 msgstr "checo"
 
-#: includes/admin/views/blog.php:515 includes/core/hooks.php:2892
+#: includes/admin/views/blog.php:515 includes/core/hooks.php:2891
 msgid "Slovak"
 msgstr "eslovaco"
 
-#: includes/admin/views/blog.php:516 includes/core/hooks.php:2893
+#: includes/admin/views/blog.php:516 includes/core/hooks.php:2892
 msgid "Hungarian"
 msgstr "húngaro"
 
-#: includes/admin/views/blog.php:517 includes/core/hooks.php:2894
+#: includes/admin/views/blog.php:517 includes/core/hooks.php:2893
 msgid "Romanian"
 msgstr "rumano"
 
-#: includes/admin/views/blog.php:518 includes/core/hooks.php:2895
+#: includes/admin/views/blog.php:518 includes/core/hooks.php:2894
 msgid "Bulgarian"
 msgstr "búlgaro"
 
-#: includes/admin/views/blog.php:519 includes/core/hooks.php:2896
+#: includes/admin/views/blog.php:519 includes/core/hooks.php:2895
 msgid "Greek"
 msgstr "Griego"
 
-#: includes/admin/views/blog.php:520 includes/core/hooks.php:2897
+#: includes/admin/views/blog.php:520 includes/core/hooks.php:2896
 msgid "Croatian"
 msgstr "croata"
 
-#: includes/admin/views/blog.php:521 includes/core/hooks.php:2898
+#: includes/admin/views/blog.php:521 includes/core/hooks.php:2897
 msgid "Slovenian"
 msgstr "esloveno"
 
-#: includes/admin/views/blog.php:522 includes/core/hooks.php:2899
+#: includes/admin/views/blog.php:522 includes/core/hooks.php:2898
 msgid "Estonian"
 msgstr "estonio"
 
-#: includes/admin/views/blog.php:523 includes/core/hooks.php:2900
+#: includes/admin/views/blog.php:523 includes/core/hooks.php:2899
 msgid "Latvian"
 msgstr "letón"
 
-#: includes/admin/views/blog.php:524 includes/core/hooks.php:2901
+#: includes/admin/views/blog.php:524 includes/core/hooks.php:2900
 msgid "Lithuanian"
 msgstr "lituano"
 
-#: includes/admin/views/blog.php:525 includes/core/hooks.php:2902
+#: includes/admin/views/blog.php:525 includes/core/hooks.php:2901
 msgid "Irish"
 msgstr "irlandés"
 
-#: includes/admin/views/blog.php:526 includes/core/hooks.php:2903
+#: includes/admin/views/blog.php:526 includes/core/hooks.php:2902
 msgid "Maltese"
 msgstr "maltés"
 
-#: includes/admin/views/blog.php:527 includes/core/hooks.php:2904
+#: includes/admin/views/blog.php:527 includes/core/hooks.php:2903
 msgid "Romansh"
 msgstr "romanche"
 
@@ -675,11 +675,12 @@ msgstr "Reglas: palabras clave -> categorías"
 
 #: includes/admin/views/blog.php:564
 msgid ""
-"Line format: <code>Category: kw1, kw2, kw3</code>. Compared against (title + "
-"content)."
+"Line format: <code>Category: kw1, kw2, kw3</code>. Title relevance has the "
+"strongest weight; line order resolves categories with comparable scores."
 msgstr ""
-"Formato de línea: <code>Categoría: kw1, kw2, kw3</code>. Comparado con "
-"(título + contenido)."
+"Formato de línea: <code>Categoría: kw1, kw2, kw3</code>. La relevancia del "
+"título tiene el mayor peso; el orden de las líneas resuelve categorías con "
+"puntuaciones comparables."
 
 #: includes/admin/views/blog.php:568
 msgid "Allowed tags"
@@ -910,31 +911,31 @@ msgid "Text and images"
 msgstr "Texto e imágenes"
 
 #: includes/admin/views/config.php:138 includes/admin/views/config.php:139
-#: includes/admin/views/config.php:173 includes/admin/views/usage.php:276
-#: includes/admin/views/usage.php:467 includes/admin/views/usage.php:937
-#: includes/admin/views/usage.php:1050 includes/admin/views/usage.php:1111
-#: includes/admin/views/usage.php:1153 includes/core/hooks.php:604
-#: includes/core/hooks.php:1019 includes/core/hooks.php:1947
+#: includes/admin/views/config.php:173 includes/admin/views/usage.php:279
+#: includes/admin/views/usage.php:470 includes/admin/views/usage.php:941
+#: includes/admin/views/usage.php:1000 includes/admin/views/usage.php:1140
+#: includes/admin/views/usage.php:1201 includes/core/hooks.php:604
+#: includes/core/hooks.php:1020 includes/core/hooks.php:1910
 msgid "Text"
 msgstr "Texto"
 
-#: includes/admin/views/config.php:142 includes/core/hooks.php:3818
+#: includes/admin/views/config.php:142 includes/core/hooks.php:3817
 msgid "Not configured"
 msgstr "No configurado"
 
-#: includes/admin/views/config.php:143 includes/core/hooks.php:3819
+#: includes/admin/views/config.php:143 includes/core/hooks.php:3818
 msgid "Connection not checked"
 msgstr "Conexión no comprobada"
 
-#: includes/admin/views/config.php:144 includes/core/hooks.php:3820
+#: includes/admin/views/config.php:144 includes/core/hooks.php:3819
 msgid "Connection verified"
 msgstr "Conexión verificada"
 
-#: includes/admin/views/config.php:145 includes/core/hooks.php:3821
+#: includes/admin/views/config.php:145 includes/core/hooks.php:3820
 msgid "Key rejected"
 msgstr "Clave rechazada"
 
-#: includes/admin/views/config.php:146 includes/core/hooks.php:3822
+#: includes/admin/views/config.php:146 includes/core/hooks.php:3821
 msgid "Provider URL must be corrected"
 msgstr "La URL del proveedor debe corregirse"
 
@@ -966,11 +967,11 @@ msgstr "En uso para texto"
 msgid "In use for images"
 msgstr "En uso para imágenes"
 
-#: includes/admin/views/config.php:168 includes/core/hooks.php:3839
+#: includes/admin/views/config.php:168 includes/core/hooks.php:3838
 msgid "Enter a new key to replace the current one"
 msgstr "Introduce una nueva clave para sustituir la actual"
 
-#: includes/admin/views/config.php:168 includes/core/hooks.php:3839
+#: includes/admin/views/config.php:168 includes/core/hooks.php:3838
 #, php-format
 msgid "Enter your %s API key"
 msgstr "Introduce tu clave API de %s"
@@ -984,12 +985,12 @@ msgstr ""
 "¿Quieres desconectar %s? La clave guardada se eliminará, pero el resto de "
 "ajustes se conservará."
 
-#: includes/admin/views/config.php:178 includes/core/hooks.php:3837
+#: includes/admin/views/config.php:178 includes/core/hooks.php:3836
 msgid "Update key"
 msgstr "Actualizar clave"
 
 #: includes/admin/views/config.php:178 includes/admin/views/config.php:184
-#: includes/core/hooks.php:3837
+#: includes/core/hooks.php:3836
 msgid "Connect"
 msgstr "Conectar"
 
@@ -1006,7 +1007,7 @@ msgstr "Clave API de %s"
 msgid "Save new key"
 msgstr "Guardar nueva clave"
 
-#: includes/admin/views/config.php:186 includes/core/hooks.php:3494
+#: includes/admin/views/config.php:186 includes/core/hooks.php:3493
 msgid "Test connection"
 msgstr "Probar conexión"
 
@@ -1014,7 +1015,7 @@ msgstr "Probar conexión"
 msgid "Get API key"
 msgstr "Obtener clave API"
 
-#: includes/admin/views/config.php:188 includes/core/hooks.php:3838
+#: includes/admin/views/config.php:188 includes/core/hooks.php:3837
 msgid "Disconnect"
 msgstr "Desconectar"
 
@@ -1022,12 +1023,12 @@ msgstr "Desconectar"
 msgid "Technical details"
 msgstr "Detalles técnicos"
 
-#: includes/admin/views/config.php:192 includes/core/hooks.php:3834
+#: includes/admin/views/config.php:192 includes/core/hooks.php:3833
 #, php-format
 msgid "Last successful check: %s"
 msgstr "Última comprobación correcta: %s"
 
-#: includes/admin/views/config.php:194 includes/core/hooks.php:3836
+#: includes/admin/views/config.php:194 includes/core/hooks.php:3835
 #, php-format
 msgid "Models returned by the provider: %d"
 msgstr "Modelos devueltos por el proveedor: %d"
@@ -1098,25 +1099,25 @@ msgid "Not available"
 msgstr "No disponible"
 
 #: includes/admin/views/config.php:375 includes/admin/views/usage.php:15
-#: includes/admin/views/usage.php:867 includes/admin/views/usage.php:1160
+#: includes/admin/views/usage.php:870 includes/admin/views/usage.php:1007
 msgid "Automatic"
 msgstr "Automática"
 
 #: includes/admin/views/config.php:375 includes/admin/views/usage.php:15
-#: includes/admin/views/usage.php:868 includes/admin/views/usage.php:1074
-#: includes/admin/views/usage.php:1161
+#: includes/admin/views/usage.php:871 includes/admin/views/usage.php:1008
+#: includes/admin/views/usage.php:1164
 msgid "Low"
 msgstr "Baja"
 
 #: includes/admin/views/config.php:375 includes/admin/views/usage.php:15
-#: includes/admin/views/usage.php:869 includes/admin/views/usage.php:1075
-#: includes/admin/views/usage.php:1162 includes/core/hooks.php:3335
+#: includes/admin/views/usage.php:872 includes/admin/views/usage.php:1009
+#: includes/admin/views/usage.php:1165 includes/core/hooks.php:3334
 msgid "Medium"
 msgstr "Media"
 
 #: includes/admin/views/config.php:375 includes/admin/views/config.php:399
-#: includes/admin/views/usage.php:15 includes/admin/views/usage.php:870
-#: includes/admin/views/usage.php:1076 includes/admin/views/usage.php:1163
+#: includes/admin/views/usage.php:15 includes/admin/views/usage.php:873
+#: includes/admin/views/usage.php:1010 includes/admin/views/usage.php:1166
 msgid "High"
 msgstr "Alta"
 
@@ -1150,7 +1151,7 @@ msgstr "Calidad de imagen del contenido"
 msgid "Applied to images inserted inside the article content."
 msgstr "Se aplica a imágenes insertadas dentro del contenido del artículo."
 
-#: includes/admin/views/config.php:388 includes/admin/views/usage.php:842
+#: includes/admin/views/config.php:388 includes/admin/views/usage.php:845
 msgid "Reasoning mode"
 msgstr "modo de razonamiento"
 
@@ -1181,7 +1182,7 @@ msgstr ""
 "límite de token de salida bajo. Aumente el límite o deshabilite el "
 "pensamiento para reducir el truncamiento y la expansión."
 
-#: includes/admin/views/config.php:397 includes/admin/views/usage.php:843
+#: includes/admin/views/config.php:397 includes/admin/views/usage.php:846
 msgid "Reasoning effort"
 msgstr "esfuerzo de razonamiento"
 
@@ -1284,8 +1285,8 @@ msgstr "Editar prompt"
 msgid "Save base prompt"
 msgstr "Guardar prompt base"
 
-#: includes/admin/views/config.php:470 includes/admin/views/usage.php:865
-#: includes/admin/views/usage.php:1158
+#: includes/admin/views/config.php:470 includes/admin/views/usage.php:868
+#: includes/admin/views/usage.php:1005
 msgid "Image quality"
 msgstr "Calidad de imagen"
 
@@ -2069,7 +2070,7 @@ msgstr "Sin filtro de fecha"
 msgid "Older than"
 msgstr "mayor que"
 
-#: includes/admin/views/oldposts.php:477 includes/admin/views/usage.php:949
+#: includes/admin/views/oldposts.php:477
 msgid "days"
 msgstr "días"
 
@@ -2129,11 +2130,11 @@ msgstr "Todos los autores"
 msgid "Sort by"
 msgstr "Ordenar por"
 
-#: includes/admin/views/oldposts.php:511 includes/admin/views/usage.php:1231
+#: includes/admin/views/oldposts.php:511 includes/admin/views/usage.php:1240
 msgid "Date"
 msgstr "Fecha"
 
-#: includes/admin/views/oldposts.php:512 includes/core/hooks.php:3327
+#: includes/admin/views/oldposts.php:512 includes/core/hooks.php:3326
 msgid "Title"
 msgstr "Título"
 
@@ -2430,153 +2431,166 @@ msgstr ""
 "post_content, mientras que el resultado visible aún proviene del diseño de "
 "Elementor."
 
-#: includes/admin/views/usage.php:190 includes/admin/views/usage.php:377
-#: includes/admin/views/usage.php:872 includes/admin/views/usage.php:1093
-#: includes/admin/views/usage.php:1169 includes/core/hooks.php:520
-#: includes/core/hooks.php:982 includes/core/hooks.php:1877
-#: includes/core/hooks.php:3435
+#: includes/admin/views/usage.php:27 includes/admin/views/usage.php:983
+msgid "Last year"
+msgstr "Último año"
+
+#: includes/admin/views/usage.php:28 includes/admin/views/usage.php:984
+msgid "Last 2 years"
+msgstr "Últimos 2 años"
+
+#: includes/admin/views/usage.php:28 includes/admin/views/usage.php:984
+#, php-format
+msgid "Last %d days"
+msgstr "Últimos días %d"
+
+#: includes/admin/views/usage.php:193 includes/admin/views/usage.php:380
+#: includes/admin/views/usage.php:876 includes/admin/views/usage.php:1016
+#: includes/admin/views/usage.php:1183 includes/core/hooks.php:520
+#: includes/core/hooks.php:983 includes/core/hooks.php:1832
+#: includes/core/hooks.php:3434
 msgid "Featured"
 msgstr "Destacada"
 
-#: includes/admin/views/usage.php:275 includes/admin/views/usage.php:466
-#: includes/admin/views/usage.php:943 includes/admin/views/usage.php:1051
-#: includes/admin/views/usage.php:1112 includes/admin/views/usage.php:1154
-#: includes/core/hooks.php:604 includes/core/hooks.php:1019
-#: includes/core/hooks.php:1947
+#: includes/admin/views/usage.php:278 includes/admin/views/usage.php:469
+#: includes/admin/views/usage.php:947 includes/admin/views/usage.php:1001
+#: includes/admin/views/usage.php:1141 includes/admin/views/usage.php:1202
+#: includes/core/hooks.php:604 includes/core/hooks.php:1020
+#: includes/core/hooks.php:1910
 msgid "Image"
 msgstr "Imagen"
 
-#: includes/admin/views/usage.php:276 includes/admin/views/usage.php:467
-#: includes/core/hooks.php:604 includes/core/hooks.php:1019
-#: includes/core/hooks.php:1947
+#: includes/admin/views/usage.php:279 includes/admin/views/usage.php:470
+#: includes/core/hooks.php:604 includes/core/hooks.php:1020
+#: includes/core/hooks.php:1910
 msgid "SEO"
 msgstr "SEO"
 
-#: includes/admin/views/usage.php:317 includes/admin/views/usage.php:508
-#: includes/core/hooks.php:622 includes/core/hooks.php:1070
-#: includes/core/hooks.php:1965
+#: includes/admin/views/usage.php:320 includes/admin/views/usage.php:511
+#: includes/core/hooks.php:622 includes/core/hooks.php:1071
+#: includes/core/hooks.php:1928
 msgid "Image generation"
 msgstr "Generación de imágenes"
 
-#: includes/admin/views/usage.php:318 includes/admin/views/usage.php:509
-#: includes/core/hooks.php:623 includes/core/hooks.php:1071
-#: includes/core/hooks.php:1966
+#: includes/admin/views/usage.php:321 includes/admin/views/usage.php:512
+#: includes/core/hooks.php:623 includes/core/hooks.php:1072
+#: includes/core/hooks.php:1929
 msgid "SEO / metadata process"
 msgstr "Proceso SEO/metadatos"
 
-#: includes/admin/views/usage.php:318 includes/admin/views/usage.php:509
-#: includes/core/hooks.php:623 includes/core/hooks.php:1071
-#: includes/core/hooks.php:1966
+#: includes/admin/views/usage.php:321 includes/admin/views/usage.php:512
+#: includes/core/hooks.php:623 includes/core/hooks.php:1072
+#: includes/core/hooks.php:1929
 msgid "Text generation"
 msgstr "Generación de texto"
 
-#: includes/admin/views/usage.php:453
+#: includes/admin/views/usage.php:456
 msgid "Unpublished / failed call"
 msgstr "Llamada no publicada/fallida"
 
-#: includes/admin/views/usage.php:505
+#: includes/admin/views/usage.php:508
 msgid "No post"
 msgstr "Sin publicación"
 
-#: includes/admin/views/usage.php:829 includes/admin/views/usage.php:963
+#: includes/admin/views/usage.php:832 includes/admin/views/usage.php:967
 msgid "Loading real usage data..."
 msgstr "Cargando datos de uso reales..."
 
-#: includes/admin/views/usage.php:830 includes/admin/views/usage.php:964
+#: includes/admin/views/usage.php:833 includes/admin/views/usage.php:968
 msgid "Charts and table will fill in automatically in a few seconds."
 msgstr ""
 "Los gráficos y las tablas se completarán automáticamente en unos segundos."
 
-#: includes/admin/views/usage.php:831 includes/admin/views/usage.php:1244
+#: includes/admin/views/usage.php:834 includes/admin/views/usage.php:1253
 msgid "Loading logs..."
 msgstr "Cargando registros..."
 
-#: includes/admin/views/usage.php:832
+#: includes/admin/views/usage.php:835
 msgid "Preparing detail view..."
 msgstr "Preparando vista detallada..."
 
-#: includes/admin/views/usage.php:833
+#: includes/admin/views/usage.php:836
 msgid "Could not load usage data right now."
 msgstr "No se pudieron cargar los datos de uso en este momento."
 
-#: includes/admin/views/usage.php:834 includes/admin/views/usage.php:835
+#: includes/admin/views/usage.php:837 includes/admin/views/usage.php:838
 msgid "Could not load usage data."
 msgstr "No se pudieron cargar los datos de uso."
 
-#: includes/admin/views/usage.php:836
+#: includes/admin/views/usage.php:839
 msgid "Local cost coverage"
 msgstr "Cobertura de costos locales"
 
-#: includes/admin/views/usage.php:837
+#: includes/admin/views/usage.php:840
 msgid "Unknown cost events"
 msgstr "Eventos de costos desconocidos"
 
-#: includes/admin/views/usage.php:838
+#: includes/admin/views/usage.php:841
 msgid "Cost not determined"
 msgstr "Costo no determinado"
 
-#: includes/admin/views/usage.php:839 includes/admin/views/usage.php:1174
-#: includes/core/hooks.php:3478
+#: includes/admin/views/usage.php:842 includes/admin/views/usage.php:1021
+#: includes/core/hooks.php:3477
 msgid "Provider"
 msgstr "Proveedor"
 
-#: includes/admin/views/usage.php:840
+#: includes/admin/views/usage.php:843
 msgid "Requested model"
 msgstr "Modelo solicitado"
 
-#: includes/admin/views/usage.php:841
+#: includes/admin/views/usage.php:844
 msgid "Effective model"
 msgstr "Modelo efectivo"
 
-#: includes/admin/views/usage.php:844
+#: includes/admin/views/usage.php:847
 msgid "Cache hit / miss tokens"
 msgstr "Tokens de acierto/fallo de caché"
 
-#: includes/admin/views/usage.php:845
+#: includes/admin/views/usage.php:848
 msgid "Reasoning tokens"
 msgstr "fichas de razonamiento"
 
-#: includes/admin/views/usage.php:846
+#: includes/admin/views/usage.php:849
 msgid "Requested quality"
 msgstr "Calidad solicitada"
 
-#: includes/admin/views/usage.php:847
+#: includes/admin/views/usage.php:850
 msgid "Effective quality"
 msgstr "Calidad efectiva"
 
-#: includes/admin/views/usage.php:848
+#: includes/admin/views/usage.php:851
 msgid "Requested size"
 msgstr "Tamaño solicitado"
 
-#: includes/admin/views/usage.php:849
+#: includes/admin/views/usage.php:852
 msgid "Effective size"
 msgstr "Tamaño efectivo"
 
-#: includes/admin/views/usage.php:850
+#: includes/admin/views/usage.php:853
 msgid "Output format"
 msgstr "Formato de salida"
 
-#: includes/admin/views/usage.php:851
+#: includes/admin/views/usage.php:854
 msgid "Background"
 msgstr "Fondo"
 
-#: includes/admin/views/usage.php:852
+#: includes/admin/views/usage.php:855
 msgid "Not returned"
 msgstr "No devuelto"
 
-#: includes/admin/views/usage.php:853 includes/admin/views/usage.php:1178
+#: includes/admin/views/usage.php:856 includes/admin/views/usage.php:1025
 msgid "Cost status"
 msgstr "Estado del costo"
 
-#: includes/admin/views/usage.php:854
+#: includes/admin/views/usage.php:857
 msgid "Cost source"
 msgstr "fuente de costo"
 
-#: includes/admin/views/usage.php:855
+#: includes/admin/views/usage.php:858
 msgid "Cost reason"
 msgstr "Razón del costo"
 
-#: includes/admin/views/usage.php:856
+#: includes/admin/views/usage.php:859
 msgid ""
 "Cost not determined: OpenAI did not return the effective quality or "
 "sufficient usage data."
@@ -2584,7 +2598,7 @@ msgstr ""
 "Costo no determinado: OpenAI no arrojó la calidad efectiva ni datos de uso "
 "suficientes."
 
-#: includes/admin/views/usage.php:857
+#: includes/admin/views/usage.php:860
 msgid ""
 "Cost not determined: the local connection timed out before usage data was "
 "received."
@@ -2592,15 +2606,15 @@ msgstr ""
 "Costo no determinado: la conexión local expiró antes de recibir los datos de "
 "uso."
 
-#: includes/admin/views/usage.php:858
+#: includes/admin/views/usage.php:861
 msgid "Output estimate only; this is not the total invoiced cost."
 msgstr "Sólo estimación de producción; este no es el costo total facturado."
 
-#: includes/admin/views/usage.php:859
+#: includes/admin/views/usage.php:862
 msgid "Calculated from API usage and the local pricing catalog."
 msgstr "Calculado a partir del uso de API y el catálogo de precios local."
 
-#: includes/admin/views/usage.php:860
+#: includes/admin/views/usage.php:863
 msgid ""
 "Estimated conservatively because the API did not return the cache breakdown; "
 "all input was priced as cache miss."
@@ -2608,58 +2622,68 @@ msgstr ""
 "Estimado de manera conservadora porque la API no devolvió el desglose del "
 "caché; todas las entradas se tasaron como pérdida de caché."
 
-#: includes/admin/views/usage.php:861
+#: includes/admin/views/usage.php:864
 msgid "Officially reconciled cost."
 msgstr "Costo oficialmente conciliado."
 
-#: includes/admin/views/usage.php:862
+#: includes/admin/views/usage.php:865
 msgid "Insufficient usage data."
 msgstr "Datos de uso insuficientes."
 
-#: includes/admin/views/usage.php:863
+#: includes/admin/views/usage.php:866
 msgid "The effective model has no local price."
 msgstr "El modelo efectivo no tiene precio local."
 
-#: includes/admin/views/usage.php:864
+#: includes/admin/views/usage.php:867
 msgid "The response did not include sufficient token usage."
 msgstr "La respuesta no incluyó suficiente uso de tokens."
 
-#: includes/admin/views/usage.php:866 includes/admin/views/usage.php:1167
+#: includes/admin/views/usage.php:869 includes/admin/views/usage.php:1014
 msgid "Image role"
 msgstr "Función de la imagen"
 
-#: includes/admin/views/usage.php:871 includes/admin/views/usage.php:1164
-#: includes/admin/views/usage.php:1182
+#: includes/admin/views/usage.php:874 includes/admin/views/usage.php:1011
+#: includes/admin/views/usage.php:1029
 msgid "Unknown"
 msgstr "Desconocido"
 
-#: includes/admin/views/usage.php:873 includes/admin/views/usage.php:1094
-#: includes/admin/views/usage.php:1170 includes/core/hooks.php:523
-#: includes/core/hooks.php:985 includes/core/hooks.php:1880
+#: includes/admin/views/usage.php:875 includes/admin/views/usage.php:1198
+msgid ""
+"Latest 12 calendar months, including months with zero data. Provider and "
+"model filters apply; the general usage range and other log filters do not "
+"change this chart."
+msgstr ""
+"Últimos 12 meses naturales, incluidos los meses sin datos. Se aplican los "
+"filtros de proveedor y modelo; el rango general de uso y los demás filtros "
+"del registro no cambian esta gráfica."
+
+#: includes/admin/views/usage.php:877 includes/admin/views/usage.php:1017
+#: includes/admin/views/usage.php:1184 includes/core/hooks.php:523
+#: includes/core/hooks.php:986 includes/core/hooks.php:1835
 msgid "Internal"
 msgstr "Interna"
 
-#: includes/admin/views/usage.php:874 includes/admin/views/usage.php:1171
+#: includes/admin/views/usage.php:878 includes/admin/views/usage.php:1018
 msgid "Other"
 msgstr "Otro"
 
-#: includes/admin/views/usage.php:875
+#: includes/admin/views/usage.php:879
 msgid "events"
 msgstr "eventos"
 
-#: includes/admin/views/usage.php:876
+#: includes/admin/views/usage.php:880
 msgid "images"
 msgstr "imágenes"
 
-#: includes/admin/views/usage.php:877
+#: includes/admin/views/usage.php:881
 msgid "active filters"
 msgstr "filtros activos"
 
-#: includes/admin/views/usage.php:878
+#: includes/admin/views/usage.php:882
 msgid "No additional filters"
 msgstr "Sin filtros adicionales"
 
-#: includes/admin/views/usage.php:879
+#: includes/admin/views/usage.php:883
 msgid ""
 "Exact image token usage returned by the API is shown when available. Output "
 "price also depends on the effective quality and size."
@@ -2668,7 +2692,7 @@ msgstr ""
 "disponible. El precio de producción también depende de la calidad y el "
 "tamaño efectivos."
 
-#: includes/admin/views/usage.php:880
+#: includes/admin/views/usage.php:884
 msgid ""
 "This image response did not include a complete token breakdown. Quality, "
 "size and locally known cost remain available."
@@ -2676,11 +2700,11 @@ msgstr ""
 "Esta respuesta de imagen no incluía un desglose completo del token. La "
 "calidad, el tamaño y el costo conocido localmente siguen estando disponibles."
 
-#: includes/admin/views/usage.php:886
+#: includes/admin/views/usage.php:890
 msgid "Usage"
 msgstr "Uso"
 
-#: includes/admin/views/usage.php:890
+#: includes/admin/views/usage.php:894
 msgid ""
 "Unified view of real usage and cost settings, with charts, per-call detail "
 "and economic KPIs."
@@ -2688,7 +2712,7 @@ msgstr ""
 "Vista unificada del uso real y la configuración de costos, con gráficos, "
 "detalles por llamada y KPI económicos."
 
-#: includes/admin/views/usage.php:891
+#: includes/admin/views/usage.php:895
 msgid ""
 "Base mode shows essential usage activity. Advanced analytics and cost "
 "intelligence are available in Pro."
@@ -2696,15 +2720,15 @@ msgstr ""
 "El modo básico muestra la actividad de uso esencial. Análisis avanzados e "
 "inteligencia de costos están disponibles en Pro."
 
-#: includes/admin/views/usage.php:901
+#: includes/admin/views/usage.php:905
 msgid "Cost settings (Pro)"
 msgstr "Configuración de costos (Pro)"
 
-#: includes/admin/views/usage.php:910
+#: includes/admin/views/usage.php:914
 msgid "Advanced Usage in Pro"
 msgstr "Uso avanzado en Pro"
 
-#: includes/admin/views/usage.php:914
+#: includes/admin/views/usage.php:918
 msgid ""
 "Usage in base mode focuses on essential activity: calls, posts, users and "
 "operational events."
@@ -2712,7 +2736,7 @@ msgstr ""
 "El uso en modo base se centra en la actividad esencial: llamadas, "
 "publicaciones, usuarios y eventos operativos."
 
-#: includes/admin/views/usage.php:915
+#: includes/admin/views/usage.php:919
 msgid ""
 "Upgrade to Pro to unlock advanced analytics, full event detail and real cost "
 "intelligence."
@@ -2720,19 +2744,19 @@ msgstr ""
 "Actualice a Pro para desbloquear análisis avanzados, detalles completos de "
 "eventos e inteligencia de costos reales."
 
-#: includes/admin/views/usage.php:918
+#: includes/admin/views/usage.php:922
 msgid "Advanced usage charts"
 msgstr "Tablas de uso avanzadas"
 
-#: includes/admin/views/usage.php:919
+#: includes/admin/views/usage.php:923
 msgid "Per-call deep detail"
 msgstr "Detalle profundo por llamada"
 
-#: includes/admin/views/usage.php:920
+#: includes/admin/views/usage.php:924
 msgid "Cost tracking and KPIs"
 msgstr "Seguimiento de costos y KPI"
 
-#: includes/admin/views/usage.php:931
+#: includes/admin/views/usage.php:935
 msgid ""
 "Cost panels and cost settings are locked in base mode and available only in "
 "Pro."
@@ -2740,47 +2764,140 @@ msgstr ""
 "Los paneles de costos y la configuración de costos están bloqueados en el "
 "modo básico y solo están disponibles en Pro."
 
-#: includes/admin/views/usage.php:939 includes/admin/views/usage.php:945
+#: includes/admin/views/usage.php:943 includes/admin/views/usage.php:949
 msgid "API key"
 msgstr "clave API"
 
-#: includes/admin/views/usage.php:939 includes/admin/views/usage.php:945
+#: includes/admin/views/usage.php:943 includes/admin/views/usage.php:949
 msgid "Configured"
 msgstr "Configurado"
 
-#: includes/admin/views/usage.php:939 includes/admin/views/usage.php:945
+#: includes/admin/views/usage.php:943 includes/admin/views/usage.php:949
 msgid "Missing"
 msgstr "Desaparecido"
 
-#: includes/admin/views/usage.php:948 includes/admin/views/usage.php:1136
+#: includes/admin/views/usage.php:952 includes/admin/views/usage.php:978
 msgid "Period"
 msgstr "Período"
 
-#: includes/admin/views/usage.php:972
+#: includes/admin/views/usage.php:991 includes/admin/views/usage.php:1248
+#: includes/core/hooks.php:3485
+msgid "Model"
+msgstr "Modelo"
+
+#: includes/admin/views/usage.php:992
+msgid "All models"
+msgstr "Todos los modelos"
+
+#: includes/admin/views/usage.php:998 includes/admin/views/usage.php:1243
+msgid "Type"
+msgstr "Tipo"
+
+#: includes/admin/views/usage.php:999
+msgid "All types"
+msgstr "Todos los tipos"
+
+#: includes/admin/views/usage.php:1006
+msgid "All image qualities"
+msgstr "Todas las calidades de imagen."
+
+#: includes/admin/views/usage.php:1015
+msgid "All image roles"
+msgstr "Todos los roles de imagen"
+
+#: includes/admin/views/usage.php:1022
+msgid "All providers"
+msgstr "Todos los proveedores"
+
+#: includes/admin/views/usage.php:1026
+msgid "All cost statuses"
+msgstr "Todos los estados de costos"
+
+#: includes/admin/views/usage.php:1027
+msgid "Exact"
+msgstr "Exacto"
+
+#: includes/admin/views/usage.php:1028
+msgid "Estimated"
+msgstr "Estimado"
+
+#: includes/admin/views/usage.php:1030
+msgid "Officially reconciled"
+msgstr "Oficialmente reconciliado"
+
+#: includes/admin/views/usage.php:1032
+msgid "Request status"
+msgstr "Estado de la solicitud"
+
+#: includes/admin/views/usage.php:1033
+msgid "All request statuses"
+msgstr "Todos los estados de solicitud"
+
+#: includes/admin/views/usage.php:1034
+msgid "Success"
+msgstr "Éxito"
+
+#: includes/admin/views/usage.php:1035
+msgid "Error"
+msgstr "Error"
+
+#: includes/admin/views/usage.php:1036
+msgid "Timeout"
+msgstr "Se acabó el tiempo"
+
+#: includes/admin/views/usage.php:1038
+msgid "From"
+msgstr "De"
+
+#: includes/admin/views/usage.php:1039
+msgid "To"
+msgstr "A"
+
+#: includes/admin/views/usage.php:1046 includes/admin/views/usage.php:1047
+msgid "Search logs"
+msgstr "Registros de búsqueda"
+
+#: includes/admin/views/usage.php:1050
+msgid "Clear filters"
+msgstr "Limpiar filtros"
+
+#: includes/admin/views/usage.php:1052
+msgid "Export CSV"
+msgstr "Exportar CSV"
+
+#: includes/admin/views/usage.php:1053
+msgid "Simulate historical cost recalculation"
+msgstr "Simular el recálculo histórico de costos"
+
+#: includes/admin/views/usage.php:1054
+msgid "Apply recalculation"
+msgstr "Aplicar recálculo"
+
+#: includes/admin/views/usage.php:1062
 msgid "Calls"
 msgstr "llamadas"
 
-#: includes/admin/views/usage.php:979
+#: includes/admin/views/usage.php:1069
 msgid "Posts"
 msgstr "Entradas"
 
-#: includes/admin/views/usage.php:986
+#: includes/admin/views/usage.php:1076
 msgid "Unique users"
 msgstr "Usuarios únicos"
 
-#: includes/admin/views/usage.php:993
+#: includes/admin/views/usage.php:1083
 msgid "Avg tokens / call"
 msgstr "Tokens promedio/llamada"
 
-#: includes/admin/views/usage.php:1001
+#: includes/admin/views/usage.php:1091
 msgid "Local calculated / estimated cost"
 msgstr "Costo local calculado/estimado"
 
-#: includes/admin/views/usage.php:1008
+#: includes/admin/views/usage.php:1098
 msgid "Local average known cost / blog"
 msgstr "Costo promedio local conocido / blog"
 
-#: includes/admin/views/usage.php:1017
+#: includes/admin/views/usage.php:1107
 msgid ""
 "Charts are built from usage events stored by the plugin on each post. Each "
 "panel measures a different thing: calls, split by type or cost."
@@ -2789,7 +2906,7 @@ msgstr ""
 "complemento en cada publicación. Cada panel mide una cosa diferente: "
 "llamadas, divididas por tipo o costo."
 
-#: includes/admin/views/usage.php:1018
+#: includes/admin/views/usage.php:1108
 msgid ""
 "Charts are built from usage events stored by the plugin on each post. This "
 "view focuses on calls and event activity in base mode."
@@ -2798,24 +2915,24 @@ msgstr ""
 "complemento en cada publicación. Esta vista se centra en las llamadas y la "
 "actividad de eventos en el modo básico."
 
-#: includes/admin/views/usage.php:1026
+#: includes/admin/views/usage.php:1116
 msgid "Calls per day"
 msgstr "llamadas por dia"
 
-#: includes/admin/views/usage.php:1027
+#: includes/admin/views/usage.php:1117
 msgid "Y axis: number of AI events recorded per day in the current filter."
 msgstr ""
 "Eje Y: número de eventos de IA registrados por día en el filtro actual."
 
-#: includes/admin/views/usage.php:1039 includes/admin/views/usage.php:1063
+#: includes/admin/views/usage.php:1129 includes/admin/views/usage.php:1153
 msgid "No data available."
 msgstr "No hay datos disponibles."
 
-#: includes/admin/views/usage.php:1046
+#: includes/admin/views/usage.php:1136
 msgid "Events by type"
 msgstr "Eventos por tipo"
 
-#: includes/admin/views/usage.php:1047
+#: includes/admin/views/usage.php:1137
 msgid ""
 "Y axis: number of text and image calls in the current filter. Period: "
 "loading..."
@@ -2823,171 +2940,65 @@ msgstr ""
 "Eje Y: número de llamadas de texto e imágenes en el filtro actual. Periodo: "
 "cargando..."
 
-#: includes/admin/views/usage.php:1070
+#: includes/admin/views/usage.php:1160
 msgid "Images by effective quality"
 msgstr "Imágenes por calidad efectiva"
 
-#: includes/admin/views/usage.php:1071
+#: includes/admin/views/usage.php:1161
 msgid "Number of image events grouped by the quality actually used."
 msgstr ""
 "Número de eventos de imagen agrupados por la calidad realmente utilizada."
 
-#: includes/admin/views/usage.php:1077
+#: includes/admin/views/usage.php:1167
 msgid "Automatic / unknown"
 msgstr "Automática / desconocida"
 
-#: includes/admin/views/usage.php:1082 includes/admin/views/usage.php:1099
+#: includes/admin/views/usage.php:1172 includes/admin/views/usage.php:1189
 msgid "No image data available for this filter."
 msgstr "No hay datos de imagen disponibles para este filtro."
 
-#: includes/admin/views/usage.php:1089
+#: includes/admin/views/usage.php:1179
 msgid "Images by role"
 msgstr "Imágenes por función"
 
-#: includes/admin/views/usage.php:1090
+#: includes/admin/views/usage.php:1180
 msgid "Featured and internal image events in the current filter."
 msgstr "Eventos de imágenes internas y destacadas en el filtro actual."
 
-#: includes/admin/views/usage.php:1107
+#: includes/admin/views/usage.php:1197
 msgid "Local calculated / estimated cost by month"
 msgstr "Costo local calculado/estimado por mes"
 
-#: includes/admin/views/usage.php:1108
-msgid ""
-"Y axis: dollars (USD). Full Jan-Dec timeline of the current year, including "
-"months with zero data."
-msgstr ""
-"Eje Y: dólares (USD). Cronología completa de enero a diciembre del año "
-"actual, incluidos los meses sin datos."
-
-#: includes/admin/views/usage.php:1124
+#: includes/admin/views/usage.php:1214
 msgid "No monthly history available."
 msgstr "No hay historial mensual disponible."
 
-#: includes/admin/views/usage.php:1139
-#, php-format
-msgid "Last %d days"
-msgstr "Últimos días %d"
-
-#: includes/admin/views/usage.php:1144 includes/admin/views/usage.php:1239
-#: includes/core/hooks.php:3486
-msgid "Model"
-msgstr "Modelo"
-
-#: includes/admin/views/usage.php:1145
-msgid "All models"
-msgstr "Todos los modelos"
-
-#: includes/admin/views/usage.php:1151 includes/admin/views/usage.php:1234
-msgid "Type"
-msgstr "Tipo"
-
-#: includes/admin/views/usage.php:1152
-msgid "All types"
-msgstr "Todos los tipos"
-
-#: includes/admin/views/usage.php:1159
-msgid "All image qualities"
-msgstr "Todas las calidades de imagen."
-
-#: includes/admin/views/usage.php:1168
-msgid "All image roles"
-msgstr "Todos los roles de imagen"
-
-#: includes/admin/views/usage.php:1175
-msgid "All providers"
-msgstr "Todos los proveedores"
-
-#: includes/admin/views/usage.php:1179
-msgid "All cost statuses"
-msgstr "Todos los estados de costos"
-
-#: includes/admin/views/usage.php:1180
-msgid "Exact"
-msgstr "Exacto"
-
-#: includes/admin/views/usage.php:1181
-msgid "Estimated"
-msgstr "Estimado"
-
-#: includes/admin/views/usage.php:1183
-msgid "Officially reconciled"
-msgstr "Oficialmente reconciliado"
-
-#: includes/admin/views/usage.php:1185
-msgid "Request status"
-msgstr "Estado de la solicitud"
-
-#: includes/admin/views/usage.php:1186
-msgid "All request statuses"
-msgstr "Todos los estados de solicitud"
-
-#: includes/admin/views/usage.php:1187
-msgid "Success"
-msgstr "Éxito"
-
-#: includes/admin/views/usage.php:1188
-msgid "Error"
-msgstr "Error"
-
-#: includes/admin/views/usage.php:1189
-msgid "Timeout"
-msgstr "Se acabó el tiempo"
-
-#: includes/admin/views/usage.php:1191
-msgid "From"
-msgstr "De"
-
-#: includes/admin/views/usage.php:1192
-msgid "To"
-msgstr "A"
-
-#: includes/admin/views/usage.php:1199 includes/admin/views/usage.php:1200
-msgid "Search logs"
-msgstr "Registros de búsqueda"
-
-#: includes/admin/views/usage.php:1203
-msgid "Clear filters"
-msgstr "Limpiar filtros"
-
-#: includes/admin/views/usage.php:1205
-msgid "Export CSV"
-msgstr "Exportar CSV"
-
-#: includes/admin/views/usage.php:1206
-msgid "Simulate historical cost recalculation"
-msgstr "Simular el recálculo histórico de costos"
-
-#: includes/admin/views/usage.php:1207
-msgid "Apply recalculation"
-msgstr "Aplicar recálculo"
-
-#: includes/admin/views/usage.php:1214
+#: includes/admin/views/usage.php:1223
 msgid "Usage events"
 msgstr "Eventos de uso"
 
-#: includes/admin/views/usage.php:1217
+#: includes/admin/views/usage.php:1226
 msgid "Loading the latest events sample for faster access..."
 msgstr ""
 "Cargando la muestra de eventos más reciente para un acceso más rápido..."
 
-#: includes/admin/views/usage.php:1232
+#: includes/admin/views/usage.php:1241
 msgid "User"
 msgstr "Usuario"
 
-#: includes/admin/views/usage.php:1235
+#: includes/admin/views/usage.php:1244
 msgid "Tokens"
 msgstr "Fichas"
 
-#: includes/admin/views/usage.php:1237
+#: includes/admin/views/usage.php:1246
 msgid "Cost"
 msgstr "Costo"
 
-#: includes/admin/views/usage.php:1260
+#: includes/admin/views/usage.php:1269
 msgid "Select an event to see the detail."
 msgstr "Seleccione un evento para ver el detalle."
 
-#: includes/admin/views/usage.php:1271
+#: includes/admin/views/usage.php:1280
 msgid "The costs section could not be loaded."
 msgstr "No se pudo cargar la sección de costos."
 
@@ -3003,351 +3014,351 @@ msgstr "Perfil del blog"
 msgid "Auto"
 msgstr "Automático"
 
-#: includes/core/hooks.php:307 includes/core/hooks.php:3633
-#: includes/core/hooks.php:3634 includes/core/hooks.php:4096
+#: includes/core/hooks.php:307 includes/core/hooks.php:3632
+#: includes/core/hooks.php:3633 includes/core/hooks.php:4095
 msgid "Unauthorized."
 msgstr "No autorizado."
 
-#: includes/core/hooks.php:1012
+#: includes/core/hooks.php:1013
 msgid "Unassigned API attempt"
 msgstr "Intento de API no asignado"
 
-#: includes/core/hooks.php:2353
+#: includes/core/hooks.php:2352
 msgid "Yoast SEO detected and active."
 msgstr "Yoast SEO detectado y activo."
 
-#: includes/core/hooks.php:2941 includes/core/hooks.php:3303
+#: includes/core/hooks.php:2940 includes/core/hooks.php:3302
 msgid "Create with AI"
 msgstr "Crear con IA"
 
-#: includes/core/hooks.php:3325
+#: includes/core/hooks.php:3324
 msgid "Generate content with AI and then insert it directly into this post."
 msgstr ""
 "Genera contenido con IA y luego insértalo directamente en esta publicación."
 
-#: includes/core/hooks.php:3332
+#: includes/core/hooks.php:3331
 msgid "Blog text length"
 msgstr "Longitud del texto del blog"
 
-#: includes/core/hooks.php:3334
+#: includes/core/hooks.php:3333
 msgid "Short"
 msgstr "Corto"
 
-#: includes/core/hooks.php:3336
+#: includes/core/hooks.php:3335
 msgid "Long"
 msgstr "Largo"
 
-#: includes/core/hooks.php:3338
+#: includes/core/hooks.php:3337
 msgid "Target words will update based on selected length."
 msgstr "Las palabras objetivo se actualizarán según la longitud seleccionada."
 
-#: includes/core/hooks.php:3341
+#: includes/core/hooks.php:3340
 msgid "Number of internal images"
 msgstr "Número de imágenes internas"
 
-#: includes/core/hooks.php:3348 includes/core/hooks.php:4328
+#: includes/core/hooks.php:3347 includes/core/hooks.php:4327
 msgid "Internal images are available in Pro only."
 msgstr "Las imágenes internas solo están disponibles en Pro."
 
-#: includes/core/hooks.php:3354
+#: includes/core/hooks.php:3353
 msgid "Article goal"
 msgstr "Objetivo del artículo"
 
-#: includes/core/hooks.php:3358
+#: includes/core/hooks.php:3357
 msgid "Auto by title"
 msgstr "Auto por título"
 
-#: includes/core/hooks.php:3360
+#: includes/core/hooks.php:3359
 msgid "Discover / Editorial"
 msgstr "Descubrir / Editorial"
 
-#: includes/core/hooks.php:3361
+#: includes/core/hooks.php:3360
 msgid "SEO Standard"
 msgstr "Estándar SEO"
 
-#: includes/core/hooks.php:3362
+#: includes/core/hooks.php:3361
 msgid "How-to / Practical Guide"
 msgstr "Cómo hacerlo / Guía práctica"
 
-#: includes/core/hooks.php:3364
+#: includes/core/hooks.php:3363
 msgid ""
 "Automatically chooses Editorial, SEO Balanced or How-to from each title."
 msgstr ""
 "Elige automáticamente Editorial, SEO Equilibrado o Procedimientos de cada "
 "título."
 
-#: includes/core/hooks.php:3364
+#: includes/core/hooks.php:3363
 msgid ""
 "Defines the writing objective. Recommended for most posts: SEO Standard."
 msgstr ""
 "Define el objetivo de la escritura. Recomendado para la mayoría de las "
 "publicaciones: Estándar SEO."
 
-#: includes/core/hooks.php:3371
+#: includes/core/hooks.php:3370
 msgid "Include FAQ"
 msgstr "Incluir preguntas frecuentes"
 
-#: includes/core/hooks.php:3372
+#: includes/core/hooks.php:3371
 msgid "Adds a final FAQ block with Q&A."
 msgstr ""
 "Agrega un bloque final de preguntas frecuentes con preguntas y respuestas."
 
-#: includes/core/hooks.php:3381
+#: includes/core/hooks.php:3380
 msgid "Include practical examples"
 msgstr "Incluir ejemplos prácticos"
 
-#: includes/core/hooks.php:3382
+#: includes/core/hooks.php:3381
 msgid "Adds realistic scenarios and actionable examples."
 msgstr "Agrega escenarios realistas y ejemplos prácticos."
 
-#: includes/core/hooks.php:3387
+#: includes/core/hooks.php:3386
 msgid "Language"
 msgstr "Idioma"
 
-#: includes/core/hooks.php:3395
+#: includes/core/hooks.php:3394
 msgid "Internal images style"
 msgstr "Estilo de imágenes internas"
 
-#: includes/core/hooks.php:3402
+#: includes/core/hooks.php:3401
 msgid "Temperature (global)"
 msgstr "Temperatura (global)"
 
-#: includes/core/hooks.php:3404
+#: includes/core/hooks.php:3403
 msgid ""
 "Applied to this generation (0 = more deterministic, 1+ = more creative)."
 msgstr "Aplicado a esta generación (0 = más determinista, 1+ = más creativo)."
 
-#: includes/core/hooks.php:3408
+#: includes/core/hooks.php:3407
 msgid "Generate with AI"
 msgstr "Generar con IA"
 
-#: includes/core/hooks.php:3409
+#: includes/core/hooks.php:3408
 msgid "Improve text with AI"
 msgstr "Mejorar el texto con IA"
 
-#: includes/core/hooks.php:3410
+#: includes/core/hooks.php:3409
 msgid "Insert into editor"
 msgstr "Insertar en el editor"
 
-#: includes/core/hooks.php:3411
+#: includes/core/hooks.php:3410
 msgid "Configure text API"
 msgstr "Configurar API de texto"
 
-#: includes/core/hooks.php:3412
+#: includes/core/hooks.php:3411
 msgid "Configure image API"
 msgstr "Configurar API de imagen"
 
-#: includes/core/hooks.php:3413
+#: includes/core/hooks.php:3412
 msgid "Go to CBIA Settings"
 msgstr "Ir a la configuración de CBIA"
 
-#: includes/core/hooks.php:3414
+#: includes/core/hooks.php:3413
 msgid "Ready to generate. Enter a title and click \"Generate with AI\"."
 msgstr ""
 "Listo para generar. Ingrese un título y haga clic en \"Generar con IA\"."
 
-#: includes/core/hooks.php:3415
+#: includes/core/hooks.php:3414
 msgid "0 words"
 msgstr "0 palabras"
 
-#: includes/core/hooks.php:3419
+#: includes/core/hooks.php:3418
 msgid "Images: -"
 msgstr "Imágenes: -"
 
-#: includes/core/hooks.php:3421
+#: includes/core/hooks.php:3420
 msgid "Generate without images if the image API is missing."
 msgstr "Generar sin imágenes si falta la API de imágenes."
 
-#: includes/core/hooks.php:3429
+#: includes/core/hooks.php:3428
 msgid "Preview images (featured + internal)"
 msgstr "Vista previa de imágenes (destacadas + internas)"
 
-#: includes/core/hooks.php:3433
+#: includes/core/hooks.php:3432
 msgid "Featured pending"
 msgstr "Imagen destacada pendiente"
 
-#: includes/core/hooks.php:3436
+#: includes/core/hooks.php:3435
 msgid "Regenerate image"
 msgstr "Regenerar imagen"
 
-#: includes/core/hooks.php:3441
+#: includes/core/hooks.php:3440
 msgid "Complete missing"
 msgstr "falta completa"
 
-#: includes/core/hooks.php:3442
+#: includes/core/hooks.php:3441
 msgid "Generates only missing images/metadata and applies them to the post."
 msgstr ""
 "Genera solo imágenes/metadatos faltantes y los aplica a la publicación."
 
-#: includes/core/hooks.php:3446
+#: includes/core/hooks.php:3445
 msgid "No preview yet."
 msgstr "Aún no hay vista previa."
 
-#: includes/core/hooks.php:3454
+#: includes/core/hooks.php:3453
 msgid "Regenerate AI image"
 msgstr "Regenerar imagen AI"
 
-#: includes/core/hooks.php:3457
+#: includes/core/hooks.php:3456
 msgid "Enter a prompt to regenerate only this slot."
 msgstr "Ingrese un prompt para regenerar solo esta ranura."
 
-#: includes/core/hooks.php:3459
+#: includes/core/hooks.php:3458
 msgid "Image prompt"
 msgstr "Prompt de imagen"
 
-#: includes/core/hooks.php:3463
+#: includes/core/hooks.php:3462
 msgid "Regenerate with AI"
 msgstr "Regenerarse con IA"
 
-#: includes/core/hooks.php:3464
+#: includes/core/hooks.php:3463
 msgid "Use from library"
 msgstr "Usar desde la biblioteca"
 
-#: includes/core/hooks.php:3465 includes/core/hooks.php:3496
+#: includes/core/hooks.php:3464 includes/core/hooks.php:3495
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: includes/core/hooks.php:3473
+#: includes/core/hooks.php:3472
 msgid "Configure API key"
 msgstr "Configurar clave API"
 
-#: includes/core/hooks.php:3495
+#: includes/core/hooks.php:3494
 msgid "Save key"
 msgstr "Guardar clave"
 
-#: includes/core/hooks.php:3537 includes/core/hooks.php:3717
-#: includes/core/hooks.php:3886 includes/core/hooks.php:3900
-#: includes/core/hooks.php:3917 includes/core/hooks.php:3929
-#: includes/core/hooks.php:3991 includes/core/hooks.php:4281
-#: includes/core/hooks.php:4284 includes/core/hooks.php:4317
-#: includes/core/hooks.php:4320 includes/core/hooks.php:4483
-#: includes/core/hooks.php:4678 includes/core/hooks.php:4839
-#: includes/core/hooks.php:4856 includes/core/hooks.php:5119
-#: includes/core/hooks.php:5142 includes/core/hooks.php:5180
-#: includes/core/hooks.php:5192 includes/core/hooks.php:5219
-#: includes/core/hooks.php:5248 includes/core/hooks.php:5325
-#: includes/core/hooks.php:5535 includes/core/hooks.php:6141
-#: includes/core/hooks.php:6218 includes/core/hooks.php:6281
-#: includes/core/hooks.php:6298 includes/core/hooks.php:6343
-#: includes/core/hooks.php:6385 includes/core/hooks.php:6409
-#: includes/core/hooks.php:6463 includes/core/hooks.php:6509
-#: includes/core/hooks.php:6674 includes/core/hooks.php:6713
+#: includes/core/hooks.php:3536 includes/core/hooks.php:3716
+#: includes/core/hooks.php:3885 includes/core/hooks.php:3899
+#: includes/core/hooks.php:3916 includes/core/hooks.php:3928
+#: includes/core/hooks.php:3990 includes/core/hooks.php:4280
+#: includes/core/hooks.php:4283 includes/core/hooks.php:4316
+#: includes/core/hooks.php:4319 includes/core/hooks.php:4482
+#: includes/core/hooks.php:4677 includes/core/hooks.php:4838
+#: includes/core/hooks.php:4855 includes/core/hooks.php:5118
+#: includes/core/hooks.php:5141 includes/core/hooks.php:5179
+#: includes/core/hooks.php:5191 includes/core/hooks.php:5218
+#: includes/core/hooks.php:5247 includes/core/hooks.php:5324
+#: includes/core/hooks.php:5534 includes/core/hooks.php:6140
+#: includes/core/hooks.php:6217 includes/core/hooks.php:6280
+#: includes/core/hooks.php:6297 includes/core/hooks.php:6342
+#: includes/core/hooks.php:6384 includes/core/hooks.php:6408
+#: includes/core/hooks.php:6462 includes/core/hooks.php:6508
+#: includes/core/hooks.php:6673 includes/core/hooks.php:6712
 msgid "Unauthorized"
 msgstr "No autorizado"
 
-#: includes/core/hooks.php:3581 includes/core/hooks.php:3733
-#: includes/core/hooks.php:5165
+#: includes/core/hooks.php:3580 includes/core/hooks.php:3732
+#: includes/core/hooks.php:5164
 msgid "Preview service unavailable"
 msgstr "Servicio de vista previa no disponible"
 
-#: includes/core/hooks.php:3681 includes/core/hooks.php:3682
+#: includes/core/hooks.php:3680 includes/core/hooks.php:3681
 msgid "Preview service unavailable."
 msgstr "Servicio de vista previa no disponible."
 
-#: includes/core/hooks.php:3686
+#: includes/core/hooks.php:3685
 msgid "Starting preview..."
 msgstr "Iniciando vista previa..."
 
-#: includes/core/hooks.php:3721 includes/core/hooks.php:5147
+#: includes/core/hooks.php:3720 includes/core/hooks.php:5146
 msgid "Preview token is required."
 msgstr "Se requiere token de vista previa."
 
-#: includes/core/hooks.php:3847 includes/core/hooks.php:3890
-#: includes/core/hooks.php:3902 includes/core/hooks.php:3919
-#: includes/core/hooks.php:3937 includes/core/hooks.php:3998
+#: includes/core/hooks.php:3846 includes/core/hooks.php:3889
+#: includes/core/hooks.php:3901 includes/core/hooks.php:3918
+#: includes/core/hooks.php:3936 includes/core/hooks.php:3997
 msgid "Invalid provider."
 msgstr "Proveedor no válido."
 
-#: includes/core/hooks.php:3849 includes/core/hooks.php:3959
+#: includes/core/hooks.php:3848 includes/core/hooks.php:3958
 msgid "That provider has no saved API key."
 msgstr "Ese proveedor no tiene una clave API guardada."
 
-#: includes/core/hooks.php:3874
+#: includes/core/hooks.php:3873
 #, php-format
 msgid "%s rejected the configured API key."
 msgstr "%s rechazó la clave API configurada."
 
-#: includes/core/hooks.php:3874
+#: includes/core/hooks.php:3873
 #, php-format
 msgid "The provider connection failed with HTTP %d."
 msgstr "La conexión con el proveedor falló con HTTP %d."
 
-#: includes/core/hooks.php:3877
+#: includes/core/hooks.php:3876
 msgid "The provider returned an invalid response."
 msgstr "El proveedor devolvió una respuesta no válida."
 
-#: includes/core/hooks.php:3879 includes/core/hooks.php:4079
+#: includes/core/hooks.php:3878 includes/core/hooks.php:4078
 msgid "Connection verified."
 msgstr "Conexión verificada."
 
-#: includes/core/hooks.php:3888
+#: includes/core/hooks.php:3887
 msgid "API key is required."
 msgstr "La clave API es obligatoria."
 
-#: includes/core/hooks.php:3893
+#: includes/core/hooks.php:3892
 #, php-format
 msgid "The %s API key was saved successfully."
 msgstr "La clave API de %s se ha guardado correctamente."
 
-#: includes/core/hooks.php:3921
+#: includes/core/hooks.php:3920
 #, php-format
 msgid "%s was disconnected."
 msgstr "%s se ha desconectado."
 
-#: includes/core/hooks.php:3940 includes/core/hooks.php:4001
+#: includes/core/hooks.php:3939 includes/core/hooks.php:4000
 msgid "The image provider does not support image generation."
 msgstr "El proveedor de imágenes no admite la generación de imágenes."
 
-#: includes/core/hooks.php:3952 includes/core/hooks.php:4028
+#: includes/core/hooks.php:3951 includes/core/hooks.php:4027
 msgid "API key cannot be empty."
 msgstr "La clave API no puede estar vacía."
 
-#: includes/core/hooks.php:3973
+#: includes/core/hooks.php:3972
 msgid "API key saved."
 msgstr "Clave API guardada."
 
-#: includes/core/hooks.php:4052
+#: includes/core/hooks.php:4051
 msgid "Could not build provider validation URL."
 msgstr "No se pudo crear la URL de validación del proveedor."
 
-#: includes/core/hooks.php:4093
+#: includes/core/hooks.php:4092
 msgid "Invalid post."
 msgstr "Publicación no válida."
 
-#: includes/core/hooks.php:4290
+#: includes/core/hooks.php:4289
 msgid "Empty snapshot."
 msgstr "Instantánea vacía."
 
-#: includes/core/hooks.php:4295
+#: includes/core/hooks.php:4294
 msgid "Invalid snapshot."
 msgstr "Instantánea no válida."
 
-#: includes/core/hooks.php:4325
+#: includes/core/hooks.php:4324
 msgid "Invalid slot."
 msgstr "Ranura no válida."
 
-#: includes/core/hooks.php:4785 includes/core/hooks.php:4834
+#: includes/core/hooks.php:4784 includes/core/hooks.php:4833
 msgid "Title or content is missing."
 msgstr "Falta título o contenido."
 
-#: includes/core/hooks.php:4866
+#: includes/core/hooks.php:4865
 msgid "Could not create draft."
 msgstr "No se pudo crear el borrador."
 
-#: includes/core/hooks.php:5285 includes/services/blog-service.php:368
+#: includes/core/hooks.php:5284 includes/services/blog-service.php:368
 #, php-format
 msgid "PAUSED | idx %1$d of %2$d | %3$s"
 msgstr "EN PAUSA | idx %1$d de %2$d | %3$s"
 
-#: includes/core/hooks.php:5329
+#: includes/core/hooks.php:5328
 msgid "cbia_set_stop_flag unavailable"
 msgstr "cbia_set_stop_flag no disponible"
 
-#: includes/core/hooks.php:5498
+#: includes/core/hooks.php:5497
 msgid "cbia_run_generate_blogs unavailable"
 msgstr "cbia_run_generate_blogs no disponible"
 
-#: includes/core/hooks.php:5758
+#: includes/core/hooks.php:5757
 #, php-format
 msgid ""
 "START v3 AJAX | batch=%1$d | scope=%2$s | filter=%3$s | older_than_days=%4$d "
@@ -3358,7 +3369,7 @@ msgstr ""
 "older_than_days=%4$d | de=%5$s | a=%6$s | images_limit=%7$d | ids=%8$s | "
 "categoría=%9$d | autor=%10$d | dry_run=%11$s"
 
-#: includes/core/hooks.php:5775 includes/engine/oldposts.php:1393
+#: includes/core/hooks.php:5774 includes/engine/oldposts.php:1393
 #, php-format
 msgid ""
 "ACTIONS | note=%1$s(force=%2$s) | "
@@ -3379,19 +3390,19 @@ msgstr ""
 "featured_only=%19$s(fuerza=%20$s,remove_old=%21$s) | "
 "categorías=%22$s(fuerza=%23$s) | etiquetas=%24$s(fuerza=%25$s)"
 
-#: includes/core/hooks.php:5804 includes/engine/oldposts.php:1423
+#: includes/core/hooks.php:5803 includes/engine/oldposts.php:1423
 msgid ""
 "NOTE: specific IDs were provided. Date/category/author filters are ignored."
 msgstr ""
 "NOTA: se proporcionaron identificaciones específicas. Se ignoran los filtros "
 "de fecha/categoría/autor."
 
-#: includes/core/hooks.php:6062 includes/core/hooks.php:6249
+#: includes/core/hooks.php:6061 includes/core/hooks.php:6248
 #, php-format
 msgid "TRAMO AJAX | ids=%1$s | size=%2$d"
 msgstr "TRAMO AJAX | ids=%1$s | tamaño = %2$d"
 
-#: includes/core/hooks.php:6080 includes/core/hooks.php:6255
+#: includes/core/hooks.php:6079 includes/core/hooks.php:6254
 #, php-format
 msgid ""
 "FIN TRAMO AJAX | ids=%1$s | processed=%2$d | ok=%3$d | skip=%4$d | fail=%5$d"
@@ -3399,11 +3410,11 @@ msgstr ""
 "FIN TRAMO AJAX | ids=%1$s | procesado=%2$d | ok=%3$d | saltar=%4$d | "
 "falla=%5$d"
 
-#: includes/core/hooks.php:6148
+#: includes/core/hooks.php:6147
 msgid "Unsupported action"
 msgstr "Acción no admitida"
 
-#: includes/core/hooks.php:6154
+#: includes/core/hooks.php:6153
 msgid ""
 "There is already an old posts batch running. Wait for it to finish or stop "
 "it first."
@@ -3411,23 +3422,23 @@ msgstr ""
 "Ya hay un lote de publicaciones antiguas en ejecución. Espere a que termine "
 "o deténgalo primero."
 
-#: includes/core/hooks.php:6220
+#: includes/core/hooks.php:6219
 msgid "Old posts runner unavailable"
 msgstr "Corredor de publicaciones antiguas no disponible"
 
-#: includes/core/hooks.php:6240
+#: includes/core/hooks.php:6239
 msgid "Chunk without valid IDs"
 msgstr "Fragmento sin ID válidos"
 
-#: includes/core/hooks.php:6683
+#: includes/core/hooks.php:6682
 msgid "Invalid provider"
 msgstr "Proveedor no válido"
 
-#: includes/core/hooks.php:6714
+#: includes/core/hooks.php:6713
 msgid "Recalculation unavailable."
 msgstr "Nuevo cálculo no disponible."
 
-#: includes/core/hooks.php:6716
+#: includes/core/hooks.php:6715
 msgid "Explicit confirmation is required."
 msgstr "Se requiere confirmación explícita."
 
@@ -4144,3 +4155,10 @@ msgid ""
 msgstr ""
 "El destino del proveedor no está permitido. Revisa la configuración del "
 "proveedor."
+
+#~ msgid ""
+#~ "Y axis: dollars (USD). Full Jan-Dec timeline of the current year, "
+#~ "including months with zero data."
+#~ msgstr ""
+#~ "Eje Y: dólares (USD). Cronología completa de enero a diciembre del año "
+#~ "actual, incluidos los meses sin datos."

@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.2.3
+# CBIAStudio BlogFlow with AI (WordPress) v2.3.0
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
@@ -8,6 +8,21 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - resumable batches with checkpoints
 - live logs and STOP controls
 - optional Yoast SEO sync
+
+## What's New in 2.3.0
+
+- Improved automatic category selection when several categories match, with stronger weighting for central title entities and deterministic configured-priority resolution.
+- The monthly cost chart now always covers the latest 12 calendar months, including zero-usage months.
+- The general Usage range now defaults to Last year, while Last 2 years remains available.
+- Usage filters now appear above the results they affect; provider and model filters continue to apply to the monthly chart.
+- The general Usage range does not change the monthly chart's rolling 12-month window.
+- Retained WordPress 7.1 compatibility and the existing security hardening.
+
+## Comparative: 2.3.0 vs 2.2.3
+
+2.3.0 improves deterministic category selection and Usage analysis without adding categorization API calls or changing the established generation, scheduling, provider, and security behavior.
+
+## Previous: 2.2.3
 
 ## What's New in 2.2.3
 
