@@ -13,6 +13,175 @@ if (!function_exists('cbia_normalize_for_match')) {
 	}
 }
 
+if (!function_exists('cbia_category_match_pattern')) {
+	function cbia_category_match_pattern($normalized_keyword) {
+		$normalized_keyword = trim((string)$normalized_keyword);
+		if ($normalized_keyword === '') return '';
+		return '/(?<![\\p{L}\\p{N}])' . preg_quote($normalized_keyword, '/') . '(?![\\p{L}\\p{N}])/iu';
+	}
+}
+
+if (!function_exists('cbia_category_comparable_score_margin')) {
+	function cbia_category_comparable_score_margin() {
+		// Within this band the administrator's mapping order is the deterministic tiebreaker.
+		return 15;
+	}
+}
+
+if (!function_exists('cbia_category_title_entity_signal')) {
+	function cbia_category_title_entity_signal($normalized_keyword, $plain_title) {
+		preg_match_all('/[\\p{L}\\p{N}]+/u', (string)$normalized_keyword, $keyword_matches);
+		preg_match_all('/[\\p{L}\\p{N}]+/u', (string)$plain_title, $title_matches);
+		$keyword_tokens = $keyword_matches[0] ?? [];
+		$title_tokens = $title_matches[0] ?? [];
+		$keyword_count = count($keyword_tokens);
+
+		if ($keyword_count < 1 || count($title_tokens) < $keyword_count) return false;
+
+		$normalized_title_tokens = array_map('cbia_normalize_for_match', $title_tokens);
+		for ($offset = 0, $limit = count($title_tokens) - $keyword_count; $offset <= $limit; $offset++) {
+			$matches = true;
+			for ($index = 0; $index < $keyword_count; $index++) {
+				if ($normalized_title_tokens[$offset + $index] !== $keyword_tokens[$index]) {
+					$matches = false;
+					break;
+				}
+			}
+			if (!$matches) continue;
+
+			for ($index = 0; $index < $keyword_count; $index++) {
+				$absolute_index = $offset + $index;
+				if ($absolute_index > 0 && preg_match('/^\\p{Lu}/u', $title_tokens[$absolute_index])) return true;
+			}
+		}
+
+		return false;
+	}
+}
+
+if (!function_exists('cbia_category_keyword_score')) {
+	function cbia_category_keyword_score($keyword, $plain_title, $normalized_title, $normalized_excerpt, $normalized_content) {
+		$normalized_keyword = cbia_normalize_for_match(trim((string)$keyword));
+		$pattern = cbia_category_match_pattern($normalized_keyword);
+		if ($pattern === '') return 0;
+
+		$score = 0;
+		$title_match = [];
+		if (preg_match($pattern, $normalized_title, $title_match, PREG_OFFSET_CAPTURE)) {
+			$score += 100; // Exact title phrase: strongest base signal.
+			$title_length = max(1, mb_strlen($normalized_title));
+			$title_offset = mb_strlen(substr($normalized_title, 0, (int)$title_match[0][1]));
+			$score += (int)round(25 * (1 - min(1, $title_offset / $title_length)));
+
+			preg_match_all('/[\\p{L}\\p{N}]+/u', $normalized_keyword, $keyword_words);
+			if (count($keyword_words[0] ?? []) > 1) $score += 25;
+			if (cbia_category_title_entity_signal($normalized_keyword, $plain_title)) $score += 85;
+		}
+
+		$excerpt_count = preg_match_all($pattern, $normalized_excerpt, $unused_excerpt_matches);
+		if ($excerpt_count > 0) $score += 18 + (4 * min(2, $excerpt_count));
+
+		$content_count = preg_match_all($pattern, $normalized_content, $unused_content_matches);
+		if ($content_count > 0) $score += 10 + (4 * min(3, $content_count));
+
+		return $score;
+	}
+}
+
+if (!function_exists('cbia_rank_category_candidates')) {
+	function cbia_rank_category_candidates($candidates, $comparable_margin = 15) {
+		$comparable_margin = max(0, (int)$comparable_margin);
+		usort($candidates, function($left, $right) {
+			$score_compare = ((int)$right['score']) <=> ((int)$left['score']);
+			if ($score_compare !== 0) return $score_compare;
+			$left_priority = isset($left['priority']) ? (int)$left['priority'] : PHP_INT_MAX;
+			$right_priority = isset($right['priority']) ? (int)$right['priority'] : PHP_INT_MAX;
+			if ($left_priority !== $right_priority) return $left_priority <=> $right_priority;
+			return strcmp((string)$left['normalized_name'], (string)$right['normalized_name']);
+		});
+
+		$ranked = [];
+		$total = count($candidates);
+		$cursor = 0;
+		while ($cursor < $total) {
+			$band_top_score = (int)$candidates[$cursor]['score'];
+			$band = [];
+			while ($cursor < $total && ($band_top_score - (int)$candidates[$cursor]['score']) <= $comparable_margin) {
+				$band[] = $candidates[$cursor];
+				$cursor++;
+			}
+			usort($band, function($left, $right) {
+				$left_priority = isset($left['priority']) ? (int)$left['priority'] : PHP_INT_MAX;
+				$right_priority = isset($right['priority']) ? (int)$right['priority'] : PHP_INT_MAX;
+				if ($left_priority !== $right_priority) return $left_priority <=> $right_priority;
+				$score_compare = ((int)$right['score']) <=> ((int)$left['score']);
+				if ($score_compare !== 0) return $score_compare;
+				return strcmp((string)$left['normalized_name'], (string)$right['normalized_name']);
+			});
+			$ranked = array_merge($ranked, $band);
+		}
+
+		return $ranked;
+	}
+}
+
+if (!function_exists('cbia_rank_categories_by_mapping')) {
+	function cbia_rank_categories_by_mapping($mapping, $title, $content_html, $max_categories = 3) {
+		$plain_title = wp_strip_all_tags((string)$title);
+		$plain_content = mb_substr(wp_strip_all_tags((string)$content_html), 0, 4000);
+		$normalized_title = cbia_normalize_for_match($plain_title);
+		$normalized_content = cbia_normalize_for_match($plain_content);
+		$normalized_excerpt = mb_substr($normalized_content, 0, 800);
+		$lines = array_values(array_filter(array_map('trim', explode("\n", (string)$mapping))));
+		$category_map = [];
+
+		foreach ($lines as $priority => $line) {
+			$parts = explode(':', $line, 2);
+			if (count($parts) !== 2) continue;
+			$category_name = trim($parts[0]);
+			$normalized_name = cbia_normalize_for_match($category_name);
+			if ($normalized_name === '') continue;
+
+			if (!isset($category_map[$normalized_name])) {
+				$category_map[$normalized_name] = [
+					'name' => $category_name,
+					'normalized_name' => $normalized_name,
+					'priority' => $priority,
+					'keywords' => [],
+				];
+			}
+
+			$keywords = array_filter(array_map('trim', explode(',', $parts[1])));
+			foreach ($keywords as $keyword) {
+				$normalized_keyword = cbia_normalize_for_match($keyword);
+				if ($normalized_keyword === '' || isset($category_map[$normalized_name]['keywords'][$normalized_keyword])) continue;
+				// Keep matching work bounded even when an imported mapping is unexpectedly large.
+				if (count($category_map[$normalized_name]['keywords']) >= 50) break;
+				$category_map[$normalized_name]['keywords'][$normalized_keyword] = $keyword;
+			}
+		}
+
+		$candidates = [];
+		foreach ($category_map as $category) {
+			$keyword_scores = [];
+			foreach ($category['keywords'] as $keyword) {
+				$keyword_score = cbia_category_keyword_score($keyword, $plain_title, $normalized_title, $normalized_excerpt, $normalized_content);
+				if ($keyword_score > 0) $keyword_scores[] = $keyword_score;
+			}
+			if (empty($keyword_scores)) continue;
+			rsort($keyword_scores, SORT_NUMERIC);
+			$category['score'] = (int)$keyword_scores[0];
+			if (isset($keyword_scores[1])) $category['score'] += (int)round($keyword_scores[1] * 0.25);
+			unset($category['keywords']);
+			$candidates[] = $category;
+		}
+
+		$ranked = cbia_rank_category_candidates($candidates, cbia_category_comparable_score_margin());
+		$names = array_map(function($candidate) { return $candidate['name']; }, $ranked);
+		return array_slice($names, 0, max(1, (int)$max_categories));
+	}
+}
+
 if (!function_exists('cbia_slugify')) {
 	function cbia_slugify($text) {
 		$text = remove_accents((string)$text);
@@ -47,34 +216,7 @@ if (!function_exists('cbia_determine_categories_by_mapping')) {
 	function cbia_determine_categories_by_mapping($title, $content_html) {
 		$s = cbia_get_settings();
 		$mapping = (string)($s['keywords_to_categories'] ?? '');
-		$lines = array_filter(array_map('trim', explode("\n", $mapping)));
-
-		$norm_title = cbia_normalize_for_match($title);
-		$norm_content = cbia_normalize_for_match(wp_strip_all_tags(mb_substr((string)$content_html, 0, 4000)));
-
-		$found = [];
-		foreach ($lines as $line) {
-			$parts = explode(':', $line, 2);
-			if (count($parts) !== 2) continue;
-
-			$cat = trim($parts[0]);
-			$keywords = array_filter(array_map('trim', explode(',', $parts[1])));
-
-			$matched = false;
-			foreach ($keywords as $kw) {
-				$kw_norm = preg_quote(cbia_normalize_for_match($kw), '/');
-				$pattern = '/(?<![a-z0-9])' . $kw_norm . '(?![a-z0-9])/i';
-				if (preg_match($pattern, $norm_title) || preg_match($pattern, $norm_content)) {
-					$matched = true;
-					break;
-				}
-			}
-
-			if ($matched && $cat !== '') $found[] = $cat;
-		}
-
-		$found = array_values(array_unique($found));
-		return array_slice($found, 0, 3);
+		return cbia_rank_categories_by_mapping($mapping, $title, $content_html, 3);
 	}
 }
 

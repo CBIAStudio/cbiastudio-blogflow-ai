@@ -561,7 +561,7 @@ echo '</select>';
 <th><?php echo esc_html__('Rules: keywords -> categories', 'cbiastudio-blogflow-ai'); ?></th>
 <td>
 <textarea name="keywords_to_categories" rows="6" style="width:100%;"><?php echo esc_textarea((string)($settings['keywords_to_categories'] ?? '')); ?></textarea>
-<p class="description"><?php echo wp_kses_post(__('Line format: <code>Category: kw1, kw2, kw3</code>. Compared against (title + content).', 'cbiastudio-blogflow-ai')); ?></p>
+<p class="description"><?php echo wp_kses_post(__('Line format: <code>Category: kw1, kw2, kw3</code>. Title relevance has the strongest weight; line order resolves categories with comparable scores.', 'cbiastudio-blogflow-ai')); ?></p>
 </td>
 </tr>
 <tr>
