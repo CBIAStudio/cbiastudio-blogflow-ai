@@ -19,6 +19,36 @@ if (!function_exists('cbia_usage_month_window_now')) {
     }
 }
 
+if (!function_exists('cbia_usage_general_range_window')) {
+    function cbia_usage_general_range_window($days, $now_ts = null) {
+        $days = (int) $days;
+        if (!in_array($days, array(7, 30, 90, 365, 730), true)) $days = 365;
+        if ($now_ts === null) {
+            $now_ts = function_exists('current_time') ? current_time('timestamp') : time();
+        }
+        $now_ts = (int) $now_ts;
+        $since_ts = $now_ts - (($days - 1) * DAY_IN_SECONDS);
+        $date_fn = function_exists('wp_date') ? 'wp_date' : 'gmdate';
+        return array(
+            'days' => $days,
+            'now_ts' => $now_ts,
+            'since_ts' => $since_ts,
+            'since_day' => (string) call_user_func($date_fn, 'Y-m-d', $since_ts),
+            'end_day' => (string) call_user_func($date_fn, 'Y-m-d', $now_ts),
+        );
+    }
+}
+
+if (!function_exists('cbia_usage_row_in_general_range')) {
+    function cbia_usage_row_in_general_range($row, $general_range) {
+        if (!is_array($row) || !is_array($general_range)) return false;
+        $sort_ts = (int) ($row['sort_ts'] ?? 0);
+        if ($sort_ts > 0) return $sort_ts >= (int) ($general_range['since_ts'] ?? 0);
+        $day_value = (string) ($row['day'] ?? '');
+        return $day_value === '' || $day_value >= (string) ($general_range['since_day'] ?? '');
+    }
+}
+
 if (!function_exists('cbia_usage_rolling_month_keys')) {
     function cbia_usage_rolling_month_keys($now = null) {
         $month_start = cbia_usage_month_window_now($now)->modify('first day of this month')->setTime(0, 0, 0);

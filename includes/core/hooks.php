@@ -1425,10 +1425,10 @@ if (!function_exists('cbia_usage_fill_daily_series')) {
 
 if (!function_exists('cbia_usage_build_payload_from_store')) {
     function cbia_usage_build_payload_from_store($rows, $days, $requested_model, $recent_rows_limit) {
-        $now_ts = current_time('timestamp');
-        $since_ts = $now_ts - (($days - 1) * DAY_IN_SECONDS);
-        $since_day = wp_date('Y-m-d', $since_ts);
-        $period_end_day = wp_date('Y-m-d', $now_ts);
+        $general_range = cbia_usage_general_range_window($days, current_time('timestamp'));
+        $days = (int) $general_range['days'];
+        $since_day = (string) $general_range['since_day'];
+        $period_end_day = (string) $general_range['end_day'];
         // Independent of GENERAL_USAGE_RANGE: one bounded pass over the existing event store.
         $rolling_monthly = cbia_usage_build_rolling_month_aggregates((array) $rows);
         $init_summary = static function () {
@@ -1463,15 +1463,8 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
 
         foreach ((array) $rows as $row) {
             if (!is_array($row)) continue;
-            $sort_ts = (int) ($row['sort_ts'] ?? 0);
             $day_value = (string) ($row['day'] ?? '');
-            $is_in_period = true;
-            if ($sort_ts > 0 && $sort_ts < $since_ts) {
-                $is_in_period = false;
-            } elseif ($sort_ts <= 0 && $day_value !== '' && $day_value < $since_day) {
-                $is_in_period = false;
-            }
-            if (!$is_in_period) continue;
+            if (!cbia_usage_row_in_general_range($row, $general_range)) continue;
 
             $model = (string) ($row['model'] ?? 'unknown');
             if ($model === '') $model = 'unknown';

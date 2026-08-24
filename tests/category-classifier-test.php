@@ -13,7 +13,7 @@ function remove_accents($value) {
         'í' => 'i', 'ì' => 'i', 'ï' => 'i', 'î' => 'i', 'Í' => 'I', 'Ì' => 'I', 'Ï' => 'I', 'Î' => 'I',
         'ó' => 'o', 'ò' => 'o', 'ö' => 'o', 'ô' => 'o', 'Ó' => 'O', 'Ò' => 'O', 'Ö' => 'O', 'Ô' => 'O',
         'ú' => 'u', 'ù' => 'u', 'ü' => 'u', 'û' => 'u', 'Ú' => 'U', 'Ù' => 'U', 'Ü' => 'U', 'Û' => 'U',
-        'ñ' => 'n', 'Ñ' => 'N',
+        'ñ' => 'n', 'Ñ' => 'N', 'ç' => 'c', 'Ç' => 'C',
     ));
 }
 function wp_strip_all_tags($value) { return strip_tags((string)$value); }
@@ -40,6 +40,17 @@ $brand_result = cbia_rank_categories_by_mapping(
     $repeated_content
 );
 category_classifier_check($brand_result[0] === 'Brands and producers', 'a central proper-name title entity beats repeated generic content keywords');
+
+$entity_at_start_result = cbia_rank_categories_by_mapping(
+    "Brands: Padron\nProduction: fermentation",
+    'Padron and the art of fermentation',
+    'The article compares established craft methods.'
+);
+category_classifier_check($entity_at_start_result[0] === 'Brands', 'a configured entity at the start of the title remains the strongest category signal');
+category_classifier_check(
+    cbia_category_title_entity_signal('planning', 'Planning reliable systems') === false,
+    'sentence-initial capitalization alone does not create a proper-name entity bonus'
+);
 
 $process_result = cbia_rank_categories_by_mapping(
     $mapping,
@@ -81,6 +92,23 @@ $accent_result = cbia_rank_categories_by_mapping(
     ''
 );
 category_classifier_check($accent_result[0] === 'Coffee', 'Unicode accents are normalized and matching is case-insensitive');
+
+$unicode_cases = array(
+    array('Enye', 'jalapeno', 'JALAPEÑO techniques', 'ñ matches its semantically equivalent unaccented form'),
+    array('Umlaut', 'uber', 'Über reliable systems', 'ü matches its semantically equivalent unaccented form'),
+    array('Acute E', 'eclair', 'ÉCLAIR preparation', 'é matches its semantically equivalent unaccented form'),
+    array('Acute A', 'area', 'Área planning', 'á matches its semantically equivalent unaccented form'),
+    array('Cedilla', 'facade', 'Façade design', 'ç matches its semantically equivalent unaccented form'),
+    array('ASCII apostrophe', "l'esprit", "L'esprit editorial methods", 'ASCII apostrophe matches with Unicode-aware boundaries'),
+    array('Typographic apostrophe', "l'esprit", 'L’esprit editorial methods', 'typographic apostrophe is equivalent to ASCII apostrophe'),
+    array('ASCII hyphen', 'co-op', 'CO-OP governance', 'ASCII hyphen matches with Unicode-aware boundaries'),
+    array('Unicode hyphen', 'co-op', 'CO‑OP governance', 'Unicode hyphen is equivalent to ASCII hyphen'),
+    array('Multiword punctuation', "cafe-l'esprit", 'CAFÉ‑L’ESPRIT methods', 'multiword accented punctuation variants match together'),
+);
+foreach ($unicode_cases as [$category_name, $keyword, $unicode_title, $description]) {
+    $unicode_result = cbia_rank_categories_by_mapping($category_name . ': ' . $keyword, $unicode_title, '');
+    category_classifier_check(($unicode_result[0] ?? '') === $category_name, $description);
+}
 
 $case_result = cbia_rank_categories_by_mapping("Mixed case: DeEpSeEk", 'Using deepseek safely', '');
 category_classifier_check($case_result[0] === 'Mixed case', 'keyword matching is case-insensitive');

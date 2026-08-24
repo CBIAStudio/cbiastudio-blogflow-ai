@@ -7,7 +7,11 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 
 if (!function_exists('cbia_normalize_for_match')) {
 	function cbia_normalize_for_match($str) {
-		$str = remove_accents((string)$str);
+		$str = strtr((string)$str, [
+			'‘' => "'", '’' => "'", 'ʼ' => "'", '＇' => "'",
+			'‐' => '-', '‑' => '-', '‒' => '-', '–' => '-', '—' => '-', '−' => '-',
+		]);
+		$str = remove_accents($str);
 		$str = mb_strtolower($str);
 		return $str;
 	}
