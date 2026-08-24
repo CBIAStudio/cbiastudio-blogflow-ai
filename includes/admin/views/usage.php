@@ -18,11 +18,14 @@ if (!function_exists('cbia_usage_image_quality_label')) {
     }
 }
 
-$allowed_days = array(7, 30, 90, 730);
-$days = isset($_GET['usage_days']) ? absint(wp_unslash((string) $_GET['usage_days'])) : 30;
+$allowed_days = array(7, 30, 90, 365, 730);
+$days = isset($_GET['usage_days']) ? absint(wp_unslash((string) $_GET['usage_days'])) : 365;
 if (!in_array($days, $allowed_days, true)) {
-    $days = 30;
+    $days = 365;
 }
+$usage_period_label = $days === 365
+    ? __('Last year', 'cbiastudio-blogflow-ai')
+    : ($days === 730 ? __('Last 2 years', 'cbiastudio-blogflow-ai') : sprintf(__('Last %d days', 'cbiastudio-blogflow-ai'), $days));
 
 $requested_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash((string) $_GET['tab'])) : 'usage';
 $posted_form = isset($_POST['cbia_form']) ? sanitize_key(wp_unslash((string) $_POST['cbia_form'])) : '';
@@ -869,6 +872,7 @@ $dashboard_payload['i18n'] = array(
     'medium' => __('Medium', 'cbiastudio-blogflow-ai'),
     'high' => __('High', 'cbiastudio-blogflow-ai'),
     'unknown' => __('Unknown', 'cbiastudio-blogflow-ai'),
+    'monthlyChartHint' => __('Latest 12 calendar months, including months with zero data. Provider and model filters apply; the general usage range and other log filters do not change this chart.', 'cbiastudio-blogflow-ai'),
     'featured' => __('Featured', 'cbiastudio-blogflow-ai'),
     'internal' => __('Internal', 'cbiastudio-blogflow-ai'),
     'other' => __('Other', 'cbiastudio-blogflow-ai'),
@@ -946,7 +950,7 @@ $dashboard_payload['i18n'] = array(
             </div>
             <div class="cbia-usage-context-pill">
                 <span><?php echo esc_html__('Period', 'cbiastudio-blogflow-ai'); ?></span>
-                <strong><?php echo esc_html((int) $days); ?> <?php echo esc_html__('days', 'cbiastudio-blogflow-ai'); ?></strong>
+                <strong><?php echo esc_html($usage_period_label); ?></strong>
             </div>
         </div>
 
@@ -963,6 +967,92 @@ $dashboard_payload['i18n'] = array(
                     <strong id="cbia-usage-loading-title"><?php echo esc_html__('Loading real usage data...', 'cbiastudio-blogflow-ai'); ?></strong>
                     <span id="cbia-usage-loading-hint"><?php echo esc_html__('Charts and table will fill in automatically in a few seconds.', 'cbiastudio-blogflow-ai'); ?></span>
                 </div>
+            </div>
+
+            <div class="cbia-usage-filters">
+                <form method="get" action="" id="cbia-usage-period-form" class="cbia-usage-filter-inline">
+                    <input type="hidden" name="page" value="cbia" />
+                    <input type="hidden" name="tab" value="usage" />
+                    <input type="hidden" name="usage_section" value="overview" />
+                    <input type="hidden" name="usage_model" id="cbia-usage-model-hidden" value="<?php echo esc_attr($requested_model); ?>" />
+                    <select id="cbia-usage-days" name="usage_days" class="abb-select" aria-label="<?php echo esc_attr__('Period', 'cbiastudio-blogflow-ai'); ?>">
+                        <?php foreach ($allowed_days as $period_days) : ?>
+                            <?php
+                            // translators: %d is the selected period length in days.
+                            $period_label = $period_days === 365
+                                ? __('Last year', 'cbiastudio-blogflow-ai')
+                                : ($period_days === 730 ? __('Last 2 years', 'cbiastudio-blogflow-ai') : sprintf(__('Last %d days', 'cbiastudio-blogflow-ai'), $period_days));
+                            ?>
+                            <option value="<?php echo esc_attr($period_days); ?>" <?php selected($days, $period_days); ?>><?php echo esc_html($period_label); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </form>
+
+                <select id="cbia-usage-model-filter" class="abb-select" aria-label="<?php echo esc_attr__('Model', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All models', 'cbiastudio-blogflow-ai'); ?></option>
+                    <?php foreach ($model_options as $model_name) : ?>
+                        <option value="<?php echo esc_attr($model_name); ?>" <?php selected($requested_model, $model_name); ?>><?php echo esc_html($model_name); ?></option>
+                    <?php endforeach; ?>
+                </select>
+
+                <select id="cbia-usage-type-filter" class="abb-select" aria-label="<?php echo esc_attr__('Type', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All types', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="text"><?php echo esc_html__('Text', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="image"><?php echo esc_html__('Image', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="seo">SEO</option>
+                </select>
+
+                <select id="cbia-usage-quality-filter" class="abb-select" aria-label="<?php echo esc_attr__('Image quality', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All image qualities', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="auto"><?php echo esc_html__('Automatic', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="low"><?php echo esc_html__('Low', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="medium"><?php echo esc_html__('Medium', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="high"><?php echo esc_html__('High', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="unknown"><?php echo esc_html__('Unknown', 'cbiastudio-blogflow-ai'); ?></option>
+                </select>
+
+                <select id="cbia-usage-image-role-filter" class="abb-select" aria-label="<?php echo esc_attr__('Image role', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All image roles', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="featured"><?php echo esc_html__('Featured', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="content"><?php echo esc_html__('Internal', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="other"><?php echo esc_html__('Other', 'cbiastudio-blogflow-ai'); ?></option>
+                </select>
+
+                <select id="cbia-usage-provider-filter" class="abb-select" aria-label="<?php echo esc_attr__('Provider', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All providers', 'cbiastudio-blogflow-ai'); ?></option>
+					<option value="openai">OpenAI</option><option value="google">Google</option><option value="deepseek">DeepSeek</option><option value="anthropic">Anthropic</option>
+                </select>
+                <select id="cbia-usage-status-filter" class="abb-select" aria-label="<?php echo esc_attr__('Cost status', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All cost statuses', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="exact"><?php echo esc_html__('Exact', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="estimated"><?php echo esc_html__('Estimated', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="unknown"><?php echo esc_html__('Unknown', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="official_reconciled"><?php echo esc_html__('Officially reconciled', 'cbiastudio-blogflow-ai'); ?></option>
+                </select>
+                <select id="cbia-usage-request-status-filter" class="abb-select" aria-label="<?php echo esc_attr__('Request status', 'cbiastudio-blogflow-ai'); ?>">
+                    <option value=""><?php echo esc_html__('All request statuses', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="success"><?php echo esc_html__('Success', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="error"><?php echo esc_html__('Error', 'cbiastudio-blogflow-ai'); ?></option>
+                    <option value="timeout"><?php echo esc_html__('Timeout', 'cbiastudio-blogflow-ai'); ?></option>
+                </select>
+                <label><?php echo esc_html__('From', 'cbiastudio-blogflow-ai'); ?> <input type="datetime-local" id="cbia-usage-from" /></label>
+                <label><?php echo esc_html__('To', 'cbiastudio-blogflow-ai'); ?> <input type="datetime-local" id="cbia-usage-to" /></label>
+                <span class="description"><?php echo esc_html(wp_timezone_string()); ?></span>
+
+                <input
+                    type="search"
+                    id="cbia-usage-search"
+                    class="regular-text"
+                    placeholder="<?php echo esc_attr__('Search logs', 'cbiastudio-blogflow-ai'); ?>"
+                    aria-label="<?php echo esc_attr__('Search logs', 'cbiastudio-blogflow-ai'); ?>"
+                />
+
+                <button type="button" class="button cbia-usage-clear-filters" id="cbia-usage-clear-filters"><?php echo esc_html__('Clear filters', 'cbiastudio-blogflow-ai'); ?></button>
+                <span id="cbia-usage-filter-summary" class="cbia-usage-filter-summary" aria-live="polite"></span>
+                <a class="button button-secondary" id="cbia-usage-export" href="<?php echo esc_url($export_url); ?>"><?php echo esc_html__('Export CSV', 'cbiastudio-blogflow-ai'); ?></a>
+                <button type="button" class="button" id="cbia-usage-recalc-dry-run"><?php echo esc_html__('Simulate historical cost recalculation', 'cbiastudio-blogflow-ai'); ?></button>
+                <button type="button" class="button" id="cbia-usage-recalc-apply"><?php echo esc_html__('Apply recalculation', 'cbiastudio-blogflow-ai'); ?></button>
+                <span id="cbia-usage-recalc-result" class="description" aria-live="polite"></span>
             </div>
 
             <div class="cbia-usage-kpis">
@@ -1105,7 +1195,7 @@ $dashboard_payload['i18n'] = array(
                     <div class="cbia-usage-panel-head">
                         <div class="cbia-usage-panel-title">
                             <h3><?php echo esc_html__('Local calculated / estimated cost by month', 'cbiastudio-blogflow-ai'); ?></h3>
-                            <p id="cbia-usage-monthly-hint"><?php echo esc_html__('Y axis: dollars (USD). Full Jan-Dec timeline of the current year, including months with zero data.', 'cbiastudio-blogflow-ai'); ?></p>
+                            <p id="cbia-usage-monthly-hint"><?php echo esc_html__('Latest 12 calendar months, including months with zero data. Provider and model filters apply; the general usage range and other log filters do not change this chart.', 'cbiastudio-blogflow-ai'); ?></p>
                         </div>
                         <div class="cbia-usage-legend">
                             <span class="cbia-usage-legend-item is-text"><i></i><?php echo esc_html__('Text', 'cbiastudio-blogflow-ai'); ?></span>
@@ -1125,87 +1215,6 @@ $dashboard_payload['i18n'] = array(
                     </div>
                 </section>
                 <?php endif; ?>
-            </div>
-
-            <div class="cbia-usage-filters">
-                <form method="get" action="" id="cbia-usage-period-form" class="cbia-usage-filter-inline">
-                    <input type="hidden" name="page" value="cbia" />
-                    <input type="hidden" name="tab" value="usage" />
-                    <input type="hidden" name="usage_section" value="overview" />
-                    <input type="hidden" name="usage_model" id="cbia-usage-model-hidden" value="<?php echo esc_attr($requested_model); ?>" />
-                    <select id="cbia-usage-days" name="usage_days" class="abb-select" aria-label="<?php echo esc_attr__('Period', 'cbiastudio-blogflow-ai'); ?>">
-                        <?php foreach ($allowed_days as $period_days) : ?>
-                            <?php // translators: %d is the selected period length in days. ?>
-                            <option value="<?php echo esc_attr($period_days); ?>" <?php selected($days, $period_days); ?>><?php echo esc_html(sprintf(__('Last %d days', 'cbiastudio-blogflow-ai'), $period_days)); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </form>
-
-                <select id="cbia-usage-model-filter" class="abb-select" aria-label="<?php echo esc_attr__('Model', 'cbiastudio-blogflow-ai'); ?>">
-                    <option value=""><?php echo esc_html__('All models', 'cbiastudio-blogflow-ai'); ?></option>
-                    <?php foreach ($model_options as $model_name) : ?>
-                        <option value="<?php echo esc_attr($model_name); ?>" <?php selected($requested_model, $model_name); ?>><?php echo esc_html($model_name); ?></option>
-                    <?php endforeach; ?>
-                </select>
-
-                <select id="cbia-usage-type-filter" class="abb-select" aria-label="<?php echo esc_attr__('Type', 'cbiastudio-blogflow-ai'); ?>">
-                    <option value=""><?php echo esc_html__('All types', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="text"><?php echo esc_html__('Text', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="image"><?php echo esc_html__('Image', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="seo">SEO</option>
-                </select>
-
-                <select id="cbia-usage-quality-filter" class="abb-select" aria-label="<?php echo esc_attr__('Image quality', 'cbiastudio-blogflow-ai'); ?>">
-                    <option value=""><?php echo esc_html__('All image qualities', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="auto"><?php echo esc_html__('Automatic', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="low"><?php echo esc_html__('Low', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="medium"><?php echo esc_html__('Medium', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="high"><?php echo esc_html__('High', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="unknown"><?php echo esc_html__('Unknown', 'cbiastudio-blogflow-ai'); ?></option>
-                </select>
-
-                <select id="cbia-usage-image-role-filter" class="abb-select" aria-label="<?php echo esc_attr__('Image role', 'cbiastudio-blogflow-ai'); ?>">
-                    <option value=""><?php echo esc_html__('All image roles', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="featured"><?php echo esc_html__('Featured', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="content"><?php echo esc_html__('Internal', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="other"><?php echo esc_html__('Other', 'cbiastudio-blogflow-ai'); ?></option>
-                </select>
-
-                <select id="cbia-usage-provider-filter" class="abb-select" aria-label="<?php echo esc_attr__('Provider', 'cbiastudio-blogflow-ai'); ?>">
-                    <option value=""><?php echo esc_html__('All providers', 'cbiastudio-blogflow-ai'); ?></option>
-					<option value="openai">OpenAI</option><option value="google">Google</option><option value="deepseek">DeepSeek</option><option value="anthropic">Anthropic</option>
-                </select>
-                <select id="cbia-usage-status-filter" class="abb-select" aria-label="<?php echo esc_attr__('Cost status', 'cbiastudio-blogflow-ai'); ?>">
-                    <option value=""><?php echo esc_html__('All cost statuses', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="exact"><?php echo esc_html__('Exact', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="estimated"><?php echo esc_html__('Estimated', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="unknown"><?php echo esc_html__('Unknown', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="official_reconciled"><?php echo esc_html__('Officially reconciled', 'cbiastudio-blogflow-ai'); ?></option>
-                </select>
-                <select id="cbia-usage-request-status-filter" class="abb-select" aria-label="<?php echo esc_attr__('Request status', 'cbiastudio-blogflow-ai'); ?>">
-                    <option value=""><?php echo esc_html__('All request statuses', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="success"><?php echo esc_html__('Success', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="error"><?php echo esc_html__('Error', 'cbiastudio-blogflow-ai'); ?></option>
-                    <option value="timeout"><?php echo esc_html__('Timeout', 'cbiastudio-blogflow-ai'); ?></option>
-                </select>
-                <label><?php echo esc_html__('From', 'cbiastudio-blogflow-ai'); ?> <input type="datetime-local" id="cbia-usage-from" /></label>
-                <label><?php echo esc_html__('To', 'cbiastudio-blogflow-ai'); ?> <input type="datetime-local" id="cbia-usage-to" /></label>
-                <span class="description"><?php echo esc_html(wp_timezone_string()); ?></span>
-
-                <input
-                    type="search"
-                    id="cbia-usage-search"
-                    class="regular-text"
-                    placeholder="<?php echo esc_attr__('Search logs', 'cbiastudio-blogflow-ai'); ?>"
-                    aria-label="<?php echo esc_attr__('Search logs', 'cbiastudio-blogflow-ai'); ?>"
-                />
-
-                <button type="button" class="button cbia-usage-clear-filters" id="cbia-usage-clear-filters"><?php echo esc_html__('Clear filters', 'cbiastudio-blogflow-ai'); ?></button>
-                <span id="cbia-usage-filter-summary" class="cbia-usage-filter-summary" aria-live="polite"></span>
-                <a class="button button-secondary" id="cbia-usage-export" href="<?php echo esc_url($export_url); ?>"><?php echo esc_html__('Export CSV', 'cbiastudio-blogflow-ai'); ?></a>
-                <button type="button" class="button" id="cbia-usage-recalc-dry-run"><?php echo esc_html__('Simulate historical cost recalculation', 'cbiastudio-blogflow-ai'); ?></button>
-                <button type="button" class="button" id="cbia-usage-recalc-apply"><?php echo esc_html__('Apply recalculation', 'cbiastudio-blogflow-ai'); ?></button>
-                <span id="cbia-usage-recalc-result" class="description" aria-live="polite"></span>
             </div>
 
             <div class="cbia-usage-main-grid">

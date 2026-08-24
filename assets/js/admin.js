@@ -818,8 +818,8 @@
         }
 
         function getPeriodInfo() {
-            var days = Number(payload.periodDays || 30);
-            if (!isFinite(days) || days <= 0) days = 30;
+            var days = Number(payload.periodDays || 365);
+            if (!isFinite(days) || days <= 0) days = 365;
             var startIso = String(payload.periodStartDay || '').trim();
             var endIso = String(payload.periodEndDay || '').trim();
             if (!/^\d{4}-\d{2}-\d{2}$/.test(startIso) || !/^\d{4}-\d{2}-\d{2}$/.test(endIso)) {
@@ -848,9 +848,7 @@
                 typeHint.textContent = 'Y axis: number of text and image calls in the current filter. ' + period.label + '.';
             }
             if (monthlyHint) {
-                var year = String(period.endIso || '').slice(0, 4);
-                if (!/^\d{4}$/.test(year)) year = String(new Date().getFullYear());
-                monthlyHint.textContent = 'Y axis: dollars (USD). Jan-Dec ' + year + ' timeline (months without data are shown as zero).';
+                monthlyHint.textContent = t('monthlyChartHint', 'Latest 12 calendar months, including months with zero data. Provider and model filters apply; the general usage range and other log filters do not change this chart.');
             }
         }
 
@@ -1009,7 +1007,7 @@
             var body = new URLSearchParams();
             body.set('action', 'cbia_usage_overview_data');
             body.set('nonce', ajaxNonce);
-            body.set('days', String(payload.periodDays || 30));
+            body.set('days', String(payload.periodDays || 365));
             body.set('usage_model', String(payload.defaultModel || ''));
 
             fetch(ajaxUrl, {
@@ -1088,35 +1086,49 @@
         }
 
         function getMonthlyBuckets() {
-            var summary = getActiveSummary();
-            var series = (summary && Array.isArray(summary.monthlySeries))
-                ? summary.monthlySeries.slice()
-                : (Array.isArray(payload.monthlySeries) ? payload.monthlySeries.slice() : []);
-            var monthMap = {};
-            series.forEach(function (item) {
-                if (!item) return;
-                var monthKey = String(item.month || '').trim();
-                if (!/^\d{4}-\d{2}$/.test(monthKey)) return;
-                monthMap[monthKey] = item;
-            });
-            var period = getPeriodInfo();
-            var year = String(period.endIso || '').slice(0, 4);
-            if (!/^\d{4}$/.test(year)) year = String(new Date().getFullYear());
-            var filled = [];
-            for (var m = 1; m <= 12; m++) {
-                var mm = m < 10 ? ('0' + m) : String(m);
-                var key = year + '-' + mm;
-                var src = monthMap[key] || {};
-                filled.push({
-                    month: key,
-                    calls: Number(src.calls || 0),
-                    text_cost_eur: Number(src.text_cost_eur || 0),
-                    image_cost_eur: Number(src.image_cost_eur || 0),
-                    seo_cost_eur: Number(src.seo_cost_eur || 0),
-                    cost_eur: (src.cost_eur === null || src.cost_eur === undefined || src.cost_eur === '') ? null : Number(src.cost_eur)
+            var model = String((modelSelect && modelSelect.value) || '').trim();
+            var provider = String((providerSelect && providerSelect.value) || '').trim();
+            var providerSeries = (payload.monthlySeriesByProvider && typeof payload.monthlySeriesByProvider === 'object')
+                ? payload.monthlySeriesByProvider
+                : {};
+            var providerModelSeries = (payload.monthlySeriesByProviderModel && typeof payload.monthlySeriesByProviderModel === 'object')
+                ? payload.monthlySeriesByProviderModel
+                : {};
+            var series = [];
+
+            if (provider && model) {
+                var modelsForProvider = (providerModelSeries[provider] && typeof providerModelSeries[provider] === 'object')
+                    ? providerModelSeries[provider]
+                    : {};
+                series = Array.isArray(modelsForProvider[model]) ? modelsForProvider[model].slice() : [];
+            } else if (provider) {
+                series = Array.isArray(providerSeries[provider]) ? providerSeries[provider].slice() : [];
+            } else if (model) {
+                var modelSummary = summariesByModel[model] || null;
+                series = modelSummary && Array.isArray(modelSummary.monthlySeries) ? modelSummary.monthlySeries.slice() : [];
+            } else {
+                series = Array.isArray(payload.monthlySeries) ? payload.monthlySeries.slice() : [];
+            }
+
+            if (!series.length && (provider || model) && Array.isArray(payload.monthlySeries)) {
+                series = payload.monthlySeries.map(function (item) {
+                    return {
+                        month: String((item && item.month) || ''),
+                        calls: 0,
+                        text_calls: 0,
+                        image_calls: 0,
+                        seo_calls: 0,
+                        text_cost_eur: 0,
+                        image_cost_eur: 0,
+                        seo_cost_eur: 0,
+                        cost_eur: 0
+                    };
                 });
             }
-            return filled;
+
+            return series.filter(function (item) {
+                return item && /^\d{4}-\d{2}$/.test(String(item.month || '').trim());
+            });
         }
 
         function getActivitySeries(filtered) {

@@ -91,8 +91,8 @@ $cbia_test_exact_transients = array(
 );
 $cbia_test_usage_transients = array();
 
-foreach (array('v5', 'v7', 'v8', 'v9', 'v11') as $cbia_test_cache_version) {
-    foreach (array(7, 30, 90, 730) as $cbia_test_cache_days) {
+foreach (array('v5', 'v7', 'v8', 'v9', 'v11', 'v12') as $cbia_test_cache_version) {
+    foreach (array(7, 30, 90, 365, 730) as $cbia_test_cache_days) {
         $cbia_test_usage_transients[] = sprintf(
             'cbia_pro_usage_overview_%s_7_%d',
             $cbia_test_cache_version,

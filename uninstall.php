@@ -67,8 +67,8 @@ foreach ($cbia_transients as $cbia_transient) {
 
 // Known usage dashboard cache variants and supported ranges.
 $cbia_blog_id = function_exists('get_current_blog_id') ? (int)get_current_blog_id() : 1;
-foreach (array('v5', 'v7', 'v8', 'v9', 'v11') as $cbia_cache_version) {
-    foreach (array(7, 30, 90, 730) as $cbia_cache_days) {
+foreach (array('v5', 'v7', 'v8', 'v9', 'v11', 'v12') as $cbia_cache_version) {
+    foreach (array(7, 30, 90, 365, 730) as $cbia_cache_days) {
         delete_transient('cbia_pro_usage_overview_' . $cbia_cache_version . '_' . $cbia_blog_id . '_' . $cbia_cache_days);
     }
 }
