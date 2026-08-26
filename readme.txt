@@ -8,170 +8,150 @@ Network: true
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Create AI-assisted blog posts in WordPress with preview, featured image, resumable batches, live logs, and optional Yoast SEO sync.
+Create AI-assisted WordPress posts with preview drafts, featured images, resumable batches, usage tracking, and optional Yoast SEO sync.
 
 == Description ==
 
-CBIAStudio BlogFlow with AI helps WordPress site owners create and manage blog content with a controlled AI workflow.
+CBIAStudio BlogFlow with AI helps WordPress site owners generate AI-assisted article content and a featured image while retaining control over what WordPress saves or publishes.
 
-This edition generates AI text plus one featured image, lets you preview the result before creating the post, and runs large batches safely with resumable checkpoints and live logs.
-
-= Who this plugin is for =
-
-This plugin is built for:
-
-* site owners who want to generate blog drafts faster
-* editorial teams that need safer batch generation with STOP / resume behavior
-* WordPress users who want cost visibility and simple diagnostics
-* users who may optionally work with Yoast SEO, without making Yoast mandatory
+For individual posts, the `Posts > Create with AI` flow creates a reviewable preview draft. You can then publish it, keep it as a draft, or schedule it. For title queues, the `Blog` screen supports checkpointed batches with STOP, resume, and live logs.
 
 = Main features =
 
-* AI text generation for blog posts
-* One featured image per generated post in this edition
-* Live preview workflow before creating the final post
-* Resumable batch generation with checkpoint logic
-* Live logs and safe STOP controls
-* Category and tag assignment rules
-* Cost dashboard with quick estimate and real-cost tracking
+* AI-assisted article generation
+* One generated featured image per post
+* Reviewable preview drafts with publish, draft, and scheduling choices
+* Checkpointed batch generation with STOP, resume, and live logs
+* Automatic category and tag assignment from configured rules and title/content signals
+* Usage and locally calculated cost tracking with provider/model filters
+* Rolling 12-month usage and cost trends
 * Environment and plugin diagnostics
-* Optional Yoast SEO integration for meta syncing when Yoast is installed
+* Optional Yoast SEO metadata synchronization
 
-= Plugin behavior =
+= Supported AI providers =
 
-CBIAStudio BlogFlow with AI is standalone and does not require another CBIA plugin.
+Text generation supports:
 
-It supports:
+* OpenAI
+* Google Gemini
+* DeepSeek
+* Anthropic
 
-* featured image generation
-* preview-first workflow
-* batch generation with recovery logic
-* AI cost visibility
+Image generation supports image-capable models from:
 
-It does not include the advanced in-editor composer and old-post regeneration tools from the Pro edition.
+* OpenAI Images
+* Google Gemini / Imagen
+
+DeepSeek and Anthropic are text-only providers in the free plugin. You supply the API keys for the providers you use, and provider charges are governed by their own terms and pricing.
+
+= Typical workflow =
+
+1. Open `CBIAStudio BlogFlow with AI > Settings`.
+2. Select the text and image providers and models you want to use, then save the corresponding API keys.
+3. Configure content options and any category or tag rules you need.
+4. For one post, open `Posts > Create with AI`, generate a preview draft, review the content and metadata, and then choose whether to publish, keep the draft, or schedule it.
+5. For multiple titles, open `CBIAStudio BlogFlow with AI > Blog`, start the batch, and monitor its live log and checkpoint status.
+
+= Usage and cost reporting =
+
+The `Usage` screen records generation activity and locally calculated costs. Events and charts can be filtered by provider and model. The monthly view always covers the latest 12 calendar months, including months with no recorded usage.
+
+Cost figures depend on the usage evidence returned by each provider and the plugin's local pricing catalog. They are operational estimates or calculations, not a replacement for the provider's invoice.
+
+= Free and Pro =
+
+The free plugin works as a standalone plugin and includes the individual `Posts > Create with AI` workflow, title-based batches, one featured image per generated post, essential Usage reporting, and optional Yoast SEO synchronization.
+
+CBIAStudio BlogFlow Pro separately adds internal-image workflows, old-post regeneration, advanced Usage and cost controls, and additional automation. Yoast SEO is optional in both workflows.
 
 == Installation ==
-1. Upload the plugin folder to `wp-content/plugins/`.
-2. Activate the plugin from "Plugins".
-3. Go to `Settings -> CBIAStudio BlogFlow with AI`.
-4. Add your API key and choose your text/image provider settings.
-5. Open the `Blog` screen to generate previews and create posts.
 
-== Usage Guide ==
+1. Install and activate CBIAStudio BlogFlow with AI from `Plugins > Add New`, or upload the plugin folder to `wp-content/plugins/`.
+2. Open `CBIAStudio BlogFlow with AI > Settings` in the WordPress admin menu.
+3. Select a text provider and model. If you want a generated featured image, also select an image provider and model.
+4. Add the API key for each provider you use and save the settings.
+5. Configure the generation, category, and tag options you need.
+6. Use `Posts > Create with AI` for a reviewable preview draft, or open `CBIAStudio BlogFlow with AI > Blog` for checkpointed title batches.
 
-= Quick start =
-
-1. Open the plugin settings and save a valid API key.
-2. Choose the provider and model you want to use.
-3. Go to the `Blog` tab.
-4. Enter or import titles.
-5. Generate a preview.
-6. Review the generated text, featured image, categories, tags, and SEO fields.
-7. Create the post when the preview looks correct.
-
-= Batch generation =
-
-1. Prepare multiple titles.
-2. Start the generation batch.
-3. Watch the live log while the plugin processes the queue.
-4. Use STOP if needed.
-5. Resume later from the saved checkpoint when required.
-
-= Cost tracking =
-
-The `Usage` area lets you review:
-
-* calls by type
-* costs by post
-* provider/model usage
-* estimated versus real cost tracking
-* monthly cost tendencies
-
-= Optional Yoast workflow =
-
-If Yoast SEO is active, the plugin can synchronize:
-
-* meta description
-* focus keyphrase
-* related Yoast metadata/hooks used by the plugin flow
+Yoast SEO is optional and is not required to use the plugin.
 
 == Frequently Asked Questions ==
 
-= Do I need to buy credits from CBIA Studio? =
-No. This plugin works with your own API key from supported AI providers. You pay the provider directly for your usage.
-
 = Which AI providers are supported? =
-CBIAStudio BlogFlow with AI supports OpenAI, Google Gemini / Imagen, DeepSeek, and Anthropic for text. Image generation remains limited to image-capable providers and models configured in the plugin settings.
+OpenAI, Google Gemini, DeepSeek, and Anthropic are supported for text generation. Featured-image generation supports image-capable OpenAI and Google Gemini / Imagen models. DeepSeek and Anthropic do not provide image generation in this plugin.
+
+= Do I need my own API keys? =
+Yes. A site administrator configures the API key for each provider the site uses. The WordPress site sends requests directly to the selected provider; CBIA Studio does not sell or intermediate the provider's API usage.
 
 = Do I need another plugin to use CBIAStudio BlogFlow with AI? =
 No. CBIAStudio BlogFlow with AI works as a standalone plugin and does not require another CBIA plugin.
 
-= Can I preview the content before creating the post? =
-Yes. CBIAStudio BlogFlow with AI includes a preview-first workflow so you can review the generated text, featured image, categories, tags, and SEO-related fields before creating the final post.
-
-= Does CBIAStudio BlogFlow with AI generate internal images inside the content? =
-No. CBIAStudio BlogFlow with AI focuses on AI text plus one featured image per post. The advanced internal-image workflow belongs to CBIAStudio BlogFlow Pro.
-
-= Can I generate multiple posts safely in batches? =
-Yes. The batch system supports live logs, STOP controls, and resumable checkpoints so long runs can be continued safely.
-
-= What happens if a generation step fails? =
-The plugin records the failure in the live log, keeps the batch state, and can resume from the saved checkpoint. If an image step fails, it can be left as a pending item for later completion.
-
 = Do I need Yoast SEO to use the plugin? =
-No. Yoast is optional. If Yoast SEO is installed and active, the plugin can sync supported metadata as part of the generation flow.
+No. Yoast SEO is optional. When it is installed and active, the plugin can synchronize supported metadata such as the meta description and focus keyphrase.
 
-= Why can the real cost differ from the quick estimate? =
-Real cost depends on the provider, model, tokens, and image pricing rules in your configuration. You can also enable fixed image pricing and adjust real-cost settings for closer tracking.
+= Does the plugin automatically publish content? =
+Generating an individual preview does not publish the post. The preview flow creates or reuses a temporary draft for review; the final action can publish it, keep it as a draft, or schedule it. A configured title batch can publish immediately or schedule posts according to its date and interval settings.
+
+= Can I stop and resume a batch? =
+Yes. The title-batch workflow records live logs and checkpoint state. STOP pauses the queue, and a later run can resume from the saved checkpoint. Blocking provider or configuration errors can also pause the queue until the issue is corrected.
+
+= Does the plugin generate images? =
+Yes. The free plugin can generate one featured image per generated post with a configured OpenAI or Google image model. Images inside the article content are a Pro feature.
+
+= How is AI usage and cost tracked? =
+The plugin records operational usage evidence such as provider, model, request type, token data when available, and image settings. It uses that evidence with its local pricing catalog to show exact, estimated, or unknown cost states. These figures may differ from the provider's final invoice.
 
 = What does the Pro version add? =
-The Pro edition adds advanced in-editor generation, internal-image workflows, old-post regeneration tools, and broader editorial controls beyond the base preview-first flow.
+CBIAStudio BlogFlow Pro adds internal-image workflows, old-post regeneration, advanced Usage and cost controls, and additional automation. The free plugin already includes the individual `Posts > Create with AI` workflow.
 
 == External services ==
 
-This plugin can connect to third-party AI services only when the site administrator configures API keys and starts generation actions.
+This plugin sends requests from the WordPress site directly to a third-party AI provider only after a site administrator configures that provider and runs a connection test or an action that uses it. The configured API key is sent to the selected provider for authentication. CBIA Studio does not proxy these provider requests.
+
+The content sent depends on the selected action. Connection tests use authentication and minimal test/model parameters. Generation actions can send titles, system instructions, prompt templates or custom instructions, image prompts, selected models, and generation settings. Provider usage is billed under the provider's own terms.
 
 = OpenAI API =
-- Service purpose: text generation and image generation for posts.
-- Data sent: post title, prompt/template text, generation parameters, and image prompts.
-- When sent: when creating preview, creating posts, or generating images manually.
-- API domain used by the plugin: `api.openai.com`
-- Terms: https://openai.com/policies/terms-of-use
-- Privacy: https://openai.com/policies/privacy-policy
+* Service purpose: text generation, featured-image generation, and connection tests.
+* Data sent for generation: system instructions, article prompts that can include the title and configured content options, image prompts, selected model, and generation parameters.
+* When sent: when OpenAI is selected and an administrator tests the connection or starts a preview, post, batch, or image-generation action.
+* API domain: `api.openai.com`
+* Terms: https://openai.com/policies/terms-of-use
+* Privacy: https://openai.com/policies/privacy-policy
 
 = Google Gemini / Imagen API =
-- Service purpose: text generation (Gemini) and image generation (Imagen/Gemini image models).
-- Data sent: post title, prompt/template text, generation parameters, and image prompts.
-- When sent: when creating preview, creating posts, or generating images manually.
-- API domain used by the plugin: `generativelanguage.googleapis.com`
-- Terms: https://ai.google.dev/terms
-- Privacy: https://policies.google.com/privacy
+* Service purpose: text generation with Gemini, featured-image generation with compatible Gemini / Imagen models, and connection tests.
+* Data sent for generation: system instructions, article prompts that can include the title and configured content options, image prompts, selected model, and generation parameters.
+* When sent: when Google is selected and an administrator tests the connection or starts a preview, post, batch, or image-generation action.
+* API domain: `generativelanguage.googleapis.com`
+* Terms: https://ai.google.dev/terms
+* Privacy: https://policies.google.com/privacy
 
 = DeepSeek API =
-- Service purpose: text generation.
-- Data sent: post title, prompt/template text, and generation parameters.
-- When sent: when creating preview or creating posts.
-- Terms: https://platform.deepseek.com/terms
-- Privacy: https://platform.deepseek.com/privacy
+* Service purpose: text generation and connection tests. DeepSeek is not used for image generation.
+* Data sent for generation: system instructions, article prompts that can include the title and configured content options, selected model, reasoning options, and generation parameters.
+* When sent: when DeepSeek is selected and an administrator tests the connection or starts a preview, post, or batch-generation action.
+* API domain: `api.deepseek.com`
+* Open Platform Terms: https://cdn.deepseek.com/policies/en-US/deepseek-open-platform-terms-of-service.html
+* Privacy: https://cdn.deepseek.com/policies/en-US/deepseek-privacy-policy.html
 
 = Anthropic API =
-- Service purpose: text generation through the Anthropic Messages API.
-- Data sent: post title, system prompt, prompt/template text, and generation parameters.
-- When sent: only when Anthropic is selected and an administrator starts preview or post generation.
-- API domain used by the plugin: `api.anthropic.com`
-- Terms: https://www.anthropic.com/legal/commercial-terms
-- Privacy: https://www.anthropic.com/legal/privacy
+* Service purpose: text generation through the Anthropic Messages API and connection tests. Anthropic is not used for image generation.
+* Data sent for generation: system instructions, article prompts that can include the title and configured content options, selected model, and generation parameters.
+* When sent: when Anthropic is selected and an administrator tests the connection or starts a preview, post, or batch-generation action.
+* API domain: `api.anthropic.com`
+* Terms: https://www.anthropic.com/legal/commercial-terms
+* Privacy: https://www.anthropic.com/legal/privacy
 
 == Changelog ==
 
+Older entries are retained as release history. Current free-plugin availability is described above; historical references to gated or Pro-compatible code do not make those capabilities available in the free plugin.
+
 = 2.3.0 =
-* Improved automatic category selection when several categories match.
-* Added stronger weighting for central title entities and deterministic configured-priority resolution.
-* The monthly cost chart now always covers the latest 12 calendar months, including zero-usage months.
-* The general Usage range now defaults to Last year; Last 2 years remains available.
-* Moved Usage filters above the results they affect.
-* The general Usage range does not change the monthly chart's rolling 12-month window.
-* Retained WordPress 7.1 compatibility and existing security hardening.
+* Improved the relevance of automatic category selection using configured rules and title/content signals.
+* Improved Usage filter placement and range defaults, with Last year selected by default and Last 2 years still available.
+* Added a rolling 12-calendar-month usage and cost view with zero-filled months and provider/model filtering.
+* Retained WordPress 7.1 compatibility metadata.
+* Carried forward security hardening for external-provider requests and generated-content handling.
 
 = 2.2.3 =
 * Declared compatibility with WordPress 7.1 after completing the automated compatibility and regression gates.
@@ -371,6 +351,9 @@ Fixes persistence of the default, featured, and content OpenAI image quality sel
 * Improved preview/create flows by returning real preview URLs for scheduled drafts and stabilizing admin-side usage rendering.
 
 == Upgrade Notice ==
+
+= 2.3.0 =
+Improves category selection and Usage reporting, including a rolling 12-month view, while retaining WordPress 7.1 compatibility and security hardening. Updating is recommended.
 
 = 2.0.9 =
 Recommended editorial automation update. Adds Pro-compatible Auto by title profile detection, per-title profile logs, and Blog profile visibility in the posts list.
