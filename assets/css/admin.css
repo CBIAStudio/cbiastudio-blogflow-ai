@@ -2088,18 +2088,18 @@ body.cbia-preview-lock {
     align-items: stretch;
 }
 
-.cbia-usage-panel.-activity { grid-column: 1 / 2; }
-.cbia-usage-panel.-type { grid-column: 2 / 3; }
-.cbia-usage-panel.-image-quality { grid-column: 1 / 2; }
-.cbia-usage-panel.-image-role { grid-column: 2 / 3; }
-.cbia-usage-panel.-monthly { grid-column: 1 / -1; }
+.cbia-usage-chart-grid > .cbia-usage-panel.-activity { grid-column: 1 / 2; }
+.cbia-usage-chart-grid > .cbia-usage-panel.-type { grid-column: 2 / 3; }
+.cbia-usage-chart-grid > .cbia-usage-panel.-image-quality { grid-column: 1 / 2; }
+.cbia-usage-chart-grid > .cbia-usage-panel.-image-role { grid-column: 2 / 3; }
+.cbia-usage-chart-grid > .cbia-usage-panel.-monthly { grid-column: 1 / -1; }
 
 @media (max-width: 1560px) {
     .cbia-usage-chart-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .cbia-usage-panel.-monthly {
+    .cbia-usage-chart-grid > .cbia-usage-panel.-monthly {
         grid-column: 1 / -1;
     }
 }
@@ -2109,11 +2109,11 @@ body.cbia-preview-lock {
         grid-template-columns: minmax(0, 1fr);
     }
 
-    .cbia-usage-panel.-activity,
-    .cbia-usage-panel.-type,
-    .cbia-usage-panel.-image-quality,
-    .cbia-usage-panel.-image-role,
-    .cbia-usage-panel.-monthly {
+    .cbia-usage-chart-grid > .cbia-usage-panel.-activity,
+    .cbia-usage-chart-grid > .cbia-usage-panel.-type,
+    .cbia-usage-chart-grid > .cbia-usage-panel.-image-quality,
+    .cbia-usage-chart-grid > .cbia-usage-panel.-image-role,
+    .cbia-usage-chart-grid > .cbia-usage-panel.-monthly {
         grid-column: 1 / -1;
     }
 }
@@ -3623,9 +3623,14 @@ body.cbia-hide-external-notices #wpbody-content .cbia-shell #message{
 }
 
 .cbia-usage-breakdown-grid {
+    align-items: stretch;
     display: grid;
     gap: 14px;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cbia-usage-breakdown-grid > .cbia-usage-panel {
+    min-width: 0;
 }
 
 .cbia-usage-breakdown-grid .cbia-usage-empty {
