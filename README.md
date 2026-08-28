@@ -1,4 +1,4 @@
-# CBIAStudio BlogFlow with AI (WordPress) v2.3.0
+# CBIAStudio BlogFlow with AI (WordPress) v2.3.1
 
 CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress posts:
 
