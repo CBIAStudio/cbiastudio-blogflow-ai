@@ -47,8 +47,9 @@ $range_rows = array(
 );
 $range_expectations = array(
     7 => array('recent'),
+    30 => array('recent'),
+    90 => array('recent'),
     365 => array('recent', 'middle'),
-    730 => array('recent', 'middle', 'old'),
 );
 $canonical_range_series = cbia_usage_build_rolling_month_aggregates($range_rows, $now)['series'];
 foreach ($range_expectations as $general_usage_range => $expected_ids) {
@@ -63,6 +64,17 @@ foreach ($range_expectations as $general_usage_range => $expected_ids) {
     usage_dashboard_check(count($monthly_again['series']) === 12, "general range {$general_usage_range} still publishes twelve monthly buckets");
     usage_dashboard_check($monthly_again['series'] === $canonical_range_series, "general range {$general_usage_range} does not alter monthly data");
 }
+
+$default_range = cbia_usage_resolve_range('', '', '', $now);
+usage_dashboard_check($default_range['key'] === '30d' && $default_range['days'] === 30, 'invalid or absent range input defaults to the latest 30 inclusive days');
+usage_dashboard_check($default_range['granularity'] === 'day', 'the 30-day view uses daily granularity');
+$custom_range = cbia_usage_resolve_range('custom', '2026-08-01', '2026-08-10', $now);
+usage_dashboard_check($custom_range['days'] === 10 && $custom_range['since_day'] === '2026-08-01' && $custom_range['end_day'] === '2026-08-10', 'custom dates are inclusive and retain the site-local boundaries');
+usage_dashboard_check($custom_range['previous_since_day'] === '2026-07-22' && $custom_range['previous_end_day'] === '2026-07-31', 'the comparison window is the immediately preceding equal-length period');
+usage_dashboard_check(cbia_usage_resolve_range('90d', '', '', $now)['granularity'] === 'week', 'the 90-day view uses weekly granularity');
+usage_dashboard_check(cbia_usage_resolve_range('12m', '', '', $now)['granularity'] === 'month', 'the 12-month general view uses monthly granularity');
+usage_dashboard_check(cbia_usage_metric_comparison(5, 0)['status'] === 'new_activity', 'zero previous activity is labelled as new activity without division by zero');
+usage_dashboard_check(cbia_usage_metric_comparison(0, 0)['status'] === 'no_comparison', 'two empty periods have no misleading percentage comparison');
 
 $january = new DateTimeImmutable('2026-01-15 12:00:00', $madrid);
 $january_keys = cbia_usage_rolling_month_keys($january);
@@ -80,20 +92,20 @@ usage_dashboard_check(strpos($monthly_source, '$days') === false, 'the canonical
 $root = dirname(__DIR__);
 $hooks_source = file_get_contents($root . '/includes/core/hooks.php');
 $view_source = file_get_contents($root . '/includes/admin/views/usage.php');
+$redesigned_view_source = substr($view_source, strpos($view_source, 'cbia-usage-quick-ranges'));
 $js_source = file_get_contents($root . '/assets/js/admin.js');
 $css_source = file_get_contents($root . '/assets/css/admin.css');
 $bootstrap_source = file_get_contents($root . '/includes/core/bootstrap.php');
 $store_start = strpos($hooks_source, "function cbia_usage_build_payload_from_store(");
 $store_end = strpos($hooks_source, "function cbia_get_usage_dashboard_payload_fast(", $store_start);
 $store_source = substr($hooks_source, $store_start, $store_end - $store_start);
-usage_dashboard_check(strpos($view_source, "array(7, 30, 90, 365, 730)") !== false && strpos($view_source, ": 365;") !== false, 'the general Usage selector defaults to 365 and retains 730');
-usage_dashboard_check(strpos($view_source, "__('Last year'") !== false && strpos($view_source, "__('Last 2 years'") !== false, '365 and 730 have descriptive labels');
-usage_dashboard_check(strpos($view_source, 'cbia-usage-filters') < strpos($view_source, 'cbia-usage-kpis') && strpos($view_source, 'cbia-usage-filters') < strpos($view_source, 'cbia-usage-chart-grid'), 'filters are rendered before every affected KPI and chart');
+usage_dashboard_check(strpos($view_source, "'30d'") !== false && strpos($view_source, "'12m'") !== false && strpos($view_source, 'cbia-usage-custom-range') !== false, 'the view exposes 7/30/90/12-month quick ranges plus custom dates');
+usage_dashboard_check(strpos($redesigned_view_source, 'cbia-usage-quick-ranges') < strpos($redesigned_view_source, 'cbia-usage-kpis') && strpos($redesigned_view_source, 'cbia-usage-kpis') < strpos($redesigned_view_source, 'cbia-usage-activity-chart'), 'period controls, KPIs and the primary chart follow the requested visual hierarchy');
 usage_dashboard_check(strpos($store_source, 'cbia_usage_build_rolling_month_aggregates') < strpos($store_source, 'cbia_usage_row_in_general_range'), 'rolling aggregation is separated before the real general-range predicate');
-usage_dashboard_check(strpos($hooks_source, 'cbia_pro_usage_overview_v12_') !== false && strpos($hooks_source, 'array(7, 30, 90, 365, 730)') !== false, 'the cache and backend accept the new default range');
+usage_dashboard_check(strpos($hooks_source, 'cbia_pro_usage_overview_v13_') !== false && strpos($hooks_source, 'array(7, 30, 90, 365)') !== false, 'the cache namespace and backend match the new range contract');
 usage_dashboard_check(strpos($js_source, 'monthlySeriesByProviderModel') !== false && strpos($js_source, 'for (var m = 1; m <= 12; m++)') === false, 'JavaScript selects backend provider/model series without rebuilding the month window');
-usage_dashboard_check(strpos($js_source, 'periodDays || 365') !== false && strpos($js_source, 'periodDays || 30') === false, 'JavaScript uses the 365-day general default');
-usage_dashboard_check(strpos($css_source, '.cbia-usage-filters') !== false && strpos($css_source, 'flex-wrap: wrap;') !== false && strpos($css_source, '@media (max-width: 780px)') !== false, 'existing responsive filter styles cover desktop, tablet, and mobile wrapping');
+usage_dashboard_check(strpos($js_source, 'payload.periodDays || 30') !== false && strpos($js_source, 'previousSummariesByModel') !== false, 'JavaScript uses the 30-day default and consumes previous-period summaries');
+usage_dashboard_check(strpos($css_source, '.cbia-usage-filters') !== false && strpos($css_source, '@media (max-width: 782px)') !== false && strpos($css_source, '@media (max-width: 480px)') !== false, 'responsive filters cover desktop, tablet and narrow mobile layouts');
 usage_dashboard_check(strpos($bootstrap_source, "support/usage-dashboard.php") < strpos($bootstrap_source, "core/hooks.php"), 'the canonical monthly helper loads before dashboard hooks');
 
 echo "usage-dashboard-range: {$checks}/{$checks} OK\n";

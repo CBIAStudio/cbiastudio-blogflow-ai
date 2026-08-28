@@ -2,7 +2,7 @@
 
 $source = file_get_contents(__DIR__ . '/../includes/core/hooks.php');
 $checks = array(
-    "return 'cbia_pro_usage_overview_v12_'" => 'rolling-month upgrade uses a fresh dashboard cache namespace',
+    "return 'cbia_pro_usage_overview_v13_'" => 'range-comparison upgrade uses a fresh dashboard cache namespace',
     "return 3;" => 'event store schema version is recorded',
     "'schema_version' => cbia_usage_event_store_schema_version()" => 'saved stores include their schema version',
     "\$schema_version !== cbia_usage_event_store_schema_version()" => 'outdated stores trigger reconciliation',

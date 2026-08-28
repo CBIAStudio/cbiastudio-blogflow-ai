@@ -19,33 +19,199 @@ if (!function_exists('cbia_usage_month_window_now')) {
     }
 }
 
+if (!function_exists('cbia_usage_range_granularity')) {
+    function cbia_usage_range_granularity($days, $range_key = '') {
+        $days = max(1, (int) $days);
+        if ($range_key === '12m' || $days > 180) return 'month';
+        if ($days > 45) return 'week';
+        return 'day';
+    }
+}
+
+if (!function_exists('cbia_usage_parse_site_timestamp')) {
+    function cbia_usage_parse_site_timestamp($value) {
+        if (is_int($value) || (is_string($value) && ctype_digit($value))) return (int) $value;
+        $raw = trim((string) $value);
+        if ($raw === '') return 0;
+        $timezone = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
+        if (preg_match('/(?:z|[+-]\d{2}:?\d{2})$/i', $raw)) {
+            try {
+                return (new DateTimeImmutable($raw))->getTimestamp();
+            } catch (Exception $exception) {
+                return 0;
+            }
+        }
+        foreach (array('Y-m-d H:i:s', 'Y-m-d\TH:i:s', 'Y-m-d H:i', 'Y-m-d\TH:i', 'Y-m-d') as $format) {
+            $parsed = DateTimeImmutable::createFromFormat('!' . $format, $raw, $timezone);
+            if ($parsed && $parsed->format($format) === $raw) return $parsed->getTimestamp();
+        }
+        try {
+            return (new DateTimeImmutable($raw, $timezone))->getTimestamp();
+        } catch (Exception $exception) {
+            return 0;
+        }
+    }
+}
+
+if (!function_exists('cbia_usage_resolve_range')) {
+    function cbia_usage_resolve_range($range_key = '30d', $from_day = '', $to_day = '', $now = null) {
+        $now_dt = cbia_usage_month_window_now($now);
+        $timezone = $now_dt->getTimezone();
+        $today = $now_dt->setTime(0, 0, 0);
+        $range_key = strtolower(trim((string) $range_key));
+        $quick_days = array('7d' => 7, '30d' => 30, '90d' => 90, '12m' => 365);
+        if (!isset($quick_days[$range_key]) && $range_key !== 'custom') $range_key = '30d';
+
+        $start = null;
+        $end = null;
+        if ($range_key === 'custom') {
+            $from = DateTimeImmutable::createFromFormat('!Y-m-d', (string) $from_day, $timezone);
+            $to = DateTimeImmutable::createFromFormat('!Y-m-d', (string) $to_day, $timezone);
+            if ($from && $to && $from->format('Y-m-d') === (string) $from_day && $to->format('Y-m-d') === (string) $to_day && $from <= $to) {
+                $start = $from->setTime(0, 0, 0);
+                $end = $to->setTime(0, 0, 0);
+            } else {
+                $range_key = '30d';
+            }
+        }
+
+        if ($range_key !== 'custom') {
+            $days = $quick_days[$range_key];
+            $end = $today;
+            $start = $today->modify('-' . ($days - 1) . ' days');
+        }
+
+        $days = (int) $start->diff($end)->format('%a') + 1;
+        if ($days > 730) {
+            $days = 730;
+            $start = $end->modify('-729 days');
+        }
+        $previous_end = $start->modify('-1 day');
+        $previous_start = $previous_end->modify('-' . ($days - 1) . ' days');
+
+        return array(
+            'key' => $range_key,
+            'days' => $days,
+            'now_ts' => $now_dt->getTimestamp(),
+            'since_ts' => $start->getTimestamp(),
+            'end_ts' => $end->setTime(23, 59, 59)->getTimestamp(),
+            'since_day' => $start->format('Y-m-d'),
+            'end_day' => $end->format('Y-m-d'),
+            'previous_since_ts' => $previous_start->getTimestamp(),
+            'previous_end_ts' => $previous_end->setTime(23, 59, 59)->getTimestamp(),
+            'previous_since_day' => $previous_start->format('Y-m-d'),
+            'previous_end_day' => $previous_end->format('Y-m-d'),
+            'granularity' => cbia_usage_range_granularity($days, $range_key),
+        );
+    }
+}
+
 if (!function_exists('cbia_usage_general_range_window')) {
     function cbia_usage_general_range_window($days, $now_ts = null) {
         $days = (int) $days;
-        if (!in_array($days, array(7, 30, 90, 365, 730), true)) $days = 365;
-        if ($now_ts === null) {
-            $now_ts = function_exists('current_time') ? current_time('timestamp') : time();
+        $keys = array(7 => '7d', 30 => '30d', 90 => '90d', 365 => '12m');
+        $range_key = isset($keys[$days]) ? $keys[$days] : '30d';
+        $now = null;
+        if ($now_ts !== null) {
+            $now = new DateTimeImmutable('@' . (int) $now_ts);
+            if (function_exists('wp_timezone')) $now = $now->setTimezone(wp_timezone());
         }
-        $now_ts = (int) $now_ts;
-        $since_ts = $now_ts - (($days - 1) * DAY_IN_SECONDS);
-        $date_fn = function_exists('wp_date') ? 'wp_date' : 'gmdate';
-        return array(
-            'days' => $days,
-            'now_ts' => $now_ts,
-            'since_ts' => $since_ts,
-            'since_day' => (string) call_user_func($date_fn, 'Y-m-d', $since_ts),
-            'end_day' => (string) call_user_func($date_fn, 'Y-m-d', $now_ts),
-        );
+        return cbia_usage_resolve_range($range_key, '', '', $now);
     }
 }
 
 if (!function_exists('cbia_usage_row_in_general_range')) {
     function cbia_usage_row_in_general_range($row, $general_range) {
         if (!is_array($row) || !is_array($general_range)) return false;
-        $sort_ts = (int) ($row['sort_ts'] ?? 0);
-        if ($sort_ts > 0) return $sort_ts >= (int) ($general_range['since_ts'] ?? 0);
         $day_value = (string) ($row['day'] ?? '');
-        return $day_value === '' || $day_value >= (string) ($general_range['since_day'] ?? '');
+        if ($day_value !== '') {
+            return $day_value >= (string) ($general_range['since_day'] ?? '')
+                && $day_value <= (string) ($general_range['end_day'] ?? '9999-12-31');
+        }
+        $sort_ts = (int) ($row['sort_ts'] ?? 0);
+        if ($sort_ts > 0) {
+            return $sort_ts >= (int) ($general_range['since_ts'] ?? 0)
+                && $sort_ts <= (int) ($general_range['end_ts'] ?? PHP_INT_MAX);
+        }
+        return true;
+    }
+}
+
+if (!function_exists('cbia_usage_row_in_previous_range')) {
+    function cbia_usage_row_in_previous_range($row, $general_range) {
+        if (!is_array($row) || !is_array($general_range)) return false;
+        $day_value = (string) ($row['day'] ?? '');
+        if ($day_value !== '') {
+            return $day_value >= (string) ($general_range['previous_since_day'] ?? '')
+                && $day_value <= (string) ($general_range['previous_end_day'] ?? '');
+        }
+        $sort_ts = (int) ($row['sort_ts'] ?? 0);
+        if ($sort_ts > 0) {
+            return $sort_ts >= (int) ($general_range['previous_since_ts'] ?? 0)
+                && $sort_ts <= (int) ($general_range['previous_end_ts'] ?? 0);
+        }
+        return false;
+    }
+}
+
+if (!function_exists('cbia_usage_metric_comparison')) {
+    function cbia_usage_metric_comparison($current, $previous) {
+        $current = (float) $current;
+        $previous = (float) $previous;
+        if ($previous <= 0) {
+            return array('status' => $current > 0 ? 'new_activity' : 'no_comparison', 'percent' => null);
+        }
+        $percent = round((($current - $previous) / abs($previous)) * 100, 1);
+        return array(
+            'status' => $percent > 0 ? 'increased' : ($percent < 0 ? 'decreased' : 'unchanged'),
+            'percent' => $percent,
+        );
+    }
+}
+
+if (!function_exists('cbia_usage_scrub_cost_intelligence')) {
+    function cbia_usage_scrub_cost_intelligence($payload) {
+        $data = is_array($payload) ? $payload : array();
+        $data['canViewCosts'] = 0;
+        unset($data['usdToEur'], $data['costControl']);
+        foreach ((array) ($data['rows'] ?? array()) as $index => $row) {
+            if (!is_array($row)) continue;
+            $row['cost_eur'] = null;
+            foreach (array('cost_usd', 'cost_micro_usd', 'cost_currency', 'cost_status', 'cost_source', 'cost_reason', 'pricing_version', 'pricing_verified_at', 'official_cost_eur', 'official_cost_usd') as $field) {
+                unset($row[$field]);
+            }
+            $data['rows'][$index] = $row;
+        }
+        $scrub_series = static function ($series) {
+            if (!is_array($series)) return array();
+            foreach ($series as $index => $row) {
+                if (!is_array($row)) continue;
+                foreach (array('text_cost_eur', 'image_cost_eur', 'seo_cost_eur', 'cost_eur', 'textCost', 'imageCost', 'seoCost', 'cost') as $field) {
+                    if (array_key_exists($field, $row)) $row[$field] = 0.0;
+                }
+                $series[$index] = $row;
+            }
+            return $series;
+        };
+        $data['dailySeries'] = $scrub_series($data['dailySeries'] ?? array());
+        $data['monthlySeries'] = $scrub_series($data['monthlySeries'] ?? array());
+        foreach (array('summariesByModel', 'previousSummariesByModel') as $group) {
+            foreach ((array) ($data[$group] ?? array()) as $key => $summary) {
+                if (!is_array($summary)) continue;
+                $summary['totalCost'] = 0.0;
+                $summary['avgCostPerPost'] = 0.0;
+                $summary['knownCostEvents'] = 0;
+                $summary['unknownCostEvents'] = 0;
+                $summary['costCoveragePercent'] = 0.0;
+                $summary['costStatusCounts'] = array();
+                $summary['dailySeries'] = $scrub_series($summary['dailySeries'] ?? array());
+                $summary['monthlySeries'] = $scrub_series($summary['monthlySeries'] ?? array());
+                $data[$group][$key] = $summary;
+            }
+        }
+        $data['monthlySeriesByProvider'] = array();
+        $data['monthlySeriesByProviderModel'] = array();
+        return $data;
     }
 }
 

@@ -3325,6 +3325,760 @@ body.cbia-hide-external-notices #wpbody-content .cbia-shell #message{
 .cbia-provider-connection-message.is-success { color: #166534; }
 .cbia-provider-connection-message.is-error { color: #b91c1c; }
 
+/* Usage dashboard redesign: filters, KPI hierarchy, charts and master-detail table. */
+.cbia-usage-page {
+    --cbia-usage-border: #dbe4ee;
+    --cbia-usage-muted: #64748b;
+    --cbia-usage-text: #172033;
+    --cbia-usage-primary: #2563eb;
+    --cbia-usage-primary-soft: #eff6ff;
+    max-width: 1440px;
+}
+
+.cbia-usage-page [hidden] {
+    display: none !important;
+}
+
+.cbia-usage-header {
+    align-items: flex-start;
+    margin-bottom: 18px;
+}
+
+.cbia-usage-header h2 {
+    color: var(--cbia-usage-text);
+    font-size: 25px;
+    line-height: 1.2;
+    margin-bottom: 5px;
+}
+
+.cbia-usage-header .description {
+    font-size: 14px;
+    margin: 0;
+}
+
+.cbia-usage-header-actions {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cbia-usage-pro-cta-card-compact {
+    align-items: center;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.cbia-usage-pro-cta-card-compact h3 {
+    display: inline-block;
+    margin: 0 0 4px 8px;
+}
+
+.cbia-usage-pro-cta-card-compact p {
+    margin: 0;
+}
+
+.cbia-usage-filter-card {
+    background: #fff;
+    border: 1px solid var(--cbia-usage-border);
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, .04);
+    margin-bottom: 18px;
+    padding: 16px;
+}
+
+.cbia-usage-quick-ranges,
+.cbia-usage-filters,
+.cbia-usage-custom-range {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cbia-usage-quick-ranges {
+    border-bottom: 1px solid #edf1f5;
+    padding-bottom: 12px;
+}
+
+.cbia-usage-range-button.is-active {
+    background: var(--cbia-usage-primary);
+    border-color: var(--cbia-usage-primary);
+    color: #fff;
+}
+
+.cbia-usage-custom-range {
+    background: #f8fafc;
+    border-radius: 8px;
+    margin-top: 12px;
+    padding: 12px;
+}
+
+.cbia-usage-custom-range label,
+.cbia-usage-more-panel label {
+    align-items: center;
+    display: flex;
+    gap: 6px;
+    font-weight: 600;
+}
+
+.cbia-usage-custom-range input,
+.cbia-usage-more-panel input {
+    font-weight: 400;
+}
+
+.cbia-usage-filters {
+    margin-top: 12px;
+}
+
+.cbia-usage-filters > select,
+.cbia-usage-filters > .abb-select {
+    min-width: 150px;
+}
+
+.cbia-usage-search-label {
+    flex: 1 1 220px;
+}
+
+.cbia-usage-search-label .regular-text {
+    max-width: none;
+    width: 100%;
+}
+
+.cbia-usage-more-filters {
+    position: relative;
+}
+
+.cbia-usage-more-filters > summary {
+    cursor: pointer;
+    list-style: none;
+}
+
+.cbia-usage-more-filters > summary::-webkit-details-marker {
+    display: none;
+}
+
+.cbia-usage-more-panel {
+    background: #fff;
+    border: 1px solid var(--cbia-usage-border);
+    border-radius: 10px;
+    box-shadow: 0 14px 34px rgba(15, 23, 42, .16);
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(190px, 1fr));
+    left: 0;
+    min-width: min(620px, calc(100vw - 80px));
+    padding: 14px;
+    position: absolute;
+    top: calc(100% + 6px);
+    z-index: 30;
+}
+
+.cbia-usage-filter-summary {
+    color: var(--cbia-usage-muted);
+    display: block;
+    margin: 10px 0 0;
+}
+
+.cbia-usage-kpis {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    margin-bottom: 10px;
+}
+
+.cbia-usage-kpi {
+    align-items: flex-start;
+    background: #fff;
+    border: 1px solid var(--cbia-usage-border);
+    border-radius: 11px;
+    box-shadow: none;
+    display: flex;
+    gap: 10px;
+    min-height: 116px;
+    padding: 15px;
+}
+
+.cbia-usage-kpi-icon {
+    align-items: center;
+    background: var(--cbia-usage-primary-soft);
+    border-radius: 8px;
+    color: var(--cbia-usage-primary);
+    display: inline-flex;
+    flex: 0 0 34px;
+    height: 34px;
+    justify-content: center;
+    width: 34px;
+}
+
+.cbia-usage-kpi-copy {
+    min-width: 0;
+}
+
+.cbia-usage-kpi-label {
+    color: var(--cbia-usage-muted);
+    display: block;
+    font-size: 12px;
+    line-height: 1.35;
+    min-height: 32px;
+}
+
+.cbia-usage-kpi-value,
+.cbia-usage-kpi-copy strong {
+    color: var(--cbia-usage-text);
+    display: block;
+    font-size: clamp(20px, 1.5vw, 27px);
+    line-height: 1.2;
+    margin-top: 3px;
+    overflow-wrap: anywhere;
+}
+
+.cbia-usage-kpi-comparison {
+    color: var(--cbia-usage-muted);
+    display: block;
+    font-size: 11px;
+    line-height: 1.35;
+    margin-top: 6px;
+}
+
+.cbia-usage-kpi-comparison.is-up { color: #166534; }
+.cbia-usage-kpi-comparison.is-down { color: #9f1239; }
+.cbia-usage-kpi-comparison.is-same { color: #475569; }
+
+.cbia-usage-secondary-metrics {
+    color: var(--cbia-usage-muted);
+    margin: 0 0 16px;
+}
+
+.cbia-usage-secondary-metrics summary {
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.cbia-usage-secondary-metrics > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    padding: 8px 0 0;
+}
+
+.cbia-usage-panel {
+    background: #fff;
+    border: 1px solid var(--cbia-usage-border);
+    border-radius: 12px;
+    box-shadow: none;
+    box-sizing: border-box;
+    padding: 18px;
+}
+
+.cbia-usage-dashboard > .cbia-usage-panel,
+.cbia-usage-dashboard > .cbia-usage-breakdown-grid,
+.cbia-usage-dashboard > .cbia-usage-events-section {
+    margin-bottom: 18px;
+}
+
+.cbia-usage-panel-head {
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.cbia-usage-panel-head h3 {
+    color: var(--cbia-usage-text);
+    font-size: 16px;
+    margin: 0 0 4px;
+}
+
+.cbia-usage-panel-head p {
+    color: var(--cbia-usage-muted);
+    margin: 0;
+}
+
+.cbia-usage-metric-switch {
+    display: flex;
+    flex-shrink: 0;
+    gap: 4px;
+}
+
+.cbia-usage-metric-switch .button.is-active {
+    background: var(--cbia-usage-primary);
+    border-color: var(--cbia-usage-primary);
+    color: #fff;
+}
+
+.cbia-usage-main-chart,
+.cbia-usage-monthly-chart {
+    min-height: 320px;
+    position: relative;
+}
+
+.cbia-usage-main-chart canvas,
+.cbia-usage-monthly-chart canvas {
+    display: block;
+    height: auto;
+    max-height: 320px;
+    max-width: 100%;
+    width: 100%;
+}
+
+.cbia-usage-breakdown-grid {
+    display: grid;
+    gap: 14px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cbia-usage-breakdown-grid .cbia-usage-empty {
+    inset: auto;
+    margin-top: 10px;
+    position: static;
+}
+
+.cbia-usage-type-distribution {
+    padding-top: 14px;
+}
+
+.cbia-usage-type-bar {
+    background: #eef2f7;
+    border-radius: 999px;
+    display: flex;
+    height: 16px;
+    overflow: hidden;
+    width: 100%;
+}
+
+.cbia-usage-type-bar .is-text { background: #2563eb; }
+.cbia-usage-type-bar .is-image { background: #8b5cf6; }
+
+.cbia-usage-type-values {
+    display: grid;
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 16px;
+}
+
+.cbia-usage-type-values > span {
+    color: var(--cbia-usage-muted);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.cbia-usage-type-values i {
+    border-radius: 50%;
+    display: inline-block;
+    height: 9px;
+    margin-top: 4px;
+    width: 9px;
+}
+
+.cbia-usage-type-values i.is-text { background: #2563eb; }
+.cbia-usage-type-values i.is-image { background: #8b5cf6; }
+
+.cbia-usage-horizontal-bars {
+    display: grid;
+    gap: 13px;
+    padding-top: 6px;
+}
+
+.cbia-usage-horizontal-row > div {
+    align-items: baseline;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.cbia-usage-horizontal-row strong {
+    font-size: 12px;
+}
+
+.cbia-usage-horizontal-track {
+    background: #edf2f7;
+    border-radius: 999px;
+    display: block;
+    height: 9px;
+    overflow: hidden;
+}
+
+.cbia-usage-horizontal-track i {
+    background: linear-gradient(90deg, #2563eb, #60a5fa);
+    border-radius: inherit;
+    display: block;
+    height: 100%;
+}
+
+.cbia-usage-coverage-panel {
+    align-items: center;
+    display: grid;
+    gap: 24px;
+    grid-template-columns: 150px minmax(0, 1fr);
+}
+
+.cbia-usage-coverage-donut {
+    align-items: center;
+    background: conic-gradient(#2563eb var(--cbia-coverage, 0%), #e8edf3 0);
+    border-radius: 50%;
+    display: flex;
+    height: 132px;
+    justify-content: center;
+    position: relative;
+    width: 132px;
+}
+
+.cbia-usage-coverage-donut::before {
+    background: #fff;
+    border-radius: 50%;
+    content: "";
+    inset: 15px;
+    position: absolute;
+}
+
+.cbia-usage-coverage-donut > div {
+    align-items: center;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    text-align: center;
+    z-index: 1;
+}
+
+.cbia-usage-coverage-donut strong {
+    color: var(--cbia-usage-text);
+    font-size: 24px;
+}
+
+.cbia-usage-coverage-donut span {
+    color: var(--cbia-usage-muted);
+    font-size: 11px;
+}
+
+.cbia-usage-cost-control-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.cbia-usage-events-section > .cbia-usage-panel-head {
+    margin: 0 0 10px;
+}
+
+.cbia-usage-main-grid {
+    align-items: start;
+    display: grid;
+    gap: 14px;
+    grid-template-columns: minmax(0, 1.75fr) minmax(300px, .75fr);
+}
+
+.cbia-usage-table-panel {
+    min-width: 0;
+    padding: 0;
+}
+
+.cbia-usage-table-wrap {
+    max-height: 640px;
+    overflow: auto;
+}
+
+.cbia-usage-events-table {
+    border: 0;
+    min-width: 760px;
+}
+
+.cbia-usage-events-table thead th {
+    background: #f8fafc;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.cbia-usage-events-table tbody tr {
+    cursor: pointer;
+}
+
+.cbia-usage-events-table tbody tr.is-active {
+    background: #eff6ff;
+    box-shadow: inset 3px 0 0 #2563eb;
+}
+
+.cbia-usage-detail-panel {
+    max-height: 640px;
+    overflow: auto;
+    position: sticky;
+    top: 46px;
+}
+
+.cbia-usage-detail-eyebrow,
+.cbia-usage-cost-eyebrow {
+    color: var(--cbia-usage-primary);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+
+.cbia-usage-detail-content h3 {
+    margin: 5px 0;
+}
+
+.cbia-usage-post-summary {
+    background: #f8fafc;
+    border-radius: 9px;
+    margin: 14px 0;
+    padding: 12px;
+}
+
+.cbia-usage-post-summary h4 {
+    margin: 0 0 8px;
+}
+
+.cbia-usage-post-summary dl,
+.cbia-usage-cost-config dl {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin: 0;
+}
+
+.cbia-usage-post-summary dl > div,
+.cbia-usage-cost-config dl > div {
+    min-width: 0;
+}
+
+.cbia-usage-post-summary dt,
+.cbia-usage-cost-config dt {
+    color: var(--cbia-usage-muted);
+    font-size: 11px;
+}
+
+.cbia-usage-post-summary dd,
+.cbia-usage-cost-config dd {
+    font-weight: 600;
+    margin: 2px 0 0;
+    overflow-wrap: anywhere;
+}
+
+.cbia-usage-detail-row {
+    border-top: 1px solid #edf1f5;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: minmax(100px, .7fr) minmax(0, 1.3fr);
+    padding: 9px 0;
+}
+
+.cbia-usage-detail-label {
+    color: var(--cbia-usage-muted);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.cbia-usage-detail-value {
+    overflow-wrap: anywhere;
+}
+
+.cbia-usage-detail-actions {
+    margin-top: 14px;
+}
+
+.cbia-usage-empty {
+    align-items: center;
+    color: var(--cbia-usage-muted);
+    flex-direction: column;
+    gap: 10px;
+    inset: 0;
+    justify-content: center;
+    min-height: 140px;
+    text-align: center;
+}
+
+.cbia-usage-empty:not([hidden]) {
+    display: flex;
+}
+
+.cbia-usage-recalculation-actions {
+    margin-bottom: 18px;
+}
+
+.cbia-usage-recalculation-actions > div {
+    align-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+body.cbia-usage-drawer-open {
+    overflow: hidden;
+}
+
+.cbia-usage-drawer-backdrop.is-open {
+    display: block;
+}
+
+.cbia-usage-cost-drawer.is-open {
+    display: flex;
+}
+
+.cbia-usage-cost-config h4 {
+    margin: 0 0 10px;
+}
+
+.cbia-usage-page :where(a, button, input, select, summary, tr[tabindex]):focus-visible {
+    outline: 2px solid #2563eb;
+    outline-offset: 2px;
+}
+
+@media (max-width: 1200px) {
+    .cbia-usage-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .cbia-usage-breakdown-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cbia-usage-breakdown-grid .-image-role {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 1024px) {
+    .cbia-usage-main-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cbia-usage-detail-panel {
+        max-height: none;
+        position: static;
+    }
+
+    .cbia-usage-more-panel {
+        left: auto;
+        right: 0;
+    }
+}
+
+@media (max-width: 782px) {
+    .cbia-usage-header,
+    .cbia-usage-pro-cta-card-compact,
+    .cbia-usage-panel-head {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .cbia-usage-header-actions,
+    .cbia-usage-header-actions .button,
+    .cbia-usage-pro-cta-card-compact .button {
+        width: 100%;
+    }
+
+    .cbia-usage-header-actions .button,
+    .cbia-usage-pro-cta-card-compact .button {
+        box-sizing: border-box;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .cbia-usage-filters > select,
+    .cbia-usage-filters > .abb-select,
+    .cbia-usage-search-label,
+    .cbia-usage-filters > .button,
+    .cbia-usage-more-filters {
+        flex: 1 1 calc(50% - 8px);
+        min-width: 0;
+    }
+
+    .cbia-usage-more-filters > summary {
+        box-sizing: border-box;
+        text-align: center;
+        width: 100%;
+    }
+
+    .cbia-usage-more-panel {
+        grid-template-columns: minmax(0, 1fr);
+        left: 0;
+        min-width: 0;
+        position: relative;
+        right: auto;
+        top: 6px;
+        width: 100%;
+    }
+
+    .cbia-usage-breakdown-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cbia-usage-breakdown-grid .-image-role {
+        grid-column: auto;
+    }
+
+    .cbia-usage-coverage-panel {
+        grid-template-columns: minmax(0, 1fr);
+        justify-items: center;
+        text-align: center;
+    }
+
+    .cbia-usage-cost-control-actions {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .cbia-usage-page {
+        margin-right: 10px;
+    }
+
+    .cbia-usage-filter-card,
+    .cbia-usage-panel,
+    .cbia-usage-kpi {
+        padding: 13px;
+    }
+
+    .cbia-usage-kpis {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cbia-usage-filters > select,
+    .cbia-usage-filters > .abb-select,
+    .cbia-usage-search-label,
+    .cbia-usage-filters > .button,
+    .cbia-usage-more-filters {
+        flex-basis: 100%;
+    }
+
+    .cbia-usage-custom-range {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .cbia-usage-custom-range label {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .cbia-usage-type-values,
+    .cbia-usage-post-summary dl,
+    .cbia-usage-cost-config dl,
+    .cbia-usage-detail-row {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .cbia-usage-metric-switch {
+        width: 100%;
+    }
+
+    .cbia-usage-metric-switch .button {
+        flex: 1;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cbia-usage-page *,
+    .cbia-usage-page *::before,
+    .cbia-usage-page *::after {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
+}
+
 .cbia-provider-connection-card :focus-visible {
     outline: 2px solid #0891b2;
     outline-offset: 2px;
@@ -3344,4 +4098,75 @@ body.cbia-hide-external-notices #wpbody-content .cbia-shell #message{
     .cbia-provider-key-row { flex-direction: column; }
     .cbia-provider-connection-actions .button,
     .cbia-provider-connection-actions .button-link-delete { width: 100%; justify-content: center; text-align: center; }
+}
+
+/* Usage dashboard interaction and data-legibility refinements. */
+.cbia-usage-page :where(h2, h3, h4) {
+    text-wrap: balance;
+}
+
+.cbia-usage-page :where(.cbia-usage-kpi-value, .cbia-usage-kpi-comparison, .cbia-usage-metric, .cbia-usage-cost, td) {
+    font-variant-numeric: tabular-nums;
+}
+
+.cbia-usage-page :where(button, .button, a, select, input, summary, tr[tabindex], canvas) {
+    touch-action: manipulation;
+}
+
+.cbia-usage-page select {
+    background-color: #fff;
+    color: var(--cbia-usage-text, #1e293b);
+}
+
+.cbia-usage-page :where(.cbia-usage-source-title, .cbia-usage-detail-value, .cbia-usage-model-code, .cbia-usage-cost-config dd) {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.cbia-usage-cost-drawer {
+    overscroll-behavior: contain;
+}
+
+.cbia-usage-legend-item.is-seo i {
+    background: #14b8a6;
+}
+
+.cbia-usage-chart-tooltip {
+    position: absolute;
+    z-index: 5;
+    display: grid;
+    max-width: min(260px, calc(100% - 24px));
+    padding: 9px 11px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: rgba(15, 23, 42, .96);
+    box-shadow: 0 8px 24px rgba(15, 23, 42, .18);
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.45;
+    pointer-events: none;
+    transform: translate(-50%, -100%);
+}
+
+.cbia-usage-chart-tooltip[hidden] {
+    display: none;
+}
+
+.cbia-usage-chart-tooltip strong,
+.cbia-usage-chart-tooltip span {
+    overflow-wrap: anywhere;
+}
+
+.cbia-usage-events-table tbody tr:hover:not(.is-active) {
+    background: #f8fafc;
+}
+
+.cbia-usage-kpis.is-three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+@media (max-width: 480px) {
+    .cbia-usage-kpis.is-three {
+        grid-template-columns: minmax(0, 1fr);
+    }
 }

@@ -308,10 +308,17 @@ if (!function_exists('cbia_admin_post_usage_export')) {
         }
         check_admin_referer('cbia_usage_export');
 
-        $days = isset($_GET['usage_days']) ? absint(wp_unslash((string) $_GET['usage_days'])) : 365;
-        if (!in_array($days, array(7, 30, 90, 365, 730), true)) $days = 365;
+        $days = isset($_GET['usage_days']) ? absint(wp_unslash((string) $_GET['usage_days'])) : 30;
+        if (!in_array($days, array(7, 30, 90, 365), true)) $days = 30;
+        $legacy_range_keys = array(7 => '7d', 30 => '30d', 90 => '90d', 365 => '12m');
+        $range = cbia_usage_resolve_range(
+            isset($_GET['usage_range']) ? sanitize_key(wp_unslash((string) $_GET['usage_range'])) : $legacy_range_keys[$days],
+            isset($_GET['usage_from']) ? sanitize_text_field(wp_unslash((string) $_GET['usage_from'])) : '',
+            isset($_GET['usage_to']) ? sanitize_text_field(wp_unslash((string) $_GET['usage_to'])) : ''
+        );
         $model_filter = isset($_GET['usage_model']) ? sanitize_text_field(wp_unslash((string) $_GET['usage_model'])) : '';
-        $since_ts = time() - ($days * DAY_IN_SECONDS);
+        $since_ts = (int) $range['since_ts'];
+        $end_ts = (int) $range['end_ts'];
 
         $rows = array();
         $query = new WP_Query(array(
@@ -329,8 +336,8 @@ if (!function_exists('cbia_admin_post_usage_export')) {
             if (empty($usage_rows) || !is_array($usage_rows)) continue;
             foreach ($usage_rows as $r) {
                 if (!is_array($r)) continue;
-                $ts = isset($r['ts']) ? strtotime((string) $r['ts']) : 0;
-                if ($ts && $ts < $since_ts) continue;
+                $ts = isset($r['ts']) ? cbia_usage_parse_site_timestamp((string) $r['ts']) : 0;
+                if ($ts && ($ts < $since_ts || $ts > $end_ts)) continue;
                 $model = (string) ($r['model'] ?? '');
                 if ($model_filter !== '' && $model_filter !== $model) {
                     continue;
@@ -365,11 +372,11 @@ if (!function_exists('cbia_admin_post_usage_export')) {
 }
 
 if (!function_exists('cbia_get_usage_dashboard_payload')) {
-    function cbia_get_usage_dashboard_payload($days = 365, $requested_model = '') {
+    function cbia_get_usage_dashboard_payload($days = 30, $requested_model = '') {
         $allowed_days = array(7, 30, 90, 365, 730);
         $days = (int) $days;
         if (!in_array($days, $allowed_days, true)) {
-            $days = 365;
+            $days = 30;
         }
 
         $requested_model = sanitize_text_field((string) $requested_model);
@@ -464,13 +471,13 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
             $post_id = (int) $post_id;
             $post_title = get_the_title($post_id);
             if ($post_title === '') {
-                $post_title = 'Post #' . $post_id;
+                $post_title = sprintf(__('Post #%d', 'cbiastudio-blogflow-ai'), $post_id);
             }
 
             $author_id = (int) get_post_field('post_author', $post_id);
             if (!isset($author_names[$author_id])) {
                 $user_obj = $author_id > 0 ? get_user_by('id', $author_id) : false;
-                $author_names[$author_id] = $user_obj ? (string) $user_obj->display_name : ('User #' . $author_id);
+                $author_names[$author_id] = $user_obj ? (string) $user_obj->display_name : sprintf(__('User #%d', 'cbiastudio-blogflow-ai'), $author_id);
             }
 
             foreach ($usage_rows as $row) {
@@ -479,7 +486,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
                 }
 
                 $ts_raw = isset($row['ts']) ? (string) $row['ts'] : '';
-                $ts = $ts_raw !== '' ? strtotime($ts_raw) : 0;
+                $ts = $ts_raw !== '' ? cbia_usage_parse_site_timestamp($ts_raw) : 0;
 
                 $type = isset($row['type']) ? strtolower(trim((string) $row['type'])) : 'text';
                 if (!in_array($type, array('text', 'image', 'seo'), true)) {
@@ -520,7 +527,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
                         $section_detail = __('Featured', 'cbiastudio-blogflow-ai');
                     } elseif ($section !== '') {
                         $section_label = 'internal';
-                        $section_detail = __('Internal', 'cbiastudio-blogflow-ai') . ' Ã‚Â· ' . ucfirst(str_replace(array('_', '-'), ' ', $section));
+                        $section_detail = __('Internal', 'cbiastudio-blogflow-ai') . ' - ' . ucfirst(str_replace(array('_', '-'), ' ', $section));
                     }
                 }
 
@@ -614,7 +621,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
                     'cached_in' => (int) ($row['cin'] ?? 0),
                     'cost_eur' => $row_cost_eur,
                     'ok' => $is_ok ? 1 : 0,
-                    'status_label' => $is_ok ? 'OK' : 'Error',
+                    'status_label' => $is_ok ? __('OK', 'cbiastudio-blogflow-ai') : __('Error', 'cbiastudio-blogflow-ai'),
                     'user_id' => $author_id,
                     'user_name' => (string) $author_names[$author_id],
                     'source_label' => (string) $post_title,
@@ -870,7 +877,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload')) {
 
 if (!function_exists('cbia_usage_overview_cache_key')) {
     function cbia_usage_overview_cache_key($days) {
-        return 'cbia_pro_usage_overview_v12_' . get_current_blog_id() . '_' . (int) $days;
+        return 'cbia_pro_usage_overview_v13_' . get_current_blog_id() . '_' . (int) $days;
     }
 }
 
@@ -926,7 +933,7 @@ if (!function_exists('cbia_usage_dashboard_format_row')) {
             if (!isset($post_titles[$post_id])) {
                 $title = get_the_title($post_id);
                 if ($title === '') {
-                    $title = 'Post #' . $post_id;
+                    $title = sprintf(__('Post #%d', 'cbiastudio-blogflow-ai'), $post_id);
                 }
                 $post_titles[$post_id] = (string) $title;
             }
@@ -937,7 +944,7 @@ if (!function_exists('cbia_usage_dashboard_format_row')) {
             $author_id = (int) $author_ids[$post_id];
             if (!isset($author_names[$author_id])) {
                 $user_obj = $author_id > 0 ? get_user_by('id', $author_id) : false;
-                $author_names[$author_id] = $user_obj ? (string) $user_obj->display_name : ('User #' . $author_id);
+                $author_names[$author_id] = $user_obj ? (string) $user_obj->display_name : sprintf(__('User #%d', 'cbiastudio-blogflow-ai'), $author_id);
             }
             $author_name = (string) ($author_names[$author_id] ?? '');
         }
@@ -956,7 +963,7 @@ if (!function_exists('cbia_usage_dashboard_format_row')) {
         if ($ts_raw === '') {
             $ts_raw = current_time('mysql');
         }
-        $ts = strtotime($ts_raw);
+        $ts = cbia_usage_parse_site_timestamp($ts_raw);
         if (!$ts) {
             $ts = 0;
         }
@@ -1063,10 +1070,10 @@ if (!function_exists('cbia_usage_dashboard_format_row')) {
             'fallback_from' => sanitize_text_field((string)($row['fallback_from'] ?? '')),
             'ok' => !empty($row['ok']) ? 1 : 0,
             'status' => sanitize_key((string)($row['status'] ?? (!empty($row['ok']) ? 'success' : 'error'))),
-            'status_label' => !empty($row['ok']) ? 'OK' : (sanitize_key((string)($row['status'] ?? 'error')) === 'timeout' ? 'Timeout' : 'Error'),
+            'status_label' => !empty($row['ok']) ? __('OK', 'cbiastudio-blogflow-ai') : (sanitize_key((string)($row['status'] ?? 'error')) === 'timeout' ? __('Timeout', 'cbiastudio-blogflow-ai') : __('Error', 'cbiastudio-blogflow-ai')),
             'user_id' => $author_id,
             'user_name' => $author_name,
-            'source_label' => $post_title !== '' ? $post_title : ('Post #' . $post_id),
+            'source_label' => $post_title !== '' ? $post_title : ($post_id > 0 ? sprintf(__('Post #%d', 'cbiastudio-blogflow-ai'), $post_id) : __('Unassigned API attempt', 'cbiastudio-blogflow-ai')),
             'message_preview' => $type === 'image'
                 ? __('Image generation', 'cbiastudio-blogflow-ai') . ($section_detail !== '' ? ' (' . $section_detail . ')' : '')
                 : ($type === 'seo' ? __('SEO / metadata process', 'cbiastudio-blogflow-ai') : __('Text generation', 'cbiastudio-blogflow-ai')),
@@ -1125,7 +1132,7 @@ if (!function_exists('cbia_usage_compact_event_rows')) {
             if (!is_array($row)) continue;
             $sort_ts = isset($row['sort_ts']) ? (int) $row['sort_ts'] : 0;
             if ($sort_ts <= 0 && !empty($row['ts'])) {
-                $sort_ts = strtotime((string) $row['ts']) ?: 0;
+                $sort_ts = cbia_usage_parse_site_timestamp((string) $row['ts']);
                 $row['sort_ts'] = $sort_ts;
             }
             if ($sort_ts > 0 && $sort_ts < $min_ts) continue;
@@ -1400,12 +1407,15 @@ if (!function_exists('cbia_usage_migrate_openai_image_high_costs')) {
 }
 
 if (!function_exists('cbia_usage_fill_daily_series')) {
-    function cbia_usage_fill_daily_series($daily_map, $days) {
+    function cbia_usage_fill_daily_series($daily_map, $range) {
         $out = array();
-        $days = max(1, (int) $days);
-        $now_ts = current_time('timestamp');
-        for ($offset = $days - 1; $offset >= 0; $offset--) {
-            $day_key = wp_date('Y-m-d', $now_ts - ($offset * DAY_IN_SECONDS));
+        if (!is_array($range)) $range = cbia_usage_general_range_window($range, current_time('timestamp'));
+        $days = max(1, (int) ($range['days'] ?? 30));
+        $timezone = function_exists('wp_timezone') ? wp_timezone() : new DateTimeZone('UTC');
+        $start = DateTimeImmutable::createFromFormat('!Y-m-d', (string) ($range['since_day'] ?? ''), $timezone);
+        if (!$start) $start = current_datetime()->setTime(0, 0, 0)->modify('-' . ($days - 1) . ' days');
+        for ($offset = 0; $offset < $days; $offset++) {
+            $day_key = $start->modify('+' . $offset . ' days')->format('Y-m-d');
             $item = isset($daily_map[$day_key]) && is_array($daily_map[$day_key]) ? $daily_map[$day_key] : array();
             $out[] = array(
                 'day' => $day_key,
@@ -1417,6 +1427,10 @@ if (!function_exists('cbia_usage_fill_daily_series')) {
                 'imageCalls' => (int) ($item['imageCalls'] ?? 0),
                 'seoCalls' => (int) ($item['seoCalls'] ?? 0),
                 'totalTokens' => (int) (($item['text'] ?? 0) + ($item['image'] ?? 0) + ($item['seo'] ?? 0)),
+                'textCost' => round((float) ($item['textCost'] ?? 0), 6),
+                'imageCost' => round((float) ($item['imageCost'] ?? 0), 6),
+                'seoCost' => round((float) ($item['seoCost'] ?? 0), 6),
+                'cost' => round((float) ($item['cost'] ?? 0), 6),
             );
         }
         return $out;
@@ -1424,8 +1438,10 @@ if (!function_exists('cbia_usage_fill_daily_series')) {
 }
 
 if (!function_exists('cbia_usage_build_payload_from_store')) {
-    function cbia_usage_build_payload_from_store($rows, $days, $requested_model, $recent_rows_limit) {
-        $general_range = cbia_usage_general_range_window($days, current_time('timestamp'));
+    function cbia_usage_build_payload_from_store($rows, $range, $requested_model, $recent_rows_limit) {
+        $general_range = is_array($range)
+            ? $range
+            : cbia_usage_general_range_window($range, current_time('timestamp'));
         $days = (int) $general_range['days'];
         $since_day = (string) $general_range['since_day'];
         $period_end_day = (string) $general_range['end_day'];
@@ -1455,17 +1471,60 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
             );
         };
 
+        $add_summary = static function (&$summary, $row, $model, $type, $tokens_total, $cost_value, $post_id, $user_id, $day_value, $include_daily) {
+            $summary['total_calls'] += 1;
+            if ($post_id > 0) $summary['post_ids'][$post_id] = true;
+            if ($user_id > 0) $summary['user_ids'][$user_id] = true;
+            $summary['total_tokens'] += $tokens_total;
+            $known_cost = $cost_value !== null && $cost_value !== '' && is_numeric($cost_value);
+            if ($known_cost) {
+                $summary['total_cost'] += (float) $cost_value;
+                $summary['known_cost_events'] += 1;
+            } else {
+                $summary['unknown_cost_events'] += 1;
+            }
+            $cost_status = sanitize_key((string) ($row['cost_status'] ?? ($known_cost ? 'estimated' : 'unknown')));
+            if (!isset($summary['cost_status_counts'][$cost_status])) $cost_status = 'unknown';
+            $summary['cost_status_counts'][$cost_status] += 1;
+            if (!isset($summary['type_counts'][$type])) $summary['type_counts'][$type] = 0;
+            $summary['type_counts'][$type] += 1;
+
+            if (!$include_daily || $day_value === '') return;
+            if (!isset($summary['daily'][$day_value])) {
+                $summary['daily'][$day_value] = array(
+                    'calls' => 0, 'text' => 0, 'image' => 0, 'seo' => 0,
+                    'textCalls' => 0, 'imageCalls' => 0, 'seoCalls' => 0,
+                    'textCost' => 0.0, 'imageCost' => 0.0, 'seoCost' => 0.0, 'cost' => 0.0,
+                );
+            }
+            $summary['daily'][$day_value]['calls'] += 1;
+            if ($type === 'image') {
+                $summary['daily'][$day_value]['image'] += 1;
+                $summary['daily'][$day_value]['imageCalls'] += 1;
+            } elseif ($type === 'seo') {
+                $summary['daily'][$day_value]['seo'] += $tokens_total;
+                $summary['daily'][$day_value]['seoCalls'] += 1;
+            } else {
+                $summary['daily'][$day_value]['text'] += $tokens_total;
+                $summary['daily'][$day_value]['textCalls'] += 1;
+            }
+            if ($known_cost) {
+                $cost_key = $type === 'image' ? 'imageCost' : ($type === 'seo' ? 'seoCost' : 'textCost');
+                $summary['daily'][$day_value][$cost_key] += (float) $cost_value;
+                $summary['daily'][$day_value]['cost'] += (float) $cost_value;
+            }
+        };
+
         $available_models = array();
         $recent_rows = array();
         $total_rows = 0;
         $daily_buckets = array();
         $summary_rows = array('__all__' => $init_summary());
+        $previous_summary_rows = array('__all__' => $init_summary());
 
         foreach ((array) $rows as $row) {
             if (!is_array($row)) continue;
             $day_value = (string) ($row['day'] ?? '');
-            if (!cbia_usage_row_in_general_range($row, $general_range)) continue;
-
             $model = (string) ($row['model'] ?? 'unknown');
             if ($model === '') $model = 'unknown';
             $type = strtolower(trim((string) ($row['type'] ?? 'text')));
@@ -1474,6 +1533,17 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
             $cost_value = $row['cost_eur'] ?? null;
             $post_id = (int) ($row['post_id'] ?? 0);
             $user_id = (int) ($row['user_id'] ?? 0);
+            $in_current_range = cbia_usage_row_in_general_range($row, $general_range);
+            $in_previous_range = cbia_usage_row_in_previous_range($row, $general_range);
+            if (!$in_current_range && !$in_previous_range) continue;
+
+            if ($in_previous_range) {
+                if (!isset($previous_summary_rows[$model])) $previous_summary_rows[$model] = $init_summary();
+                foreach (array('__all__', $model) as $summary_key) {
+                    $add_summary($previous_summary_rows[$summary_key], $row, $model, $type, $tokens_total, $cost_value, $post_id, $user_id, $day_value, false);
+                }
+            }
+            if (!$in_current_range) continue;
 
             $available_models[$model] = true;
             $total_rows++;
@@ -1483,7 +1553,11 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
 
             if ($day_value !== '') {
                 if (!isset($daily_buckets[$day_value])) {
-                    $daily_buckets[$day_value] = array('calls' => 0, 'text' => 0, 'image' => 0, 'seo' => 0, 'textCalls' => 0, 'imageCalls' => 0, 'seoCalls' => 0);
+                    $daily_buckets[$day_value] = array(
+                        'calls' => 0, 'text' => 0, 'image' => 0, 'seo' => 0,
+                        'textCalls' => 0, 'imageCalls' => 0, 'seoCalls' => 0,
+                        'textCost' => 0.0, 'imageCost' => 0.0, 'seoCost' => 0.0, 'cost' => 0.0,
+                    );
                 }
                 $daily_buckets[$day_value]['calls'] += 1;
                 if ($type === 'image') {
@@ -1496,49 +1570,20 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
                     $daily_buckets[$day_value]['text'] += $tokens_total;
                     $daily_buckets[$day_value]['textCalls'] += 1;
                 }
+                if ($cost_value !== null && $cost_value !== '' && is_numeric($cost_value)) {
+                    $cost_key = $type === 'image' ? 'imageCost' : ($type === 'seo' ? 'seoCost' : 'textCost');
+                    $daily_buckets[$day_value][$cost_key] += (float) $cost_value;
+                    $daily_buckets[$day_value]['cost'] += (float) $cost_value;
+                }
             }
 
             if (!isset($summary_rows[$model])) $summary_rows[$model] = $init_summary();
             foreach (array('__all__', $model) as $summary_key) {
-                $summary_rows[$summary_key]['total_calls'] += 1;
-                if ($post_id > 0) $summary_rows[$summary_key]['post_ids'][$post_id] = true;
-                if ($user_id > 0) $summary_rows[$summary_key]['user_ids'][$user_id] = true;
-                $summary_rows[$summary_key]['total_tokens'] += $tokens_total;
-                if ($cost_value !== null && $cost_value !== '' && is_numeric($cost_value)) {
-                    $summary_rows[$summary_key]['total_cost'] += (float) $cost_value;
-                    $summary_rows[$summary_key]['known_cost_events'] += 1;
-                } else {
-                    $summary_rows[$summary_key]['unknown_cost_events'] += 1;
-                }
-                $cost_status = sanitize_key((string)($row['cost_status'] ?? 'unknown'));
-                if (!isset($summary_rows[$summary_key]['cost_status_counts'][$cost_status])) $cost_status = 'unknown';
-                $summary_rows[$summary_key]['cost_status_counts'][$cost_status] += 1;
-                if (!isset($summary_rows[$summary_key]['type_counts'][$type])) {
-                    $summary_rows[$summary_key]['type_counts'][$type] = 0;
-                }
-                $summary_rows[$summary_key]['type_counts'][$type] += 1;
-
-                if ($day_value !== '') {
-                    if (!isset($summary_rows[$summary_key]['daily'][$day_value])) {
-                        $summary_rows[$summary_key]['daily'][$day_value] = array('calls' => 0, 'text' => 0, 'image' => 0, 'seo' => 0, 'textCalls' => 0, 'imageCalls' => 0, 'seoCalls' => 0);
-                    }
-                    $summary_rows[$summary_key]['daily'][$day_value]['calls'] += 1;
-                    if ($type === 'image') {
-                        $summary_rows[$summary_key]['daily'][$day_value]['image'] += 1;
-                        $summary_rows[$summary_key]['daily'][$day_value]['imageCalls'] += 1;
-                    } elseif ($type === 'seo') {
-                        $summary_rows[$summary_key]['daily'][$day_value]['seo'] += $tokens_total;
-                        $summary_rows[$summary_key]['daily'][$day_value]['seoCalls'] += 1;
-                    } else {
-                        $summary_rows[$summary_key]['daily'][$day_value]['text'] += $tokens_total;
-                        $summary_rows[$summary_key]['daily'][$day_value]['textCalls'] += 1;
-                    }
-                }
-
+                $add_summary($summary_rows[$summary_key], $row, $model, $type, $tokens_total, $cost_value, $post_id, $user_id, $day_value, true);
             }
         }
 
-        $daily_series = cbia_usage_fill_daily_series($daily_buckets, $days);
+        $daily_series = cbia_usage_fill_daily_series($daily_buckets, $general_range);
         $monthly_series = (array) ($rolling_monthly['series'] ?? array());
         $model_options = array_keys($available_models);
         sort($model_options, SORT_STRING);
@@ -1564,10 +1609,34 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
                     'image' => (int) ($summary['type_counts']['image'] ?? 0),
                     'seo' => (int) ($summary['type_counts']['seo'] ?? 0),
                 ),
-                'dailySeries' => cbia_usage_fill_daily_series((array) ($summary['daily'] ?? array()), $days),
+                'dailySeries' => cbia_usage_fill_daily_series((array) ($summary['daily'] ?? array()), $general_range),
                 'monthlySeries' => $summary_key === '__all__'
                     ? $monthly_series
                     : (array) ($rolling_monthly['by_model'][$summary_key] ?? cbia_usage_fill_rolling_month_series(array())),
+            );
+        }
+
+        $previous_summaries_by_model = array();
+        foreach ($previous_summary_rows as $summary_key => $summary) {
+            $post_count = count((array) $summary['post_ids']);
+            $calls = (int) ($summary['total_calls'] ?? 0);
+            $previous_summaries_by_model[$summary_key] = array(
+                'totalCalls' => $calls,
+                'uniquePosts' => $post_count,
+                'uniqueUsers' => count((array) $summary['user_ids']),
+                'totalTokens' => (int) ($summary['total_tokens'] ?? 0),
+                'avgTokens' => $calls > 0 ? (int) round(((int) ($summary['total_tokens'] ?? 0)) / $calls) : 0,
+                'totalCost' => round((float) ($summary['total_cost'] ?? 0), 6),
+                'avgCostPerPost' => $post_count > 0 ? round(((float) ($summary['total_cost'] ?? 0)) / $post_count, 6) : 0.0,
+                'knownCostEvents' => (int) ($summary['known_cost_events'] ?? 0),
+                'unknownCostEvents' => (int) ($summary['unknown_cost_events'] ?? 0),
+                'costCoveragePercent' => $calls > 0 ? round(100 * ((int) ($summary['known_cost_events'] ?? 0)) / $calls, 1) : 0,
+                'costStatusCounts' => (array) ($summary['cost_status_counts'] ?? array()),
+                'typeCounts' => array(
+                    'text' => (int) ($summary['type_counts']['text'] ?? 0),
+                    'image' => (int) ($summary['type_counts']['image'] ?? 0),
+                    'seo' => (int) ($summary['type_counts']['seo'] ?? 0),
+                ),
             );
         }
 
@@ -1589,28 +1658,42 @@ if (!function_exists('cbia_usage_build_payload_from_store')) {
             'monthlyStartMonth' => (string) ($rolling_monthly['start_month'] ?? ''),
             'monthlyEndMonth' => (string) ($rolling_monthly['end_month'] ?? ''),
             'summariesByModel' => $summaries_by_model,
+            'previousSummariesByModel' => $previous_summaries_by_model,
             'modelOptions' => $model_options,
             'defaultModel' => $requested_model,
             'periodDays' => $days,
             'periodStartDay' => $since_day,
             'periodEndDay' => $period_end_day,
+            'rangeKey' => (string) ($general_range['key'] ?? '30d'),
+            'granularity' => (string) ($general_range['granularity'] ?? 'day'),
+            'previousPeriodStartDay' => (string) ($general_range['previous_since_day'] ?? ''),
+            'previousPeriodEndDay' => (string) ($general_range['previous_end_day'] ?? ''),
         );
     }
 }
 
 if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
-    function cbia_get_usage_dashboard_payload_fast($days = 365, $requested_model = '') {
-        $allowed_days = array(7, 30, 90, 365, 730);
+    function cbia_get_usage_dashboard_payload_fast($days = 30, $requested_model = '', $range_args = array()) {
+        $allowed_days = array(7, 30, 90, 365);
         $days = (int) $days;
-        if (!in_array($days, $allowed_days, true)) {
-            $days = 365;
-        }
+        if (!in_array($days, $allowed_days, true)) $days = 30;
+        $legacy_range_keys = array(7 => '7d', 30 => '30d', 90 => '90d', 365 => '12m');
+        $range_args = is_array($range_args) ? $range_args : array();
+        $range_key = sanitize_key((string) ($range_args['key'] ?? $legacy_range_keys[$days]));
+        $range_from = sanitize_text_field((string) ($range_args['from'] ?? ''));
+        $range_to = sanitize_text_field((string) ($range_args['to'] ?? ''));
+        $general_range = cbia_usage_resolve_range($range_key, $range_from, $range_to);
+        $days = (int) $general_range['days'];
 
         $requested_model = sanitize_text_field((string) $requested_model);
-        $now_ts = current_time('timestamp');
-        $since_ts = $now_ts - (($days - 1) * DAY_IN_SECONDS);
-        $since_day = wp_date('Y-m-d', $since_ts);
-        $period_end_day = wp_date('Y-m-d', $now_ts);
+        $since_ts = (int) $general_range['since_ts'];
+        $end_ts = (int) $general_range['end_ts'];
+        $since_day = (string) $general_range['since_day'];
+        $period_end_day = (string) $general_range['end_day'];
+        $previous_since_ts = (int) $general_range['previous_since_ts'];
+        $previous_end_ts = (int) $general_range['previous_end_ts'];
+        $previous_since_day = (string) $general_range['previous_since_day'];
+        $previous_end_day = (string) $general_range['previous_end_day'];
         $cost_settings = function_exists('cbia_costes_get_settings') ? cbia_costes_get_settings() : array();
         $cost_table = function_exists('cbia_costes_price_table_usd_per_million') ? cbia_costes_price_table_usd_per_million() : array();
         $real_adjust_multiplier = isset($cost_settings['real_adjust_multiplier']) ? (float) $cost_settings['real_adjust_multiplier'] : 1.0;
@@ -1628,7 +1711,8 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
         }
 
         $cache_key = cbia_usage_overview_cache_key($days);
-        $cached_usage = $cache_ttl > 0 ? get_transient($cache_key) : false;
+        $cache_allowed = $general_range['key'] !== 'custom';
+        $cached_usage = $cache_ttl > 0 && $cache_allowed ? get_transient($cache_key) : false;
         $cached_has_payload = is_array($cached_usage) && array_key_exists('total_rows', $cached_usage);
         if ($cached_has_payload) {
             return array(
@@ -1644,18 +1728,23 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                 'monthlyStartMonth' => (string) ($cached_usage['monthly_start_month'] ?? ''),
                 'monthlyEndMonth' => (string) ($cached_usage['monthly_end_month'] ?? ''),
                 'summariesByModel' => is_array($cached_usage['summaries_by_model'] ?? null) ? $cached_usage['summaries_by_model'] : array(),
+                'previousSummariesByModel' => is_array($cached_usage['previous_summaries_by_model'] ?? null) ? $cached_usage['previous_summaries_by_model'] : array(),
                 'modelOptions' => is_array($cached_usage['model_options'] ?? null) ? $cached_usage['model_options'] : array(),
                 'defaultModel' => $requested_model,
                 'periodDays' => $days,
                 'periodStartDay' => (string) ($cached_usage['period_start_day'] ?? $since_day),
                 'periodEndDay' => (string) ($cached_usage['period_end_day'] ?? $period_end_day),
+                'rangeKey' => (string) ($general_range['key'] ?? '30d'),
+                'granularity' => (string) ($general_range['granularity'] ?? 'day'),
+                'previousPeriodStartDay' => (string) ($general_range['previous_since_day'] ?? ''),
+                'previousPeriodEndDay' => (string) ($general_range['previous_end_day'] ?? ''),
             );
         }
 
         $store_rows = cbia_usage_get_event_store_rows(true);
         if (!empty($store_rows)) {
-            $payload = cbia_usage_build_payload_from_store($store_rows, $days, $requested_model, $recent_rows_limit);
-            if ($cache_ttl > 0) {
+            $payload = cbia_usage_build_payload_from_store($store_rows, $general_range, $requested_model, $recent_rows_limit);
+            if ($cache_ttl > 0 && $cache_allowed) {
                 set_transient($cache_key, array(
                     'recent_rows' => is_array($payload['rows'] ?? null) ? $payload['rows'] : array(),
                     'total_rows' => (int) ($payload['totalRows'] ?? 0),
@@ -1668,6 +1757,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                     'monthly_end_month' => (string) ($payload['monthlyEndMonth'] ?? ''),
                     'model_options' => is_array($payload['modelOptions'] ?? null) ? $payload['modelOptions'] : array(),
                     'summaries_by_model' => is_array($payload['summariesByModel'] ?? null) ? $payload['summariesByModel'] : array(),
+                    'previous_summaries_by_model' => is_array($payload['previousSummariesByModel'] ?? null) ? $payload['previousSummariesByModel'] : array(),
                     'period_start_day' => (string) ($payload['periodStartDay'] ?? $since_day),
                     'period_end_day' => (string) ($payload['periodEndDay'] ?? $period_end_day),
                 ), $cache_ttl);
@@ -1682,6 +1772,9 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                 'user_ids' => array(),
                 'total_tokens' => 0,
                 'total_cost' => 0.0,
+                'known_cost_events' => 0,
+                'unknown_cost_events' => 0,
+                'cost_status_counts' => array('exact' => 0, 'estimated' => 0, 'unknown' => 0, 'official_reconciled' => 0),
                 'daily' => array(),
                 'monthly' => array(),
                 'type_counts' => array(
@@ -1724,6 +1817,9 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
         $monthly_buckets = array();
         $rolling_monthly_accumulator = cbia_usage_monthly_aggregates_init();
         $summary_rows = array(
+            '__all__' => $init_summary(),
+        );
+        $previous_summary_rows = array(
             '__all__' => $init_summary(),
         );
 
@@ -1770,7 +1866,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                     }
 
                     $ts_raw = isset($row['ts']) ? (string) $row['ts'] : '';
-                    $ts = $ts_raw !== '' ? strtotime($ts_raw) : 0;
+                    $ts = $ts_raw !== '' ? cbia_usage_parse_site_timestamp($ts_raw) : 0;
 
                     $type = isset($row['type']) ? strtolower(trim((string) $row['type'])) : 'text';
                     if (!in_array($type, array('text', 'image', 'seo'), true)) {
@@ -1866,26 +1962,58 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                     ));
 
                     $is_in_period = true;
-                    if ($ts > 0 && $ts < $since_ts) {
+                    if ($ts > 0 && ($ts < $since_ts || $ts > $end_ts)) {
                         $is_in_period = false;
-                    } elseif ($ts <= 0 && $day_value !== '' && $day_value < $since_day) {
+                    } elseif ($ts <= 0 && $day_value !== '' && ($day_value < $since_day || $day_value > $period_end_day)) {
                         $is_in_period = false;
                     }
-                    if (!$is_in_period) {
+                    $is_in_previous_period = false;
+                    if ($ts > 0) {
+                        $is_in_previous_period = $ts >= $previous_since_ts && $ts <= $previous_end_ts;
+                    } elseif ($day_value !== '') {
+                        $is_in_previous_period = $day_value >= $previous_since_day && $day_value <= $previous_end_day;
+                    }
+                    if (!$is_in_period && !$is_in_previous_period) {
                         continue;
                     }
 
                     if (!$post_context_loaded) {
                         $post_title = get_the_title($post_id);
                         if ($post_title === '') {
-                            $post_title = 'Post #' . $post_id;
+                            $post_title = sprintf(__('Post #%d', 'cbiastudio-blogflow-ai'), $post_id);
                         }
                         $author_id = (int) get_post_field('post_author', $post_id);
                         if (!isset($author_names[$author_id])) {
                             $user_obj = $author_id > 0 ? get_user_by('id', $author_id) : false;
-                            $author_names[$author_id] = $user_obj ? (string) $user_obj->display_name : ('User #' . $author_id);
+                            $author_names[$author_id] = $user_obj ? (string) $user_obj->display_name : sprintf(__('User #%d', 'cbiastudio-blogflow-ai'), $author_id);
                         }
                         $post_context_loaded = true;
+                    }
+
+                    if ($is_in_previous_period) {
+                        if (!isset($previous_summary_rows[$model])) {
+                            $previous_summary_rows[$model] = $init_summary();
+                        }
+                        foreach (array('__all__', $model) as $summary_key) {
+                            $previous_summary_rows[$summary_key]['total_calls'] += 1;
+                            if ($post_id > 0) $previous_summary_rows[$summary_key]['post_ids'][$post_id] = true;
+                            if ($author_id > 0) $previous_summary_rows[$summary_key]['user_ids'][$author_id] = true;
+                            $previous_summary_rows[$summary_key]['total_tokens'] += $tokens_total;
+                            if ($row_cost_eur !== null && $row_cost_eur !== '' && is_numeric($row_cost_eur)) {
+                                $previous_summary_rows[$summary_key]['total_cost'] += (float) $row_cost_eur;
+                                $previous_summary_rows[$summary_key]['known_cost_events'] += 1;
+                            } else {
+                                $previous_summary_rows[$summary_key]['unknown_cost_events'] += 1;
+                            }
+                            $cost_status = sanitize_key((string) ($row['cost_status'] ?? ($row_cost_eur === null ? 'unknown' : 'estimated')));
+                            if (!isset($previous_summary_rows[$summary_key]['cost_status_counts'][$cost_status])) $cost_status = 'unknown';
+                            $previous_summary_rows[$summary_key]['cost_status_counts'][$cost_status] += 1;
+                            if (!isset($previous_summary_rows[$summary_key]['type_counts'][$type])) $previous_summary_rows[$summary_key]['type_counts'][$type] = 0;
+                            $previous_summary_rows[$summary_key]['type_counts'][$type] += 1;
+                        }
+                    }
+                    if (!$is_in_period) {
+                        continue;
                     }
 
                     $available_models[$model] = true;
@@ -1900,6 +2028,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                         'day' => $day_value,
                         'month' => $month_value,
                         'type' => $type,
+                        'provider' => sanitize_key((string) ($row['provider'] ?? 'openai')),
                         'type_label' => $type === 'image' ? __('Image', 'cbiastudio-blogflow-ai') : ($type === 'seo' ? __('SEO', 'cbiastudio-blogflow-ai') : __('Text', 'cbiastudio-blogflow-ai')),
                         'section' => $section,
                         'section_label' => $section_label,
@@ -1912,8 +2041,10 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                         'token_metrics_applicable' => $type !== 'image',
                         'cached_in' => (int) ($row['cin'] ?? 0),
                         'cost_eur' => $row_cost_eur,
+                        'cost_status' => sanitize_key((string) ($row['cost_status'] ?? ($row_cost_eur === null ? 'unknown' : 'estimated'))),
                         'ok' => $is_ok ? 1 : 0,
-                        'status_label' => $is_ok ? 'OK' : 'Error',
+                        'status' => sanitize_key((string) ($row['status'] ?? ($is_ok ? 'success' : 'error'))),
+                        'status_label' => $is_ok ? __('OK', 'cbiastudio-blogflow-ai') : __('Error', 'cbiastudio-blogflow-ai'),
                         'user_id' => $author_id,
                         'user_name' => (string) $author_names[$author_id],
                         'source_label' => (string) $post_title,
@@ -1924,7 +2055,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
 
                     $sort_ts = $ts > 0 ? $ts : 0;
                     if ($sort_ts <= 0 && $day_value !== '') {
-                        $sort_ts = strtotime($day_value . ' 23:59:59');
+                        $sort_ts = cbia_usage_parse_site_timestamp($day_value . ' 23:59:59');
                         if (!$sort_ts) {
                             $sort_ts = 0;
                         }
@@ -1942,6 +2073,10 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                                 'textCalls' => 0,
                                 'imageCalls' => 0,
                                 'seoCalls' => 0,
+                                'textCost' => 0.0,
+                                'imageCost' => 0.0,
+                                'seoCost' => 0.0,
+                                'cost' => 0.0,
                             );
                         }
                         $daily_buckets[$day_value]['calls'] += 1;
@@ -1951,6 +2086,13 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                         $count_key = $type . 'Calls';
                         if (isset($daily_buckets[$day_value][$count_key])) {
                             $daily_buckets[$day_value][$count_key] += 1;
+                        }
+                        if ($row_cost_eur !== null && $row_cost_eur !== '' && is_numeric($row_cost_eur)) {
+                            $cost_key = $type . 'Cost';
+                            $daily_buckets[$day_value]['cost'] += (float) $row_cost_eur;
+                            if (isset($daily_buckets[$day_value][$cost_key])) {
+                                $daily_buckets[$day_value][$cost_key] += (float) $row_cost_eur;
+                            }
                         }
                     }
 
@@ -2003,7 +2145,13 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                         $summary_rows[$summary_key]['total_tokens'] += $tokens_total;
                         if ($row_cost_eur !== null && $row_cost_eur !== '' && is_numeric($row_cost_eur)) {
                             $summary_rows[$summary_key]['total_cost'] += (float) $row_cost_eur;
+                            $summary_rows[$summary_key]['known_cost_events'] += 1;
+                        } else {
+                            $summary_rows[$summary_key]['unknown_cost_events'] += 1;
                         }
+                        $cost_status = sanitize_key((string) ($row['cost_status'] ?? ($row_cost_eur === null ? 'unknown' : 'estimated')));
+                        if (!isset($summary_rows[$summary_key]['cost_status_counts'][$cost_status])) $cost_status = 'unknown';
+                        $summary_rows[$summary_key]['cost_status_counts'][$cost_status] += 1;
                         if (!isset($summary_rows[$summary_key]['type_counts'][$type])) {
                             $summary_rows[$summary_key]['type_counts'][$type] = 0;
                         }
@@ -2020,6 +2168,10 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                                     'textCalls' => 0,
                                     'imageCalls' => 0,
                                     'seoCalls' => 0,
+                                    'textCost' => 0.0,
+                                    'imageCost' => 0.0,
+                                    'seoCost' => 0.0,
+                                    'cost' => 0.0,
                                 );
                             }
                             $summary_rows[$summary_key]['daily'][$day_value]['calls'] += 1;
@@ -2032,6 +2184,13 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                             } else {
                                 $summary_rows[$summary_key]['daily'][$day_value]['text'] += $tokens_total;
                                 $summary_rows[$summary_key]['daily'][$day_value]['textCalls'] += 1;
+                            }
+                            if ($row_cost_eur !== null && $row_cost_eur !== '' && is_numeric($row_cost_eur)) {
+                                $cost_key = $type . 'Cost';
+                                $summary_rows[$summary_key]['daily'][$day_value]['cost'] += (float) $row_cost_eur;
+                                if (isset($summary_rows[$summary_key]['daily'][$day_value][$cost_key])) {
+                                    $summary_rows[$summary_key]['daily'][$day_value][$cost_key] += (float) $row_cost_eur;
+                                }
                             }
                         }
 
@@ -2106,10 +2265,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
         $summaries_by_model = array();
         foreach ($summary_rows as $summary_key => $summary) {
             ksort($summary['daily'], SORT_STRING);
-            $normalized_daily = array_values(array_map(static function ($item) {
-                $item['totalTokens'] = (int) (($item['text'] ?? 0) + ($item['image'] ?? 0) + ($item['seo'] ?? 0));
-                return $item;
-            }, $summary['daily']));
+            $normalized_daily = cbia_usage_fill_daily_series($summary['daily'], $general_range);
             $normalized_monthly = $summary_key === '__all__'
                 ? $monthly_series
                 : (array) ($rolling_monthly['by_model'][$summary_key] ?? cbia_usage_fill_rolling_month_series(array()));
@@ -2123,6 +2279,10 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                 'avgTokens' => $total_calls > 0 ? (int) round(((int) ($summary['total_tokens'] ?? 0)) / $total_calls) : 0,
                 'totalCost' => round((float) ($summary['total_cost'] ?? 0), 6),
                 'avgCostPerPost' => $post_count > 0 ? round(((float) ($summary['total_cost'] ?? 0)) / $post_count, 6) : 0.0,
+                'knownCostEvents' => (int) ($summary['known_cost_events'] ?? 0),
+                'unknownCostEvents' => (int) ($summary['unknown_cost_events'] ?? 0),
+                'costCoveragePercent' => $total_calls > 0 ? round(100 * ((int) ($summary['known_cost_events'] ?? 0)) / $total_calls, 1) : 0,
+                'costStatusCounts' => (array) ($summary['cost_status_counts'] ?? array()),
                 'typeCounts' => array(
                     'text' => (int) ($summary['type_counts']['text'] ?? 0),
                     'image' => (int) ($summary['type_counts']['image'] ?? 0),
@@ -2132,6 +2292,35 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                 'monthlySeries' => $normalized_monthly,
             );
         }
+
+        $previous_summaries_by_model = array();
+        foreach ($previous_summary_rows as $summary_key => $summary) {
+            $post_count = count($summary['post_ids']);
+            $total_calls = (int) ($summary['total_calls'] ?? 0);
+            $known_cost_events = (int) ($summary['known_cost_events'] ?? 0);
+            $previous_summaries_by_model[$summary_key] = array(
+                'totalCalls' => $total_calls,
+                'uniquePosts' => $post_count,
+                'uniqueUsers' => count($summary['user_ids']),
+                'totalTokens' => (int) ($summary['total_tokens'] ?? 0),
+                'avgTokens' => $total_calls > 0 ? (int) round(((int) ($summary['total_tokens'] ?? 0)) / $total_calls) : 0,
+                'totalCost' => round((float) ($summary['total_cost'] ?? 0), 6),
+                'avgCostPerPost' => $post_count > 0 ? round(((float) ($summary['total_cost'] ?? 0)) / $post_count, 6) : 0.0,
+                'knownCostEvents' => $known_cost_events,
+                'unknownCostEvents' => (int) ($summary['unknown_cost_events'] ?? 0),
+                'costCoveragePercent' => $total_calls > 0 ? round(100 * $known_cost_events / $total_calls, 1) : 0,
+                'costStatusCounts' => (array) ($summary['cost_status_counts'] ?? array()),
+                'typeCounts' => array(
+                    'text' => (int) ($summary['type_counts']['text'] ?? 0),
+                    'image' => (int) ($summary['type_counts']['image'] ?? 0),
+                    'seo' => (int) ($summary['type_counts']['seo'] ?? 0),
+                ),
+                'dailySeries' => array(),
+                'monthlySeries' => array(),
+            );
+        }
+
+        $daily_series = (array) ($summaries_by_model['__all__']['dailySeries'] ?? $daily_series);
 
         $payload = array(
             'rows' => $recent_rows,
@@ -2146,14 +2335,19 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
             'monthlyStartMonth' => (string) ($rolling_monthly['start_month'] ?? ''),
             'monthlyEndMonth' => (string) ($rolling_monthly['end_month'] ?? ''),
             'summariesByModel' => $summaries_by_model,
+            'previousSummariesByModel' => $previous_summaries_by_model,
             'modelOptions' => $model_options,
             'defaultModel' => $requested_model,
             'periodDays' => $days,
             'periodStartDay' => $since_day,
             'periodEndDay' => $period_end_day,
+            'rangeKey' => (string) ($general_range['key'] ?? '30d'),
+            'granularity' => (string) ($general_range['granularity'] ?? 'day'),
+            'previousPeriodStartDay' => (string) ($general_range['previous_since_day'] ?? ''),
+            'previousPeriodEndDay' => (string) ($general_range['previous_end_day'] ?? ''),
         );
 
-        if ($cache_ttl > 0) {
+        if ($cache_ttl > 0 && $cache_allowed) {
             set_transient($cache_key, array(
                 'recent_rows' => $recent_rows,
                 'total_rows' => $total_rows,
@@ -2166,6 +2360,7 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
                 'monthly_end_month' => (string) ($rolling_monthly['end_month'] ?? ''),
                 'model_options' => $model_options,
                 'summaries_by_model' => $summaries_by_model,
+                'previous_summaries_by_model' => $previous_summaries_by_model,
                 'period_start_day' => $since_day,
                 'period_end_day' => $period_end_day,
             ), $cache_ttl);
@@ -2177,13 +2372,17 @@ if (!function_exists('cbia_get_usage_dashboard_payload_fast')) {
 
 if (!function_exists('cbia_ajax_usage_overview_data')) {
     if (!function_exists('cbia_get_usage_dashboard_payload_basic')) {
-        function cbia_get_usage_dashboard_payload_basic($days = 365, $requested_model = '') {
+        function cbia_get_usage_dashboard_payload_basic($days = 30, $requested_model = '', $range_args = array()) {
             $days = (int) $days;
-            if (!in_array($days, array(7, 30, 90, 365, 730), true)) {
-                $days = 365;
-            }
-            $period_start = gmdate('Y-m-d', time() - ($days * DAY_IN_SECONDS));
-            $period_end = gmdate('Y-m-d');
+            if (!in_array($days, array(7, 30, 90, 365), true)) $days = 30;
+            $legacy_range_keys = array(7 => '7d', 30 => '30d', 90 => '90d', 365 => '12m');
+            $range_args = is_array($range_args) ? $range_args : array();
+            $range = cbia_usage_resolve_range(
+                sanitize_key((string) ($range_args['key'] ?? $legacy_range_keys[$days])),
+                sanitize_text_field((string) ($range_args['from'] ?? '')),
+                sanitize_text_field((string) ($range_args['to'] ?? ''))
+            );
+            $days = (int) $range['days'];
             $rolling_monthly = cbia_usage_build_rolling_month_aggregates(array());
 
             return array(
@@ -2212,23 +2411,33 @@ if (!function_exists('cbia_ajax_usage_overview_data')) {
                         'monthlySeries' => (array) $rolling_monthly['series'],
                     ),
                 ),
+                'previousSummariesByModel' => array(),
                 'modelOptions' => array(),
                 'defaultModel' => (string) $requested_model,
                 'periodDays' => $days,
-                'periodStartDay' => $period_start,
-                'periodEndDay' => $period_end,
+                'periodStartDay' => (string) $range['since_day'],
+                'periodEndDay' => (string) $range['end_day'],
+                'rangeKey' => (string) $range['key'],
+                'granularity' => (string) $range['granularity'],
+                'previousPeriodStartDay' => (string) $range['previous_since_day'],
+                'previousPeriodEndDay' => (string) $range['previous_end_day'],
             );
         }
     }
 
     function cbia_ajax_usage_overview_data() {
         if (!current_user_can('manage_options')) {
-            wp_send_json_error(array('message' => 'Unauthorized'), 403);
+            wp_send_json_error(array('message' => __('Unauthorized', 'cbiastudio-blogflow-ai')), 403);
         }
         check_ajax_referer('cbia_usage_overview', 'nonce');
 
-        $days = isset($_REQUEST['days']) ? absint(wp_unslash((string) $_REQUEST['days'])) : 365;
+        $days = isset($_REQUEST['days']) ? absint(wp_unslash((string) $_REQUEST['days'])) : 30;
         $requested_model = isset($_REQUEST['usage_model']) ? sanitize_text_field(wp_unslash((string) $_REQUEST['usage_model'])) : '';
+        $range_args = array(
+            'key' => isset($_REQUEST['range_key']) ? sanitize_key(wp_unslash((string) $_REQUEST['range_key'])) : '',
+            'from' => isset($_REQUEST['range_from']) ? sanitize_text_field(wp_unslash((string) $_REQUEST['range_from'])) : '',
+            'to' => isset($_REQUEST['range_to']) ? sanitize_text_field(wp_unslash((string) $_REQUEST['range_to'])) : '',
+        );
 
         $can_view_costs = false;
         if (function_exists('cbia_cap_enabled') && cbia_cap_enabled('costs_advanced')) {
@@ -2236,90 +2445,22 @@ if (!function_exists('cbia_ajax_usage_overview_data')) {
         }
         $apply_usage_caps = static function ($payload) use ($can_view_costs) {
             $data = is_array($payload) ? $payload : array();
-            $data['canViewCosts'] = $can_view_costs ? 1 : 0;
             if ($can_view_costs) {
+                $data['canViewCosts'] = 1;
                 return $data;
             }
-
-            if (!empty($data['rows']) && is_array($data['rows'])) {
-                foreach ($data['rows'] as $idx => $row) {
-                    if (!is_array($row)) continue;
-                    $row['cost_eur'] = null;
-                    $data['rows'][$idx] = $row;
-                }
-            }
-            if (!empty($data['monthlySeries']) && is_array($data['monthlySeries'])) {
-                foreach ($data['monthlySeries'] as $idx => $row) {
-                    if (!is_array($row)) continue;
-                    $row['text_cost_eur'] = 0.0;
-                    $row['image_cost_eur'] = 0.0;
-                    $row['seo_cost_eur'] = 0.0;
-                    $row['cost_eur'] = 0.0;
-                    $data['monthlySeries'][$idx] = $row;
-                }
-            }
-            if (!empty($data['monthlySeriesByProvider']) && is_array($data['monthlySeriesByProvider'])) {
-                foreach ($data['monthlySeriesByProvider'] as $provider => $series) {
-                    if (!is_array($series)) continue;
-                    foreach ($series as $idx => $row) {
-                        if (!is_array($row)) continue;
-                        $row['text_cost_eur'] = 0.0;
-                        $row['image_cost_eur'] = 0.0;
-                        $row['seo_cost_eur'] = 0.0;
-                        $row['cost_eur'] = 0.0;
-                        $series[$idx] = $row;
-                    }
-                    $data['monthlySeriesByProvider'][$provider] = $series;
-                }
-            }
-            if (!empty($data['monthlySeriesByProviderModel']) && is_array($data['monthlySeriesByProviderModel'])) {
-                foreach ($data['monthlySeriesByProviderModel'] as $provider => $models) {
-                    if (!is_array($models)) continue;
-                    foreach ($models as $model => $series) {
-                        if (!is_array($series)) continue;
-                        foreach ($series as $idx => $row) {
-                            if (!is_array($row)) continue;
-                            $row['text_cost_eur'] = 0.0;
-                            $row['image_cost_eur'] = 0.0;
-                            $row['seo_cost_eur'] = 0.0;
-                            $row['cost_eur'] = 0.0;
-                            $series[$idx] = $row;
-                        }
-                        $models[$model] = $series;
-                    }
-                    $data['monthlySeriesByProviderModel'][$provider] = $models;
-                }
-            }
-            if (!empty($data['summariesByModel']) && is_array($data['summariesByModel'])) {
-                foreach ($data['summariesByModel'] as $key => $summary) {
-                    if (!is_array($summary)) continue;
-                    $summary['totalCost'] = 0.0;
-                    $summary['avgCostPerPost'] = 0.0;
-                    if (!empty($summary['monthlySeries']) && is_array($summary['monthlySeries'])) {
-                        foreach ($summary['monthlySeries'] as $idx => $mrow) {
-                            if (!is_array($mrow)) continue;
-                            $mrow['text_cost_eur'] = 0.0;
-                            $mrow['image_cost_eur'] = 0.0;
-                            $mrow['seo_cost_eur'] = 0.0;
-                            $mrow['cost_eur'] = 0.0;
-                            $summary['monthlySeries'][$idx] = $mrow;
-                        }
-                    }
-                    $data['summariesByModel'][$key] = $summary;
-                }
-            }
-            return $data;
+            return cbia_usage_scrub_cost_intelligence($data);
         };
 
         if (function_exists('cbia_cap_enabled') && !cbia_cap_enabled('usage_advanced')) {
             if (function_exists('cbia_get_usage_dashboard_payload_fast')) {
-                wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload_fast($days, $requested_model)));
+                wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload_fast($days, $requested_model, $range_args)));
             }
-            wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload_basic($days, $requested_model)));
+            wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload_basic($days, $requested_model, $range_args)));
         }
 
         if (function_exists('cbia_get_usage_dashboard_payload_fast')) {
-            wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload_fast($days, $requested_model)));
+            wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload_fast($days, $requested_model, $range_args)));
         }
         wp_send_json_success($apply_usage_caps(cbia_get_usage_dashboard_payload($days, $requested_model)));
     }

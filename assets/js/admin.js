@@ -619,98 +619,56 @@
     function initUsageDashboard() {
         var root = document.getElementById('cbia-usage-dashboard');
         var dataNode = document.getElementById('cbia-usage-data');
-        if (!root || !dataNode || root.getAttribute('data-cbia-usage-bound') === '1') return;
-        root.setAttribute('data-cbia-usage-bound', '1');
+        if (!root || !dataNode || root.getAttribute('data-cbia-usage-v2-bound') === '1') return;
+        root.setAttribute('data-cbia-usage-v2-bound', '1');
 
         var payload = {};
         try {
             payload = JSON.parse(dataNode.textContent || '{}');
-        } catch (e) {
+        } catch (_error) {
             payload = {};
         }
 
         var rows = Array.isArray(payload.rows) ? payload.rows.slice() : [];
+        var summariesByModel = payload.summariesByModel && typeof payload.summariesByModel === 'object' ? payload.summariesByModel : {};
+        var previousSummariesByModel = payload.previousSummariesByModel && typeof payload.previousSummariesByModel === 'object' ? payload.previousSummariesByModel : {};
+        var modelOptions = Array.isArray(payload.modelOptions) ? payload.modelOptions.slice() : [];
         var totalRows = Number(payload.totalRows || rows.length || 0);
         var rowsLimited = !!payload.rowsLimited;
         var recentRowsLimit = Number(payload.recentRowsLimit || rows.length || 0);
-        var summariesByModel = (payload.summariesByModel && typeof payload.summariesByModel === 'object') ? payload.summariesByModel : {};
-        var modelOptions = Array.isArray(payload.modelOptions) ? payload.modelOptions.slice() : [];
-        var initialDailySeries = Array.isArray(payload.dailySeries) ? payload.dailySeries.slice() : [];
-        var i18n = (payload.i18n && typeof payload.i18n === 'object') ? payload.i18n : {};
         var canViewCosts = !!payload.canViewCosts;
-        var lazyLoad = !!payload.lazyLoad;
-        var ajaxUrl = String(payload.ajaxUrl || '');
-        var ajaxNonce = String(payload.ajaxNonce || '');
-        var usdToEur = Number(payload.usdToEur || 0.92);
-        if (!isFinite(usdToEur) || usdToEur <= 0) usdToEur = 0.92;
-        var modelSelect = document.getElementById('cbia-usage-model-filter');
-        var typeSelect = document.getElementById('cbia-usage-type-filter');
-        var providerSelect = document.getElementById('cbia-usage-provider-filter');
-        var statusSelect = document.getElementById('cbia-usage-status-filter');
-        var requestStatusSelect = document.getElementById('cbia-usage-request-status-filter');
-        var qualitySelect = document.getElementById('cbia-usage-quality-filter');
-        var imageRoleSelect = document.getElementById('cbia-usage-image-role-filter');
-        var fromInput = document.getElementById('cbia-usage-from');
-        var toInput = document.getElementById('cbia-usage-to');
-        var searchInput = document.getElementById('cbia-usage-search');
-        var clearFiltersBtn = document.getElementById('cbia-usage-clear-filters');
-        var filterSummary = document.getElementById('cbia-usage-filter-summary');
-        var daysSelect = document.getElementById('cbia-usage-days');
-        var hiddenModel = document.getElementById('cbia-usage-model-hidden');
-        var periodForm = document.getElementById('cbia-usage-period-form');
-        var exportBtn = document.getElementById('cbia-usage-export');
-        var tableBody = document.getElementById('cbia-usage-table-body');
-        var detailPanel = document.getElementById('cbia-usage-detail');
-        var activityCanvas = document.getElementById('cbia-usage-activity-chart');
-        var activityEmpty = document.getElementById('cbia-usage-activity-empty');
-        var typeCanvas = document.getElementById('cbia-usage-type-chart');
-        var typeEmpty = document.getElementById('cbia-usage-type-empty');
-        var imageQualityCanvas = document.getElementById('cbia-usage-image-quality-chart');
-        var imageQualityEmpty = document.getElementById('cbia-usage-image-quality-empty');
-        var imageRoleCanvas = document.getElementById('cbia-usage-image-role-chart');
-        var imageRoleEmpty = document.getElementById('cbia-usage-image-role-empty');
-        var monthlyCanvas = document.getElementById('cbia-usage-monthly-chart');
-        var monthlyEmpty = document.getElementById('cbia-usage-monthly-empty');
-        var activityHint = document.getElementById('cbia-usage-activity-hint');
-        var typeHint = document.getElementById('cbia-usage-type-hint');
-        var monthlyHint = document.getElementById('cbia-usage-monthly-hint');
-        var tableMeta = document.getElementById('cbia-usage-table-meta');
-        var loadingBanner = document.getElementById('cbia-usage-loading-banner');
-        var loadingTitle = document.getElementById('cbia-usage-loading-title');
-        var loadingHint = document.getElementById('cbia-usage-loading-hint');
+        var i18n = payload.i18n && typeof payload.i18n === 'object' ? payload.i18n : {};
+        var locale = String(payload.locale || document.documentElement.lang || 'en-US').replace('_', '-');
         var selectedKey = '';
-        var allFilteredRows = [];
-        var loadingRemote = false;
+        var currentMetric = canViewCosts ? 'cost' : 'calls';
+        var lastFilteredRows = [];
+        var resizeFrame = 0;
 
-        function t(key, fallback) {
-            var value = i18n && Object.prototype.hasOwnProperty.call(i18n, key) ? i18n[key] : fallback;
-            return String(value || fallback || '');
+        var controls = {
+            model: document.getElementById('cbia-usage-model-filter'),
+            type: document.getElementById('cbia-usage-type-filter'),
+            provider: document.getElementById('cbia-usage-provider-filter'),
+            costStatus: document.getElementById('cbia-usage-status-filter'),
+            requestStatus: document.getElementById('cbia-usage-request-status-filter'),
+            quality: document.getElementById('cbia-usage-quality-filter'),
+            role: document.getElementById('cbia-usage-image-role-filter'),
+            from: document.getElementById('cbia-usage-from'),
+            to: document.getElementById('cbia-usage-to'),
+            search: document.getElementById('cbia-usage-search')
+        };
+
+        function t(key) {
+            return Object.prototype.hasOwnProperty.call(i18n, key) ? String(i18n[key]) : '';
         }
 
-        function numberFormat(value) {
-            return new Intl.NumberFormat('es-ES').format(Number(value || 0));
-        }
-
-        function hasNumericValue(value) {
-            return value !== null && value !== '' && isFinite(Number(value));
-        }
-
-        function currencyFormat(value) {
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 4
-            }).format(Number(value || 0));
-        }
-
-        function eurToUsd(value) {
-            var num = Number(value);
-            return isFinite(num) ? num : 0;
+        function formatTemplate(template, values) {
+            return String(template || '').replace(/%(\d+)\$s/g, function (_match, index) {
+                return values[Number(index) - 1] !== undefined ? String(values[Number(index) - 1]) : '';
+            });
         }
 
         function escapeHtml(value) {
-            return String(value || '')
+            return String(value === undefined || value === null ? '' : value)
                 .replace(/&/g, '&amp;')
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;')
@@ -718,1446 +676,1083 @@
                 .replace(/'/g, '&#39;');
         }
 
+        function safeAdminUrl(value) {
+            try {
+                var url = new URL(String(value || ''), window.location.origin);
+                return (url.protocol === 'http:' || url.protocol === 'https:') && url.origin === window.location.origin ? url.toString() : '';
+            } catch (_error) {
+                return '';
+            }
+        }
+
+        function hasNumericValue(value) {
+            return value !== null && value !== '' && isFinite(Number(value));
+        }
+
+        function numberFormat(value, maximumFractionDigits) {
+            try {
+                return new Intl.NumberFormat(locale, {
+                    maximumFractionDigits: maximumFractionDigits === undefined ? 0 : maximumFractionDigits
+                }).format(Number(value || 0));
+            } catch (_error) {
+                return String(Number(value || 0).toFixed(maximumFractionDigits || 0));
+            }
+        }
+
+        function currencyFormat(value) {
+            try {
+                return new Intl.NumberFormat(locale, {
+                    style: 'currency',
+                    currency: 'USD',
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 4
+                }).format(Number(value || 0));
+            } catch (_error) {
+                return '$' + Number(value || 0).toFixed(2);
+            }
+        }
+
+        function dateFromIso(day) {
+            var parts = String(day || '').split('-');
+            if (parts.length !== 3) return null;
+            var parsed = new Date(Date.UTC(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]), 12));
+            return isNaN(parsed.getTime()) ? null : parsed;
+        }
+
+        function formatDay(day) {
+            var parsed = dateFromIso(String(day || '').slice(0, 10));
+            if (!parsed) return String(day || '');
+            try {
+                return new Intl.DateTimeFormat(locale, {day: '2-digit', month: 'short'}).format(parsed);
+            } catch (_error) {
+                return String(day || '').slice(5);
+            }
+        }
+
+        function formatMonth(month) {
+            var parsed = dateFromIso(String(month || '') + '-01');
+            if (!parsed) return String(month || '');
+            try {
+                return new Intl.DateTimeFormat(locale, {month: 'short', year: '2-digit'}).format(parsed);
+            } catch (_error) {
+                return String(month || '');
+            }
+        }
+
+        function formatDateTime(value) {
+            var raw = String(value || '').trim();
+            if (!raw) return '-';
+            var hasExplicitZone = /(?:z|[+-]\d{2}:?\d{2})$/i.test(raw);
+            var parsed = null;
+            var timeZone = hasExplicitZone ? String(payload.siteTimezone || '') : 'UTC';
+            if (hasExplicitZone) {
+                parsed = new Date(raw);
+            } else {
+                var match = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+                if (match) parsed = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4] || 0), Number(match[5] || 0), Number(match[6] || 0)));
+            }
+            if (!parsed || isNaN(parsed.getTime())) return raw;
+            try {
+                var options = {dateStyle: 'medium', timeStyle: 'short'};
+                if (timeZone) options.timeZone = timeZone;
+                return new Intl.DateTimeFormat(locale, options).format(parsed);
+            } catch (_error) {
+                return raw;
+            }
+        }
+
         function rowKey(row) {
-            return [
-                String(row.ts || ''),
-                String(row.post_id || ''),
-                String(row.type || ''),
-                String(row.model || ''),
-                String(row.section || ''),
-                String(row.attach_id || '')
-            ].join('|');
+            return [row.ts, row.post_id, row.type, row.model, row.section, row.attach_id, row.request_id].join('|');
         }
 
-        function formatShortDate(value) {
-            var text = String(value || '');
-            if (/^\d{4}-\d{2}$/.test(text)) {
-                return formatMonth(text);
-            }
-            var datePart = text.slice(0, 10);
-            var bits = datePart.split('-');
-            if (bits.length === 3) {
-                return bits[2] + '/' + bits[1];
-            }
-            return text || '-';
+        function normalizeQuality(row) {
+            var quality = String((row && (row.effective_quality || row.quality || row.requested_quality)) || '').toLowerCase();
+            return ['auto', 'low', 'medium', 'high'].indexOf(quality) >= 0 ? quality : 'unknown';
         }
 
-        function formatMonth(value) {
-            var text = String(value || '').trim();
-            var bits = text.split('-');
-            if (bits.length !== 2) return text || '-';
-            var monthIndex = parseInt(bits[1], 10) - 1;
-            var names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            var monthLabel = (monthIndex >= 0 && monthIndex < names.length) ? names[monthIndex] : bits[1];
-            return monthLabel + ' ' + bits[0];
-        }
-
-        function formatMonthTick(value) {
-            var text = String(value || '').trim();
-            var bits = text.split('-');
-            if (bits.length !== 2) return text || '-';
-            var monthIndex = parseInt(bits[1], 10) - 1;
-            var names = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-            return (monthIndex >= 0 && monthIndex < names.length) ? names[monthIndex] : bits[1];
-        }
-
-        function formatDateTime(value) {
-            var text = String(value || '');
-            if (!text) return '-';
-            return text.replace(' ', ' · ');
-        }
-
-        // Override with clean separator to avoid mojibake artifacts in tables.
-        function formatDateTime(value) {
-            var text = String(value || '');
-            if (!text) return '-';
-            return text.replace(' ', ' · ');
-        }
-
-        function getSearchValue() {
-            return String((searchInput && searchInput.value) || '').trim().toLowerCase();
-        }
-
-        function normalizeImageQuality(row) {
-            var value = String((row && (row.effective_quality || row.quality || row.requested_quality)) || '').trim().toLowerCase();
-            return ['auto', 'low', 'medium', 'high'].indexOf(value) !== -1 ? value : 'unknown';
-        }
-
-        function normalizeImageRole(row) {
-            var value = String((row && row.image_type) || '').trim().toLowerCase();
-            var section = String((row && row.section) || '').trim().toLowerCase();
-            if (value === 'featured' || section === 'featured') return 'featured';
-            if (value === 'content' || value === 'internal' || ['body', 'closing', 'faq'].indexOf(section) !== -1) return 'content';
+        function normalizeRole(row) {
+            var role = String((row && row.image_type) || '').toLowerCase();
+            var section = String((row && row.section) || '').toLowerCase();
+            var sectionLabel = String((row && row.section_label) || '').toLowerCase();
+            if (role === 'featured' || section === 'featured' || section === 'intro' || sectionLabel === 'featured') return 'featured';
+            if (role === 'content' || role === 'internal' || sectionLabel === 'internal' || ['body', 'closing', 'faq'].indexOf(section) >= 0) return 'content';
             return 'other';
         }
 
-        function parseIsoDay(text) {
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(String(text || ''))) return null;
-            var parts = String(text).split('-');
-            var y = parseInt(parts[0], 10);
-            var m = parseInt(parts[1], 10) - 1;
-            var d = parseInt(parts[2], 10);
-            if (!isFinite(y) || !isFinite(m) || !isFinite(d)) return null;
-            var dt = new Date(Date.UTC(y, m, d));
-            return isNaN(dt.getTime()) ? null : dt;
+        function periodInfo() {
+            var days = Number(payload.periodDays || 30);
+            if (!isFinite(days) || days < 1) days = 30;
+            var start = String(payload.periodStartDay || '');
+            var end = String(payload.periodEndDay || '');
+            var label = t('periodLabel') + ': ' + formatDay(start) + ' – ' + formatDay(end) + ' (' + numberFormat(days) + ' ' + t('daysLabel') + ')';
+            return {days: days, start: start, end: end, label: label};
         }
 
-        function formatLocalIsoDay(date) {
-            if (!(date instanceof Date) || isNaN(date.getTime())) return '';
-            var y = date.getFullYear();
-            var m = date.getMonth() + 1;
-            var d = date.getDate();
-            return String(y) + '-' + (m < 10 ? '0' + m : String(m)) + '-' + (d < 10 ? '0' + d : String(d));
-        }
-
-        function addDaysIso(day, amount) {
-            var base = parseIsoDay(day);
-            if (!base) return '';
-            base.setUTCDate(base.getUTCDate() + Number(amount || 0));
-            return base.toISOString().slice(0, 10);
-        }
-
-        function getPeriodInfo() {
-            var days = Number(payload.periodDays || 365);
-            if (!isFinite(days) || days <= 0) days = 365;
-            var startIso = String(payload.periodStartDay || '').trim();
-            var endIso = String(payload.periodEndDay || '').trim();
-            if (!/^\d{4}-\d{2}-\d{2}$/.test(startIso) || !/^\d{4}-\d{2}-\d{2}$/.test(endIso)) {
-                var endDate = new Date();
-                var startDate = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
-                startDate.setDate(startDate.getDate() - (days - 1));
-                startIso = formatLocalIsoDay(startDate);
-                endIso = formatLocalIsoDay(endDate);
-            }
-            return {
-                days: days,
-                startIso: startIso,
-                endIso: endIso,
-                startLabel: formatShortDate(startIso),
-                endLabel: formatShortDate(endIso),
-                label: 'Period: ' + formatShortDate(startIso) + ' - ' + formatShortDate(endIso) + ' (' + numberFormat(days) + ' days)'
-            };
-        }
-
-        function updateChartHints() {
-            var period = getPeriodInfo();
-            if (activityHint) {
-                activityHint.textContent = 'Y axis: number of AI events recorded per day in the current filter. ' + period.label + '.';
-            }
-            if (typeHint) {
-                typeHint.textContent = 'Y axis: number of text and image calls in the current filter. ' + period.label + '.';
-            }
-            if (monthlyHint) {
-                monthlyHint.textContent = t('monthlyChartHint', 'Latest 12 calendar months, including months with zero data. Provider and model filters apply; the general usage range and other log filters do not change this chart.');
-            }
-        }
-
-        function populateModelOptions(options) {
-            if (!modelSelect) return;
-            var list = Array.isArray(options) ? options.slice() : [];
-            var selectedValue = String((payload.defaultModel || modelSelect.value || '')).trim();
-            var allModelsLabel = (modelSelect.options && modelSelect.options.length)
-                ? String(modelSelect.options[0].text || 'All models')
-                : 'All models';
-            var html = '<option value="">' + escapeHtml(allModelsLabel) + '</option>';
-            list.forEach(function (modelName) {
-                var name = String(modelName || '').trim();
-                if (!name) return;
-                html += '<option value="' + escapeHtml(name) + '"' + (name === selectedValue ? ' selected' : '') + '>' + escapeHtml(name) + '</option>';
-            });
-            modelSelect.innerHTML = html;
-            modelSelect.value = selectedValue;
-        }
-
-        function setLoadingState(message) {
-            setDashboardLoading(true, message, t('loadingHint', 'Charts and table will fill in automatically in a few seconds.'));
-            if (tableMeta) {
-                tableMeta.textContent = message || t('loadingData', 'Loading real usage data...');
-            }
-            if (tableBody) {
-                tableBody.innerHTML = '<tr><td colspan="' + (canViewCosts ? '7' : '6') + '" class="cbia-usage-table-placeholder">' + escapeHtml(t('loadingLogs', 'Loading logs...')) + '</td></tr>';
-            }
-            if (detailPanel) {
-                detailPanel.innerHTML = '<div class="cbia-usage-detail-skeleton" id="cbia-usage-detail-skeleton-runtime" aria-hidden="true"><span class="is-title"></span><span></span><span></span><span class="is-wide"></span><span></span><span class="is-wide"></span></div><div class="cbia-usage-detail-empty">' + escapeHtml(t('loadingDetail', 'Preparing detail view...')) + '</div>';
-            }
-        }
-
-        function setDashboardLoading(isLoading, titleText, hintText) {
-            root.classList.toggle('is-loading', !!isLoading);
-            root.setAttribute('aria-busy', isLoading ? 'true' : 'false');
-            if (loadingBanner) {
-                loadingBanner.hidden = !isLoading;
-            }
-            if (loadingTitle) {
-                loadingTitle.textContent = titleText || t('loadingData', 'Loading real usage data...');
-            }
-            if (loadingHint) {
-                loadingHint.textContent = hintText || t('loadingHint', 'Charts and table will fill in automatically in a few seconds.');
-            }
+        function populateModels() {
+            if (!controls.model) return;
+            var initial = String(payload.defaultModel || controls.model.value || '');
+            var firstLabel = controls.model.options.length ? controls.model.options[0].text : '';
+            controls.model.innerHTML = '<option value="">' + escapeHtml(firstLabel) + '</option>' + modelOptions.map(function (model) {
+                var value = String(model || '');
+                return value ? '<option value="' + escapeHtml(value) + '">' + escapeHtml(value) + '</option>' : '';
+            }).join('');
+            controls.model.value = initial;
         }
 
         function getSelectedModelKey() {
-            var value = String((modelSelect && modelSelect.value) || '').trim();
-            return value || '__all__';
+            var model = controls.model ? String(controls.model.value || '') : '';
+            return model || '__all__';
         }
 
-        function getActiveSummary() {
-            var modelKey = getSelectedModelKey();
-            return summariesByModel[modelKey] || summariesByModel.__all__ || null;
+        function secondaryFilterCount() {
+            return [controls.quality, controls.role, controls.costStatus, controls.requestStatus, controls.from, controls.to].reduce(function (count, control) {
+                return count + (control && String(control.value || '') ? 1 : 0);
+            }, 0);
+        }
+
+        function hasRowFilters() {
+            return !!(
+                (controls.type && controls.type.value) ||
+                (controls.provider && controls.provider.value) ||
+                (controls.costStatus && controls.costStatus.value) ||
+                (controls.requestStatus && controls.requestStatus.value) ||
+                (controls.quality && controls.quality.value) ||
+                (controls.role && controls.role.value) ||
+                (controls.from && controls.from.value) ||
+                (controls.to && controls.to.value) ||
+                (controls.search && controls.search.value.trim())
+            );
         }
 
         function canUseSummaryDataset() {
-            var hasTypeFilter = !!String((typeSelect && typeSelect.value) || '').trim();
-            var hasSearchFilter = !!getSearchValue();
-            var hasExtraFilter = !!String((providerSelect && providerSelect.value) || '').trim()
-                || !!String((statusSelect && statusSelect.value) || '').trim()
-                || !!String((requestStatusSelect && requestStatusSelect.value) || '').trim()
-                || !!String((qualitySelect && qualitySelect.value) || '').trim()
-                || !!String((imageRoleSelect && imageRoleSelect.value) || '').trim()
-                || !!(fromInput && fromInput.value) || !!(toInput && toInput.value);
-            return !hasTypeFilter && !hasSearchFilter && !hasExtraFilter;
+            return !hasRowFilters();
         }
 
-        function getFilteredRows() {
-            var model = String((modelSelect && modelSelect.value) || '').trim();
-            var type = String((typeSelect && typeSelect.value) || '').trim();
-            var provider = String((providerSelect && providerSelect.value) || '').trim();
-            var costStatus = String((statusSelect && statusSelect.value) || '').trim();
-            var requestStatus = String((requestStatusSelect && requestStatusSelect.value) || '').trim();
-            var quality = String((qualitySelect && qualitySelect.value) || '').trim();
-            var imageRole = String((imageRoleSelect && imageRoleSelect.value) || '').trim();
-            var fromTs = fromInput && fromInput.value ? new Date(fromInput.value).getTime() : 0;
-            var toTs = toInput && toInput.value ? new Date(toInput.value).getTime() : 0;
-            var term = getSearchValue();
-
+        function filteredRows() {
+            var values = {};
+            Object.keys(controls).forEach(function (key) {
+                values[key] = controls[key] ? String(controls[key].value || '').trim() : '';
+            });
+            var term = values.search.toLowerCase();
             return rows.filter(function (row) {
-                if (model && String(row.model || '') !== model) return false;
-                if (type && String(row.type || '') !== type) return false;
-                if (provider && String(row.provider || '') !== provider) return false;
-                if (costStatus && String(row.cost_status || 'unknown') !== costStatus) return false;
-                if (requestStatus && String(row.status || (row.ok ? 'success' : 'error')) !== requestStatus) return false;
-                if (quality && (String(row.type || '') !== 'image' || normalizeImageQuality(row) !== quality)) return false;
-                if (imageRole && (String(row.type || '') !== 'image' || normalizeImageRole(row) !== imageRole)) return false;
-                var rowTs = row.ts ? new Date(String(row.ts).replace(' ', 'T')).getTime() : 0;
-                if (fromTs && rowTs && rowTs < fromTs) return false;
-                if (toTs && rowTs && rowTs > toTs) return false;
+                if (values.model && String(row.model || '') !== values.model) return false;
+                if (values.type && String(row.type || '') !== values.type) return false;
+                if (values.provider && String(row.provider || '') !== values.provider) return false;
+                if (values.costStatus && String(row.cost_status || 'unknown') !== values.costStatus) return false;
+                var requestStatus = String(row.status || (row.ok ? 'success' : 'error'));
+                if (values.requestStatus && requestStatus !== values.requestStatus) return false;
+                if (values.quality && (String(row.type || '') !== 'image' || normalizeQuality(row) !== values.quality)) return false;
+                if (values.role && (String(row.type || '') !== 'image' || normalizeRole(row) !== values.role)) return false;
+                var localTs = String(row.ts || '').replace(' ', 'T').slice(0, 16);
+                if (values.from && localTs && localTs < values.from) return false;
+                if (values.to && localTs && localTs > values.to) return false;
                 if (!term) return true;
-
-                var haystack = [
-                    row.ts,
-                    row.user_name,
-                    row.post_title,
-                    row.model,
-                    row.provider,
-                    row.batch_id,
-                    row.request_id,
-                    row.type_label,
-                    row.message_preview,
-                    row.status_label
-                    , normalizeImageQuality(row)
-                    , normalizeImageRole(row)
-                ].join(' ').toLowerCase();
-                return haystack.indexOf(term) !== -1;
+                return [
+                    row.ts, row.user_name, row.post_title, row.model, row.provider, row.batch_id,
+                    row.request_id, row.type_label, row.message_preview, row.status_label,
+                    normalizeQuality(row), normalizeRole(row)
+                ].join(' ').toLowerCase().indexOf(term) >= 0;
             });
         }
 
-        function updateExportLink() {
-            if (!exportBtn) return;
-            if (hiddenModel && modelSelect) {
-                hiddenModel.value = modelSelect.value || '';
-            }
-            try {
-                var url = new URL(exportBtn.href, window.location.origin);
-                url.searchParams.set('usage_model', (modelSelect && modelSelect.value) ? modelSelect.value : '');
-                exportBtn.href = url.toString();
-            } catch (_e) {}
+        function emptySummary() {
+            return {
+                totalCalls: 0,
+                uniquePosts: 0,
+                uniqueUsers: 0,
+                totalTokens: 0,
+                avgTokens: 0,
+                totalCost: 0,
+                avgCostPerPost: 0,
+                knownCostEvents: 0,
+                unknownCostEvents: 0,
+                costCoveragePercent: 0,
+                typeCounts: {text: 0, image: 0, seo: 0},
+                dailySeries: []
+            };
         }
 
-        function applyRemotePayload(remotePayload) {
-            payload = remotePayload || {};
-            if (payload.canViewCosts !== undefined) {
-                canViewCosts = !!payload.canViewCosts;
-            }
-            rows = Array.isArray(payload.rows) ? payload.rows.slice() : [];
-            totalRows = Number(payload.totalRows || rows.length || 0);
-            rowsLimited = !!payload.rowsLimited;
-            recentRowsLimit = Number(payload.recentRowsLimit || rows.length || 0);
-            summariesByModel = (payload.summariesByModel && typeof payload.summariesByModel === 'object') ? payload.summariesByModel : {};
-            modelOptions = Array.isArray(payload.modelOptions) ? payload.modelOptions.slice() : [];
-            initialDailySeries = Array.isArray(payload.dailySeries) ? payload.dailySeries.slice() : [];
-            if (payload.usdToEur !== undefined) {
-                var parsedRate = Number(payload.usdToEur);
-                if (isFinite(parsedRate) && parsedRate > 0) {
-                    usdToEur = parsedRate;
-                }
-            }
-            if (payload.defaultModel !== undefined) {
-                payload.defaultModel = String(payload.defaultModel || '');
-            }
-            populateModelOptions(modelOptions);
-        }
-
-        function loadUsageData() {
-            if (!lazyLoad || !ajaxUrl || loadingRemote) {
-                return;
-            }
-            loadingRemote = true;
-            setLoadingState(t('loadingData', 'Loading real usage data...'));
-
-            var body = new URLSearchParams();
-            body.set('action', 'cbia_usage_overview_data');
-            body.set('nonce', ajaxNonce);
-            body.set('days', String(payload.periodDays || 365));
-            body.set('usage_model', String(payload.defaultModel || ''));
-
-            fetch(ajaxUrl, {
-                method: 'POST',
-                credentials: 'same-origin',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'
-                },
-                body: body.toString()
-            })
-                .then(function (response) {
-                    return response.json();
-                })
-                .then(function (json) {
-                    if (!json || !json.success || !json.data) {
-                        throw new Error('Invalid usage payload');
-                    }
-                    applyRemotePayload(json.data);
-                    loadingRemote = false;
-                    lazyLoad = false;
-                    setDashboardLoading(false);
-                    refresh();
-                })
-                .catch(function () {
-                    loadingRemote = false;
-                    setDashboardLoading(false);
-                    if (tableMeta) {
-                        tableMeta.textContent = t('loadErrorMeta', 'Could not load usage data right now.');
-                    }
-                    if (tableBody) {
-                        tableBody.innerHTML = '<tr><td colspan="' + (canViewCosts ? '7' : '6') + '" class="cbia-usage-table-placeholder">' + escapeHtml(t('loadErrorRow', 'Could not load usage data.')) + '</td></tr>';
-                    }
-                    if (detailPanel) {
-                        detailPanel.innerHTML = '<div class="cbia-usage-detail-empty">' + escapeHtml(t('loadErrorDetail', 'Could not load usage data.')) + '</div>';
-                    }
-                });
-        }
-
-        function getDailyBuckets(filtered) {
-            if (Array.isArray(filtered) && filtered.length === rows.length && initialDailySeries.length) {
-                return initialDailySeries.slice();
-            }
-            var buckets = {};
-            var fallbackDay = formatLocalIsoDay(new Date());
-            filtered.forEach(function (row) {
-                var day = String(row.day || '').trim();
-                if (!day && row.ts) {
-                    var tsMatch = String(row.ts || '').match(/\d{4}-\d{2}-\d{2}/);
-                    day = tsMatch ? String(tsMatch[0] || '').trim() : '';
-                }
-                if (!day) {
-                    day = fallbackDay;
-                }
-                if (!day) return;
-                if (!buckets[day]) {
-                    buckets[day] = { calls: 0, text: 0, image: 0, seo: 0, textCalls: 0, imageCalls: 0, seoCalls: 0 };
-                }
-                buckets[day].calls += 1;
-                var bucketKey = String(row.type || 'text');
-                var bucketValue = bucketKey === 'image'
-                    ? 1
-                    : Number(row.tokens_total || 0);
-                if (!isFinite(bucketValue) || bucketValue < 0) bucketValue = 0;
-                buckets[day][bucketKey] += bucketValue;
-                var countKey = bucketKey + 'Calls';
-                if (Object.prototype.hasOwnProperty.call(buckets[day], countKey)) {
-                    buckets[day][countKey] += 1;
+        function summaryFromRows(list) {
+            var postIds = {};
+            var userIds = {};
+            var totalTokens = 0;
+            var totalCost = 0;
+            var known = 0;
+            var types = {text: 0, image: 0, seo: 0};
+            list.forEach(function (row) {
+                if (Number(row.post_id || 0) > 0) postIds[String(row.post_id)] = true;
+                if (String(row.user_id || row.user_name || '')) userIds[String(row.user_id || row.user_name)] = true;
+                totalTokens += Number(row.tokens_total || 0);
+                var type = String(row.type || '');
+                if (Object.prototype.hasOwnProperty.call(types, type)) types[type] += 1;
+                if (hasNumericValue(row.cost_eur)) {
+                    totalCost += Number(row.cost_eur);
+                    known += 1;
                 }
             });
-            return Object.keys(buckets).sort().map(function (day) {
-                var item = buckets[day];
-                item.day = day;
-                item.totalTokens = item.text + item.image + item.seo;
+            var calls = list.length;
+            var posts = Object.keys(postIds).length;
+            return {
+                totalCalls: calls,
+                uniquePosts: posts,
+                uniqueUsers: Object.keys(userIds).length,
+                totalTokens: totalTokens,
+                avgTokens: calls ? Math.round(totalTokens / calls) : 0,
+                totalCost: totalCost,
+                avgCostPerPost: posts ? totalCost / posts : 0,
+                knownCostEvents: known,
+                unknownCostEvents: calls - known,
+                costCoveragePercent: calls ? 100 * known / calls : 0,
+                typeCounts: types,
+                dailySeries: seriesFromRows(list)
+            };
+        }
+
+        function activeSummary(filtered) {
+            if (canUseSummaryDataset()) {
+                var modelKey = getSelectedModelKey();
+                return summariesByModel[modelKey] || (modelKey === '__all__' ? summariesByModel.__all__ : null) || emptySummary();
+            }
+            return summaryFromRows(filtered);
+        }
+
+        function previousSummary() {
+            if (!canUseSummaryDataset()) return null;
+            var modelKey = getSelectedModelKey();
+            if (previousSummariesByModel[modelKey]) return previousSummariesByModel[modelKey];
+            return modelKey === '__all__' ? (previousSummariesByModel.__all__ || null) : emptySummary();
+        }
+
+        function seriesFromRows(list) {
+            var map = {};
+            list.forEach(function (row) {
+                var day = String(row.ts || '').slice(0, 10);
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
+                if (!map[day]) map[day] = {day: day, calls: 0, cost: 0, textCalls: 0, imageCalls: 0, seoCalls: 0};
+                map[day].calls += 1;
+                var type = String(row.type || 'text');
+                var countKey = type === 'image' ? 'imageCalls' : (type === 'seo' ? 'seoCalls' : 'textCalls');
+                map[day][countKey] += 1;
+                if (hasNumericValue(row.cost_eur)) map[day].cost += Number(row.cost_eur);
+            });
+            var info = periodInfo();
+            var output = [];
+            var cursor = dateFromIso(info.start);
+            var end = dateFromIso(info.end);
+            if (!cursor || !end) return Object.keys(map).sort().map(function (key) { return map[key]; });
+            while (cursor.getTime() <= end.getTime()) {
+                var day = cursor.toISOString().slice(0, 10);
+                output.push(map[day] || {day: day, calls: 0, cost: 0, textCalls: 0, imageCalls: 0, seoCalls: 0});
+                cursor.setUTCDate(cursor.getUTCDate() + 1);
+            }
+            return output;
+        }
+
+        function aggregateSeries(series) {
+            var granularity = String(payload.granularity || 'day');
+            var groups = {};
+            (Array.isArray(series) ? series : []).forEach(function (item, index) {
+                var day = String(item.day || '');
+                var key = day;
+                if (granularity === 'month') {
+                    key = day.slice(0, 7);
+                } else if (granularity === 'week') {
+                    var start = dateFromIso(periodInfo().start);
+                    var current = dateFromIso(day);
+                    var offset = start && current ? Math.floor((current.getTime() - start.getTime()) / 604800000) : Math.floor(index / 7);
+                    var weekStart = start ? new Date(start.getTime() + Math.max(0, offset) * 604800000) : current;
+                    key = weekStart ? weekStart.toISOString().slice(0, 10) : day;
+                }
+                if (!groups[key]) groups[key] = {key: key, calls: 0, cost: 0, textCalls: 0, imageCalls: 0, seoCalls: 0};
+                groups[key].calls += Number(item.calls || 0);
+                groups[key].cost += Number(item.cost || item.cost_eur || 0);
+                groups[key].textCalls += Number(item.textCalls || item.text_calls || 0);
+                groups[key].imageCalls += Number(item.imageCalls || item.image_calls || 0);
+                groups[key].seoCalls += Number(item.seoCalls || item.seo_calls || 0);
+            });
+            return Object.keys(groups).sort().map(function (key) {
+                var item = groups[key];
+                item.label = granularity === 'month' ? formatMonth(key) : formatDay(key);
                 return item;
             });
         }
 
-        function getMonthlyBuckets() {
-            var model = String((modelSelect && modelSelect.value) || '').trim();
-            var provider = String((providerSelect && providerSelect.value) || '').trim();
-            var providerSeries = (payload.monthlySeriesByProvider && typeof payload.monthlySeriesByProvider === 'object')
-                ? payload.monthlySeriesByProvider
-                : {};
-            var providerModelSeries = (payload.monthlySeriesByProviderModel && typeof payload.monthlySeriesByProviderModel === 'object')
-                ? payload.monthlySeriesByProviderModel
-                : {};
-            var series = [];
-
-            if (provider && model) {
-                var modelsForProvider = (providerModelSeries[provider] && typeof providerModelSeries[provider] === 'object')
-                    ? providerModelSeries[provider]
-                    : {};
-                series = Array.isArray(modelsForProvider[model]) ? modelsForProvider[model].slice() : [];
-            } else if (provider) {
-                series = Array.isArray(providerSeries[provider]) ? providerSeries[provider].slice() : [];
-            } else if (model) {
-                var modelSummary = summariesByModel[model] || null;
-                series = modelSummary && Array.isArray(modelSummary.monthlySeries) ? modelSummary.monthlySeries.slice() : [];
-            } else {
-                series = Array.isArray(payload.monthlySeries) ? payload.monthlySeries.slice() : [];
-            }
-
-            if (!series.length && (provider || model) && Array.isArray(payload.monthlySeries)) {
-                series = payload.monthlySeries.map(function (item) {
-                    return {
-                        month: String((item && item.month) || ''),
-                        calls: 0,
-                        text_calls: 0,
-                        image_calls: 0,
-                        seo_calls: 0,
-                        text_cost_eur: 0,
-                        image_cost_eur: 0,
-                        seo_cost_eur: 0,
-                        cost_eur: 0
-                    };
-                });
-            }
-
-            return series.filter(function (item) {
-                return item && /^\d{4}-\d{2}$/.test(String(item.month || '').trim());
-            });
-        }
-
-        function getActivitySeries(filtered) {
-            var baseSeries = [];
-            if (canUseSummaryDataset()) {
-                var summary = getActiveSummary();
-                if (summary && Array.isArray(summary.dailySeries) && summary.dailySeries.length) {
-                    baseSeries = summary.dailySeries.slice();
-                }
-            }
-            if (!baseSeries.length) {
-                baseSeries = getDailyBuckets(filtered);
-            }
-
-            if (!baseSeries.length) return [];
-
-            var period = getPeriodInfo();
-            var byDay = {};
-            baseSeries.forEach(function (item) {
-                if (!item) return;
-                var day = String(item.day || '').trim();
-                if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return;
-                byDay[day] = item;
-            });
-
-            var series = [];
-            for (var d = 0; d < period.days; d++) {
-                var dayKey = addDaysIso(period.startIso, d);
-                if (!dayKey) continue;
-                var src = byDay[dayKey] || {};
-                series.push({
-                    day: dayKey,
-                    calls: Number(src.calls || 0),
-                    text: Number(src.text || 0),
-                    image: Number(src.image || 0),
-                    seo: Number(src.seo || 0),
-                    textCalls: Number(src.textCalls || 0),
-                    imageCalls: Number(src.imageCalls || 0),
-                    seoCalls: Number(src.seoCalls || 0)
-                });
-            }
-
-            var paddingDays = 3;
-            for (var i = 1; i <= paddingDays; i++) {
-                var nextDay = addDaysIso(period.endIso, i);
-                if (!nextDay) continue;
-                series.push({
-                    day: nextDay,
-                    calls: null,
-                    text: 0,
-                    image: 0,
-                    seo: 0,
-                    textCalls: 0,
-                    imageCalls: 0,
-                    seoCalls: 0,
-                    _future: true
-                });
-            }
-            return series;
-        }
-
-        function getTypeSeries(filtered) {
-            if (canUseSummaryDataset()) {
-                var summary = getActiveSummary();
-                if (summary && summary.typeCounts) {
-                    return [
-                        { key: 'text', label: 'Text', value: Number(summary.typeCounts.text || 0) },
-                        { key: 'image', label: 'Image', value: Number(summary.typeCounts.image || 0) }
-                    ];
-                }
-            }
-            return getTypeActivityBuckets(filtered);
-        }
-
-        function setupCanvas(canvas) {
-            var parent = canvas.parentElement;
-            var width = Math.max(280, (parent ? parent.clientWidth : canvas.clientWidth || 280) - 2);
-            var height = 260;
-            var ratio = window.devicePixelRatio || 1;
-            canvas.width = Math.round(width * ratio);
-            canvas.height = Math.round(height * ratio);
+        function setupCanvas(canvas, height) {
+            if (!canvas) return null;
+            var width = Math.max(280, Math.floor((canvas.parentElement && canvas.parentElement.clientWidth) || canvas.clientWidth || 720));
+            var ratio = Math.min(2, window.devicePixelRatio || 1);
+            canvas.width = Math.floor(width * ratio);
+            canvas.height = Math.floor(height * ratio);
             canvas.style.width = width + 'px';
             canvas.style.height = height + 'px';
-            var ctx = canvas.getContext('2d');
-            ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-            return { ctx: ctx, width: width, height: height };
+            var context = canvas.getContext('2d');
+            context.setTransform(ratio, 0, 0, ratio, 0, 0);
+            context.clearRect(0, 0, width, height);
+            return {ctx: context, width: width, height: height};
         }
 
-        function formatAxisNumber(value) {
-            var num = Number(value || 0);
-            if (!isFinite(num)) num = 0;
-            if (Math.abs(num) < 10) {
-                return new Intl.NumberFormat('es-ES', {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 1
-                }).format(num);
-            }
-            return numberFormat(Math.round(num));
+        function responsiveChartHeight(desktopHeight) {
+            if (window.matchMedia('(max-width: 480px)').matches) return desktopHeight === 320 ? 250 : 240;
+            if (window.matchMedia('(max-width: 782px)').matches) return desktopHeight === 320 ? 280 : 270;
+            return desktopHeight;
         }
 
-        function formatAxisCurrency(value) {
-            var num = Number(value || 0);
-            if (!isFinite(num)) num = 0;
-            return new Intl.NumberFormat('en-US', {
-                style: 'currency',
-                currency: 'USD',
-                minimumFractionDigits: num < 0.1 ? 3 : 2,
-                maximumFractionDigits: num < 0.1 ? 3 : 2
-            }).format(num);
-        }
-
-        function drawAxes(ctx, width, height, maxValue, labels, options) {
-            var opts = options || {};
+        function drawAxes(frame, max, formatter) {
+            var ctx = frame.ctx;
             var left = 56;
-            var right = width - 28;
-            var top = 24;
-            var bottom = height - 42;
-            var plotW = right - left;
-            var plotH = bottom - top;
-            var steps = 4;
-            var categorical = !!opts.categorical;
-            var valueFormatter = typeof opts.valueFormatter === 'function' ? opts.valueFormatter : formatAxisNumber;
-            var labelFormatter = typeof opts.labelFormatter === 'function' ? opts.labelFormatter : formatShortDate;
-
-            ctx.clearRect(0, 0, width, height);
-            ctx.fillStyle = '#ffffff';
-            ctx.fillRect(0, 0, width, height);
-            ctx.strokeStyle = '#e8edf4';
-            ctx.lineWidth = 1;
-
-            for (var i = 0; i <= steps; i++) {
-                var y = top + ((plotH / steps) * i);
+            var right = frame.width - 16;
+            var top = 18;
+            var bottom = frame.height - 42;
+            ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            for (var step = 0; step <= 4; step += 1) {
+                var y = bottom - (bottom - top) * step / 4;
+                ctx.strokeStyle = '#e2e8f0';
+                ctx.lineWidth = 1;
                 ctx.beginPath();
                 ctx.moveTo(left, y);
                 ctx.lineTo(right, y);
                 ctx.stroke();
-
-                var value = maxValue - ((maxValue / steps) * i);
-                ctx.fillStyle = '#8ca0b8';
-                ctx.font = '11px Segoe UI, Arial, sans-serif';
-                ctx.textAlign = 'right';
-                ctx.fillText(String(valueFormatter(value)), left - 8, y + 4);
+                ctx.fillStyle = '#64748b';
+                ctx.fillText(formatter(max * step / 4), left - 8, y);
             }
+            return {left: left, right: right, top: top, bottom: bottom};
+        }
 
-            var requestedLabels = Number(opts.maxLabels || (categorical ? (labels.length <= 12 ? labels.length : 8) : 7));
-            if (!isFinite(requestedLabels) || requestedLabels < 2) {
-                requestedLabels = categorical ? 8 : 7;
+        function setChartTooltip(canvas, series, box, slot, describe) {
+            if (!canvas || !canvas.parentElement) return;
+            var wrap = canvas.parentElement;
+            var tooltip = wrap.querySelector('.cbia-usage-chart-tooltip');
+            if (!tooltip) {
+                tooltip = document.createElement('div');
+                tooltip.className = 'cbia-usage-chart-tooltip';
+                tooltip.hidden = true;
+                tooltip.setAttribute('aria-hidden', 'true');
+                wrap.appendChild(tooltip);
             }
-            var targetLabels = Math.max(2, Math.min(labels.length || 1, Math.round(requestedLabels)));
-            var labelStep = Math.max(1, Math.ceil(labels.length / Math.max(1, targetLabels)));
-            var bandW = labels.length ? (plotW / Math.max(1, labels.length)) : plotW;
-            var lastDrawnX = null;
-            var minGap = categorical ? 38 : 34;
-            labels.forEach(function (label, index) {
-                if (index % labelStep !== 0 && index !== labels.length - 1) return;
-                var x = categorical
-                    ? left + (bandW * index) + (bandW / 2)
-                    : (labels.length === 1
-                        ? left + (plotW / 2)
-                        : left + ((plotW / Math.max(1, labels.length - 1)) * index));
-                if (lastDrawnX !== null && Math.abs(x - lastDrawnX) < minGap && index !== labels.length - 1) return;
-                lastDrawnX = x;
-                ctx.fillStyle = '#8ca0b8';
-                ctx.font = '11px Segoe UI, Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(String(labelFormatter(label, index, labels)), x, height - 8);
-            });
-
-            return {
-                left: left,
-                right: right,
-                top: top,
-                bottom: bottom,
-                width: plotW,
-                height: plotH
-            };
-        }
-
-        function getNiceCountAxisMax(value, minimum) {
-            var num = Number(value || 0);
-            if (!isFinite(num) || num <= 0) num = 1;
-            var min = Number(minimum || 0);
-            if (!isFinite(min) || min < 0) min = 0;
-            num = Math.max(num, min);
-
-            if (num <= 4) return 4;
-            if (num <= 8) return 8;
-            if (num <= 12) return 12;
-
-            var magnitude = Math.pow(10, Math.floor(Math.log(num) / Math.LN10));
-            var residual = num / magnitude;
-            var niceResidual = 10;
-            if (residual <= 1) {
-                niceResidual = 1;
-            } else if (residual <= 2) {
-                niceResidual = 2;
-            } else if (residual <= 5) {
-                niceResidual = 5;
+            canvas._cbiaUsageTooltip = {series: series, box: box, slot: slot, describe: describe, tooltip: tooltip};
+            if (canvas.getAttribute('data-cbia-tooltip-bound') === '1') return;
+            canvas.setAttribute('data-cbia-tooltip-bound', '1');
+            function hideTooltip() {
+                var state = canvas._cbiaUsageTooltip;
+                if (state && state.tooltip) state.tooltip.hidden = true;
             }
-            return niceResidual * magnitude;
-        }
-
-        function getNiceCurrencyAxisMax(value, minimum) {
-            var num = Number(value || 0);
-            if (!isFinite(num) || num <= 0) num = 0.01;
-            var min = Number(minimum || 0);
-            if (!isFinite(min) || min < 0) min = 0;
-            num = Math.max(num, min);
-
-            if (num <= 0.02) return 0.02;
-            if (num <= 0.05) return 0.05;
-            if (num <= 0.10) return 0.10;
-            if (num <= 0.20) return 0.20;
-            if (num <= 0.50) return 0.50;
-            if (num <= 1.00) return 1.00;
-            if (num <= 2.00) return 2.00;
-            if (num <= 5.00) return 5.00;
-
-            var magnitude = Math.pow(10, Math.floor(Math.log(num) / Math.LN10));
-            var residual = num / magnitude;
-            var niceResidual = 10;
-            if (residual <= 1) {
-                niceResidual = 1;
-            } else if (residual <= 2) {
-                niceResidual = 2;
-            } else if (residual <= 5) {
-                niceResidual = 5;
+            function showTooltip(event) {
+                var state = canvas._cbiaUsageTooltip;
+                if (!state || !state.series.length || !state.slot) return hideTooltip();
+                var rect = canvas.getBoundingClientRect();
+                var x = event.clientX - rect.left;
+                var y = event.clientY - rect.top;
+                if (x < state.box.left || x > state.box.right || y < state.box.top || y > state.box.bottom) return hideTooltip();
+                var index = Math.max(0, Math.min(state.series.length - 1, Math.floor((x - state.box.left) / state.slot)));
+                var lines = state.describe(state.series[index], index);
+                state.tooltip.innerHTML = lines.map(function (line, lineIndex) {
+                    return lineIndex === 0 ? '<strong>' + escapeHtml(line) + '</strong>' : '<span>' + escapeHtml(line) + '</span>';
+                }).join('');
+                state.tooltip.style.left = Math.max(12, Math.min(rect.width - 12, x)) + 'px';
+                state.tooltip.style.top = Math.max(12, y - 10) + 'px';
+                state.tooltip.hidden = false;
             }
-            return niceResidual * magnitude;
+            canvas.addEventListener('pointermove', showTooltip);
+            canvas.addEventListener('pointerdown', showTooltip);
+            canvas.addEventListener('pointerleave', hideTooltip);
         }
 
-        function getBandCenter(area, count, index) {
-            var bandW = area.width / Math.max(1, count);
-            return area.left + (bandW * index) + (bandW / 2);
-        }
-
-        function getUsageChartColors() {
-            return {
-                text: '#5B8DEF',
-                image: '#7BC67B',
-                low: '#25a56a',
-                medium: '#2388c9',
-                high: '#e78424',
-                auto: '#8794a8',
-                unknown: '#b2bcc9',
-                featured: '#d77b17',
-                content: '#18a0ae',
-                other: '#8794a8'
-            };
-        }
-
-        function getImageQualitySeries(filtered) {
-            var counts = { low: 0, medium: 0, high: 0, auto: 0, unknown: 0 };
-            filtered.forEach(function (row) {
-                if (String(row.type || '') !== 'image') return;
-                counts[normalizeImageQuality(row)] += 1;
-            });
-            return [
-                { key: 'low', label: t('low', 'Low'), value: counts.low },
-                { key: 'medium', label: t('medium', 'Medium'), value: counts.medium },
-                { key: 'high', label: t('high', 'High'), value: counts.high },
-                { key: 'auto', label: t('automatic', 'Automatic'), value: counts.auto },
-                { key: 'unknown', label: t('unknown', 'Unknown'), value: counts.unknown }
-            ];
-        }
-
-        function getImageRoleSeries(filtered) {
-            var counts = { featured: 0, content: 0, other: 0 };
-            filtered.forEach(function (row) {
-                if (String(row.type || '') !== 'image') return;
-                counts[normalizeImageRole(row)] += 1;
-            });
-            return [
-                { key: 'featured', label: t('featured', 'Featured'), value: counts.featured },
-                { key: 'content', label: t('internal', 'Internal'), value: counts.content },
-                { key: 'other', label: t('other', 'Other'), value: counts.other }
-            ];
-        }
-
-        function getTypeActivityBuckets(filtered) {
-            var counts = { text: 0, image: 0 };
-            filtered.forEach(function (row) {
-                var key = String(row.type || 'text');
-                if (!Object.prototype.hasOwnProperty.call(counts, key)) key = 'text';
-                counts[key] += 1;
-            });
-            return [
-                { key: 'text', label: 'Text', value: counts.text },
-                { key: 'image', label: 'Image', value: counts.image }
-            ];
-        }
-
-        function renderActivityChart(filtered) {
-            var series = getActivitySeries(filtered);
-            if (!activityCanvas || !activityEmpty) return;
-            if (!series.length) {
-                activityCanvas.hidden = true;
-                activityEmpty.hidden = false;
-                return;
+        function renderActivity(filtered, summary) {
+            var canvas = document.getElementById('cbia-usage-activity-chart');
+            var empty = document.getElementById('cbia-usage-activity-empty');
+            var accessible = document.getElementById('cbia-usage-activity-data');
+            var hint = document.getElementById('cbia-usage-activity-hint');
+            if (!canvas) return;
+            var raw = canUseSummaryDataset() && Array.isArray(summary.dailySeries) ? summary.dailySeries : seriesFromRows(filtered);
+            var series = aggregateSeries(raw);
+            var values = series.map(function (item) { return Number(item[currentMetric] || 0); });
+            var max = Math.max.apply(null, values.concat([0]));
+            if (empty) empty.hidden = max > 0;
+            if (empty) {
+                var emptyLabel = empty.querySelector('span');
+                if (emptyLabel) emptyLabel.textContent = currentMetric === 'cost' && Number(summary.totalCalls || 0) > 0 ? t('costUnavailable') : t('noEventsPeriod');
             }
-
-            activityCanvas.hidden = false;
-            activityEmpty.hidden = true;
-
-            var chart = setupCanvas(activityCanvas);
-            var ctx = chart.ctx;
-            var labels = series.map(function (item) { return item.day; });
-            var numericTotals = series.map(function (item) {
-                if (item && item.calls !== null && item.calls !== '' && isFinite(Number(item.calls))) {
-                    return Math.max(0, Number(item.calls));
-                }
-                return null;
-            });
-            var positiveTotals = numericTotals.filter(function (value) {
-                return value !== null && value > 0;
-            });
-            if (!positiveTotals.length) {
-                activityCanvas.hidden = true;
-                activityEmpty.hidden = false;
-                return;
+            canvas.hidden = max <= 0;
+            if (max <= 0 && canvas.parentElement) {
+                var staleActivityTooltip = canvas.parentElement.querySelector('.cbia-usage-chart-tooltip');
+                if (staleActivityTooltip) staleActivityTooltip.hidden = true;
             }
-            var rawMaxValue = Math.max.apply(null, positiveTotals.concat([1]));
-            var maxValue = getNiceCountAxisMax(rawMaxValue, 4);
-            var area = drawAxes(ctx, chart.width, chart.height, maxValue, labels, {
-                categorical: false,
-                valueFormatter: formatAxisNumber,
-                maxLabels: 8
-            });
-            var points = series.map(function (item, index) {
-                var total = numericTotals[index];
-                var x = (series.length === 1)
-                    ? area.left + (area.width / 2)
-                    : area.left + ((area.width / Math.max(1, series.length - 1)) * index);
-                var y = total === null ? null : area.bottom - ((Math.max(0, total) / maxValue) * area.height);
-                return { x: x, y: y, total: total };
-            });
-
-            if (!points.length) {
-                return;
+            var granularityKey = 'granularity' + String(payload.granularity || 'day').charAt(0).toUpperCase() + String(payload.granularity || 'day').slice(1);
+            if (hint) hint.textContent = (currentMetric === 'cost' ? t('activityCostHint') : t('activityCallsHint')) + ' ' + t(granularityKey) + '. ' + periodInfo().label + '.';
+            canvas.setAttribute('aria-label', (currentMetric === 'cost' ? t('cost') : t('calls')) + '. ' + periodInfo().label);
+            if (accessible) {
+                accessible.innerHTML = series.map(function (item) {
+                    var value = currentMetric === 'cost' ? currencyFormat(item.cost) : numberFormat(item.calls);
+                    return '<li>' + escapeHtml(item.label + ': ' + value + '; ' + t('text') + ' ' + numberFormat(item.textCalls) + '; ' + t('image') + ' ' + numberFormat(item.imageCalls)) + '</li>';
+                }).join('');
             }
-
-            var gradient = ctx.createLinearGradient(0, area.top, 0, area.bottom);
-            gradient.addColorStop(0, 'rgba(91, 141, 239, 0.28)');
-            gradient.addColorStop(1, 'rgba(91, 141, 239, 0.02)');
-
-            var validPoints = points.filter(function (point) {
-                return point && point.y !== null;
-            });
-
-            if (validPoints.length > 1) {
-                ctx.beginPath();
-                ctx.moveTo(validPoints[0].x, area.bottom);
-                validPoints.forEach(function (point) {
-                    ctx.lineTo(point.x, point.y);
+            if (max <= 0) return;
+            var frame = setupCanvas(canvas, responsiveChartHeight(320));
+            if (!frame) return;
+            var box = drawAxes(frame, max, currentMetric === 'cost' ? currencyFormat : numberFormat);
+            var count = series.length;
+            var slot = (box.right - box.left) / Math.max(1, count);
+            var ctx = frame.ctx;
+            if (currentMetric === 'cost') {
+                series.forEach(function (item, index) {
+                    var value = Number(item.cost || 0);
+                    var height = (box.bottom - box.top) * value / max;
+                    var barWidth = Math.max(2, Math.min(24, slot * 0.62));
+                    ctx.fillStyle = '#2563eb';
+                    ctx.fillRect(box.left + slot * index + (slot - barWidth) / 2, box.bottom - height, barWidth, height);
                 });
-                ctx.lineTo(validPoints[validPoints.length - 1].x, area.bottom);
-                ctx.closePath();
-                ctx.fillStyle = gradient;
-                ctx.fill();
-
-                ctx.beginPath();
-                validPoints.forEach(function (point, index) {
-                    if (index === 0) {
-                        ctx.moveTo(point.x, point.y);
-                    } else {
-                        ctx.lineTo(point.x, point.y);
-                    }
-                });
-                ctx.strokeStyle = '#5B8DEF';
-                ctx.lineWidth = 3;
-                ctx.stroke();
-            } else if (validPoints.length === 1) {
-                ctx.beginPath();
-                ctx.moveTo(validPoints[0].x, area.bottom);
-                ctx.lineTo(validPoints[0].x, validPoints[0].y);
-                ctx.strokeStyle = 'rgba(91, 141, 239, 0.35)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-            }
-
-            var lastLabelX = -9999;
-            points.forEach(function (point) {
-                if (point.y === null || !isFinite(point.total) || point.total <= 0) return;
-                ctx.beginPath();
-                ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
-                ctx.fillStyle = '#ffffff';
-                ctx.fill();
-                ctx.lineWidth = 2;
-                ctx.strokeStyle = '#5B8DEF';
-                ctx.stroke();
-
-                ctx.fillStyle = '#627892';
-                ctx.font = '11px Segoe UI, Arial, sans-serif';
-                ctx.textAlign = 'center';
-                var labelX = Math.max(area.left + 14, Math.min(area.right - 14, point.x));
-                if (Math.abs(labelX - lastLabelX) < 26) return;
-                lastLabelX = labelX;
-                ctx.fillText(numberFormat(point.total), labelX, Math.max(area.top + 10, point.y - 8));
-            });
-        }
-
-        function renderTypeChart(filtered) {
-            var series = getTypeSeries(filtered);
-            if (!typeCanvas || !typeEmpty) return;
-            if (!series.length || !series.some(function (item) { return Number(item.value || 0) > 0; })) {
-                typeCanvas.hidden = true;
-                typeEmpty.hidden = false;
-                return;
-            }
-
-            typeCanvas.hidden = false;
-            typeEmpty.hidden = true;
-
-            var chart = setupCanvas(typeCanvas);
-            var ctx = chart.ctx;
-            var labels = series.map(function (item) { return item.label; });
-            var rawMaxValue = Math.max.apply(null, series.map(function (item) { return Number(item.value || 0); }).concat([1]));
-            var maxValue = getNiceCountAxisMax(rawMaxValue, 4);
-            var area = drawAxes(ctx, chart.width, chart.height, maxValue, labels, {
-                categorical: true,
-                valueFormatter: formatAxisNumber,
-                maxLabels: labels.length
-            });
-            var bandW = area.width / Math.max(1, series.length);
-            var barWidth = Math.max(34, Math.min(86, Math.floor(bandW * 0.58)));
-            var colors = getUsageChartColors();
-
-            series.forEach(function (item, index) {
-                var xCenter = getBandCenter(area, series.length, index);
-                var x = xCenter - (barWidth / 2);
-                var value = Number(item.value || 0);
-                if (!isFinite(value) || value < 0) value = 0;
-                if (value <= 0) return;
-                var barH = Math.max(1, (value / maxValue) * area.height);
-                var y = area.bottom - barH;
-                ctx.fillStyle = colors[item.key] || colors.text;
-                ctx.fillRect(x, y, barWidth, barH);
-                var labelY = y + Math.min(22, Math.max(15, (barH * 0.45)));
-                var inside = barH >= 28;
-                ctx.fillStyle = inside ? '#ffffff' : '#627892';
-                ctx.font = inside ? '600 12px Segoe UI, Arial, sans-serif' : '11px Segoe UI, Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(numberFormat(value), xCenter, inside ? labelY : Math.max(area.top + 10, y - 6));
-            });
-        }
-
-        function renderImageBreakdownChart(canvas, emptyNode, series) {
-            if (!canvas || !emptyNode) return;
-            var visibleSeries = series.filter(function (item) {
-                return Number(item.value || 0) > 0;
-            });
-            if (!visibleSeries.length) {
-                canvas.hidden = true;
-                emptyNode.hidden = false;
-                return;
-            }
-
-            canvas.hidden = false;
-            emptyNode.hidden = true;
-            var chart = setupCanvas(canvas);
-            var ctx = chart.ctx;
-            var labels = visibleSeries.map(function (item) { return item.label; });
-            var rawMaxValue = Math.max.apply(null, visibleSeries.map(function (item) {
-                return Number(item.value || 0);
-            }).concat([1]));
-            var maxValue = getNiceCountAxisMax(rawMaxValue, 4);
-            var area = drawAxes(ctx, chart.width, chart.height, maxValue, labels, {
-                categorical: true,
-                valueFormatter: formatAxisNumber,
-                maxLabels: labels.length
-            });
-            var bandW = area.width / Math.max(1, visibleSeries.length);
-            var barWidth = Math.max(30, Math.min(78, Math.floor(bandW * 0.56)));
-            var colors = getUsageChartColors();
-
-            visibleSeries.forEach(function (item, index) {
-                var xCenter = getBandCenter(area, visibleSeries.length, index);
-                var value = Number(item.value || 0);
-                var barH = Math.max(2, (value / maxValue) * area.height);
-                var x = xCenter - (barWidth / 2);
-                var y = area.bottom - barH;
-                ctx.fillStyle = colors[item.key] || colors.unknown;
-                ctx.fillRect(x, y, barWidth, barH);
-                ctx.fillStyle = barH >= 28 ? '#ffffff' : '#627892';
-                ctx.font = barH >= 28 ? '600 12px Segoe UI, Arial, sans-serif' : '11px Segoe UI, Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(numberFormat(value), xCenter, barH >= 28 ? y + 19 : Math.max(area.top + 10, y - 6));
-            });
-        }
-
-        function renderImageQualityChart(filtered) {
-            renderImageBreakdownChart(imageQualityCanvas, imageQualityEmpty, getImageQualitySeries(filtered));
-        }
-
-        function renderImageRoleChart(filtered) {
-            renderImageBreakdownChart(imageRoleCanvas, imageRoleEmpty, getImageRoleSeries(filtered));
-        }
-
-        function updateFilterSummary(filtered) {
-            var controls = [modelSelect, typeSelect, providerSelect, statusSelect, requestStatusSelect, qualitySelect, imageRoleSelect, fromInput, toInput];
-            var activeCount = controls.reduce(function (count, control) {
-                return count + (control && String(control.value || '').trim() ? 1 : 0);
-            }, getSearchValue() ? 1 : 0);
-            var imageCount = filtered.filter(function (row) {
-                return String(row.type || '') === 'image';
-            }).length;
-            if (filterSummary) {
-                filterSummary.textContent = numberFormat(filtered.length) + ' ' + t('events', 'events')
-                    + ' · ' + numberFormat(imageCount) + ' ' + t('images', 'images')
-                    + ' · ' + (activeCount ? (numberFormat(activeCount) + ' ' + t('activeFilters', 'active filters')) : t('noActiveFilters', 'No additional filters'));
-            }
-            if (clearFiltersBtn) {
-                clearFiltersBtn.disabled = activeCount === 0;
-            }
-        }
-
-        function renderMonthlyChart() {
-            var series = getMonthlyBuckets();
-            if (!monthlyCanvas || !monthlyEmpty) return;
-            if (!series.length) {
-                monthlyCanvas.hidden = true;
-                monthlyEmpty.hidden = false;
-                return;
-            }
-
-            monthlyCanvas.hidden = false;
-            monthlyEmpty.hidden = true;
-
-            var chart = setupCanvas(monthlyCanvas);
-            var ctx = chart.ctx;
-            var labels = series.map(function (item) { return item.month; });
-            var rawMaxValue = Math.max.apply(null, series.map(function (item) {
-                return eurToUsd(Number(item.text_cost_eur || 0) + Number(item.image_cost_eur || 0));
-            }).concat([0.01]));
-            var maxValue = getNiceCurrencyAxisMax(rawMaxValue, 0.05);
-            var area = drawAxes(ctx, chart.width, chart.height, maxValue, labels, {
-                categorical: true,
-                valueFormatter: formatAxisCurrency,
-                labelFormatter: formatMonthTick,
-                maxLabels: labels.length
-            });
-            var bandW = area.width / Math.max(1, series.length);
-            var barWidth = Math.max(12, Math.min(44, Math.floor(bandW * 0.56)));
-            var colors = getUsageChartColors();
-
-            series.forEach(function (item, index) {
-                var xCenter = getBandCenter(area, series.length, index);
-                var x = xCenter - (barWidth / 2);
-                var stack = [
-                    { value: eurToUsd(Number(item.text_cost_eur || 0)), color: colors.text },
-                    { value: eurToUsd(Number(item.image_cost_eur || 0)), color: colors.image }
-                ];
-                var total = 0;
-                stack.forEach(function (seg) {
-                    total += Number(seg.value || 0);
-                });
-                if (!isFinite(total) || total <= 0) return;
-
-                var currentBottom = area.bottom;
-                stack.forEach(function (seg) {
-                    var value = Number(seg.value || 0);
-                    if (!isFinite(value) || value <= 0) return;
-                    var barH = Math.max(2, (value / maxValue) * area.height);
-                    var y = currentBottom - barH;
-                    ctx.fillStyle = seg.color;
-                    ctx.fillRect(x, y, barWidth, barH);
-                    currentBottom = y;
-                });
-                var totalBarHeight = area.bottom - currentBottom;
-                var labelY = currentBottom + Math.min(22, Math.max(15, (totalBarHeight * 0.45)));
-                var inside = totalBarHeight >= 34;
-                var showLabel = inside && barWidth >= 24;
-                if (!showLabel) return;
-                ctx.fillStyle = inside ? '#ffffff' : '#627892';
-                ctx.font = inside ? '600 12px Segoe UI, Arial, sans-serif' : '11px Segoe UI, Arial, sans-serif';
-                ctx.textAlign = 'center';
-                ctx.fillText(formatAxisCurrency(total), xCenter, inside ? labelY : Math.max(area.top + 10, currentBottom - 6));
-            });
-        }
-
-        function renderKpis(filtered) {
-            var totalCalls = filtered.length;
-            var uniquePostsCount = 0;
-            var uniqueUsersCount = 0;
-            var totalTokens = 0;
-            var totalCost = 0;
-            var avg = 0;
-            var avgCostPerPost = 0;
-            var knownCostEvents = 0;
-            var unknownCostEvents = 0;
-
-            if (canUseSummaryDataset()) {
-                var summary = getActiveSummary();
-                if (summary) {
-                    totalCalls = Number(summary.totalCalls || 0);
-                    uniquePostsCount = Number(summary.uniquePosts || 0);
-                    uniqueUsersCount = Number(summary.uniqueUsers || 0);
-                    totalTokens = Number(summary.totalTokens || 0);
-                    totalCost = Number(summary.totalCost || 0);
-                    avg = Number(summary.avgTokens || 0);
-                    avgCostPerPost = Number(summary.avgCostPerPost || 0);
-                    knownCostEvents = Number(summary.knownCostEvents || 0);
-                    unknownCostEvents = Number(summary.unknownCostEvents || 0);
-                }
             } else {
-                var uniquePosts = new Set();
-                var uniqueUsers = new Set();
-                filtered.forEach(function (row) {
-                    if (row.post_id) uniquePosts.add(String(row.post_id));
-                    if (row.user_id) uniqueUsers.add(String(row.user_id));
-                    totalTokens += Number(row.tokens_total || 0);
-                    if (hasNumericValue(row.cost_eur)) {
-                        totalCost += Number(row.cost_eur);
-                        knownCostEvents += 1;
-                    } else {
-                        unknownCostEvents += 1;
-                    }
+                ctx.beginPath();
+                series.forEach(function (item, index) {
+                    var x = box.left + slot * (index + 0.5);
+                    var y = box.bottom - (box.bottom - box.top) * Number(item.calls || 0) / max;
+                    if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
                 });
-                uniquePostsCount = uniquePosts.size;
-                uniqueUsersCount = uniqueUsers.size;
-                avg = totalCalls ? Math.round(totalTokens / totalCalls) : 0;
-                avgCostPerPost = uniquePostsCount ? (totalCost / uniquePostsCount) : 0;
+                ctx.lineTo(box.left + slot * (count - 0.5), box.bottom);
+                ctx.lineTo(box.left + slot * 0.5, box.bottom);
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(37, 99, 235, 0.12)';
+                ctx.fill();
+                ctx.beginPath();
+                series.forEach(function (item, index) {
+                    var x = box.left + slot * (index + 0.5);
+                    var y = box.bottom - (box.bottom - box.top) * Number(item.calls || 0) / max;
+                    if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                });
+                ctx.strokeStyle = '#2563eb';
+                ctx.lineWidth = 2.5;
+                ctx.stroke();
             }
-            totalCost = canViewCosts ? eurToUsd(totalCost) : 0;
-            avgCostPerPost = canViewCosts ? eurToUsd(avgCostPerPost) : 0;
-
-            var callsNode = document.getElementById('cbia-usage-kpi-calls');
-            var postsNode = document.getElementById('cbia-usage-kpi-posts');
-            var usersNode = document.getElementById('cbia-usage-kpi-users');
-            var avgNode = document.getElementById('cbia-usage-kpi-avg');
-            var costTotalNode = document.getElementById('cbia-usage-kpi-cost-total');
-            var costBlogNode = document.getElementById('cbia-usage-kpi-cost-blog');
-            var coverageNode = document.getElementById('cbia-usage-cost-coverage');
-
-            if (callsNode) callsNode.textContent = numberFormat(totalCalls);
-            if (postsNode) postsNode.textContent = numberFormat(uniquePostsCount);
-            if (usersNode) usersNode.textContent = numberFormat(uniqueUsersCount);
-            if (avgNode) avgNode.textContent = numberFormat(avg);
-            if (costTotalNode) costTotalNode.textContent = canViewCosts ? currencyFormat(totalCost) : '-';
-            if (costBlogNode) costBlogNode.textContent = canViewCosts ? currencyFormat(avgCostPerPost) : '-';
-            if (coverageNode) {
-                var coverageTotal = knownCostEvents + unknownCostEvents;
-                var coverage = coverageTotal ? Math.round((knownCostEvents / coverageTotal) * 1000) / 10 : 0;
-                coverageNode.textContent = ' ' + t('costCoverage', 'Local cost coverage') + ': ' + coverage + '% · ' + t('unknownEvents', 'Unknown events') + ': ' + numberFormat(unknownCostEvents) + '.';
-            }
-        }
-
-        function aggregatePostSummary(row, filteredRows) {
-            if (!row) return null;
-            var postId = Number(row.post_id || 0);
-            var relatedRows = (Array.isArray(filteredRows) ? filteredRows : []).filter(function (item) {
-                return Number(item.post_id || 0) === postId;
+            var labelEvery = Math.max(1, Math.ceil(count / 7));
+            ctx.fillStyle = '#64748b';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'top';
+            series.forEach(function (item, index) {
+                if (index % labelEvery !== 0 && index !== count - 1) return;
+                ctx.fillText(item.label, box.left + slot * (index + 0.5), box.bottom + 10);
             });
-            if (!relatedRows.length) {
-                relatedRows = [row];
-            }
-
-            var summary = {
-                post_id: postId,
-                post_title: row.post_title || 'Post summary',
-                post_edit_url: row.post_edit_url || '',
-                latest_ts: row.ts || '',
-                latest_user_name: row.user_name || '-',
-                models: [],
-                types: [],
-                call_count: relatedRows.length,
-                ok_count: 0,
-                fail_count: 0,
-                billable_fail_count: 0,
-                text_calls: 0,
-                seo_calls: 0,
-                image_calls: 0,
-                featured_images: 0,
-                internal_images: 0,
-                token_in: 0,
-                token_out: 0,
-                token_total: 0,
-                token_events: 0,
-                total_cost: 0
-            };
-
-            var modelsSeen = {};
-            var typesSeen = {};
-            relatedRows.forEach(function (item, index) {
-                if (index === 0 && item.ts) {
-                    summary.latest_ts = item.ts;
-                }
-                if (item.ok) summary.ok_count += 1;
-                else summary.fail_count += 1;
-                if (!item.ok && hasNumericValue(item.cost_eur) && Number(item.cost_eur) > 0) {
-                    summary.billable_fail_count += 1;
-                }
-                if (hasNumericValue(item.cost_eur)) {
-                    summary.total_cost += Number(item.cost_eur || 0);
-                }
-
-                var itemType = String(item.type || 'text');
-                if (!typesSeen[itemType]) {
-                    typesSeen[itemType] = true;
-                    summary.types.push(itemType);
-                }
-                var itemModel = String(item.model || '').trim();
-                if (itemModel && !modelsSeen[itemModel]) {
-                    modelsSeen[itemModel] = true;
-                    summary.models.push(itemModel);
-                }
-
-                if (itemType === 'image') {
-                    summary.image_calls += 1;
-                    var section = String(item.section || '').trim();
-                    var sectionLabel = String(item.section_label || '').trim();
-                    if (section === 'featured' || section === 'intro' || sectionLabel === 'featured' || sectionLabel === 'destacada') {
-                        summary.featured_images += 1;
-                    } else {
-                        summary.internal_images += 1;
-                    }
-                } else {
-                    if (itemType === 'seo') summary.seo_calls += 1;
-                    else summary.text_calls += 1;
-                    summary.token_in += Number(item.tokens_in || 0);
-                    summary.token_out += Number(item.tokens_out || 0);
-                    summary.token_total += Number(item.tokens_total || 0);
-                    summary.token_events += 1;
-                }
+            setChartTooltip(canvas, series, box, slot, function (item) {
+                return [
+                    item.label,
+                    (currentMetric === 'cost' ? t('cost') + ': ' + currencyFormat(item.cost) : t('calls') + ': ' + numberFormat(item.calls)),
+                    t('text') + ': ' + numberFormat(item.textCalls),
+                    t('image') + ': ' + numberFormat(item.imageCalls)
+                ];
             });
-
-            return summary;
         }
 
-        function costReasonText(reason) {
-            var labels = {
-                automatic_quality_without_usage: t('automaticQualityWithoutUsage', 'Cost not determined: OpenAI selected the quality automatically and returned no sufficient usage data.'),
-                timeout_without_response_usage: t('timeoutWithoutResponseUsage', 'Cost not determined: the local connection timed out before usage data was received.'),
-                output_estimate_only: t('outputEstimateOnly', 'Output estimate only; this is not the total invoiced cost.'),
-                api_usage: t('apiUsage', 'Calculated from API usage and the local pricing catalog.'),
-                cache_breakdown_missing_all_input_priced_as_miss: t('cacheBreakdownMissing', 'Estimated conservatively because the API did not return the cache breakdown; all input was priced as cache miss.'),
-                official_reconciliation: t('officialReconciliation', 'Officially reconciled cost.'),
-                model_without_pricing: t('modelWithoutPricing', 'The effective model has no local price.'),
-                missing_token_usage: t('missingTokenUsage', 'The response did not include sufficient token usage.'),
-                insufficient_usage_data: t('insufficientUsageData', 'Insufficient usage data.')
-            };
-            return labels[String(reason || '')] || labels.insufficient_usage_data;
+        function renderType(summary) {
+            var chart = document.getElementById('cbia-usage-type-chart');
+            var empty = document.getElementById('cbia-usage-type-empty');
+            if (!chart) return;
+            var counts = summary.typeCounts || {};
+            var textCount = Number(counts.text || 0);
+            var imageCount = Number(counts.image || 0);
+            var total = textCount + imageCount;
+            if (empty) empty.hidden = total > 0;
+            chart.hidden = total <= 0;
+            var textPercent = total ? 100 * textCount / total : 0;
+            var imagePercent = total ? 100 * imageCount / total : 0;
+            var textBar = chart.querySelector('.cbia-usage-type-bar .is-text');
+            var imageBar = chart.querySelector('.cbia-usage-type-bar .is-image');
+            var textValue = chart.querySelector('[data-usage-type="text"]');
+            var imageValue = chart.querySelector('[data-usage-type="image"]');
+            if (textBar) textBar.style.width = textPercent + '%';
+            if (imageBar) imageBar.style.width = imagePercent + '%';
+            if (textValue) textValue.textContent = numberFormat(textCount) + ' · ' + numberFormat(textPercent, 1) + '%';
+            if (imageValue) imageValue.textContent = numberFormat(imageCount) + ' · ' + numberFormat(imagePercent, 1) + '%';
+            chart.setAttribute('aria-label', t('typeDistributionLabel') + ': ' + t('text') + ' ' + numberFormat(textPercent, 1) + '%, ' + t('image') + ' ' + numberFormat(imagePercent, 1) + '%.');
         }
 
-        function renderDetail(row, filteredRows) {
-            if (!detailPanel) return;
+        function renderHorizontalBars(nodeId, emptyId, values, labels) {
+            var node = document.getElementById(nodeId);
+            var empty = document.getElementById(emptyId);
+            if (!node) return;
+            var sorted = Object.keys(values).map(function (key) {
+                return {key: key, label: labels[key] || key, value: Number(values[key] || 0)};
+            }).sort(function (a, b) {
+                return b.value - a.value || a.label.localeCompare(b.label);
+            });
+            var total = sorted.reduce(function (sum, item) { return sum + item.value; }, 0);
+            node.hidden = total <= 0;
+            if (empty) empty.hidden = total > 0;
+            node.innerHTML = sorted.map(function (item) {
+                var percent = total ? 100 * item.value / total : 0;
+                return '<div class="cbia-usage-horizontal-row"><div><span>' + escapeHtml(item.label) + '</span><strong>' + escapeHtml(numberFormat(item.value) + ' · ' + numberFormat(percent, 1) + '%') + '</strong></div><span class="cbia-usage-horizontal-track"><i style="width:' + percent + '%"></i></span></div>';
+            }).join('');
+        }
+
+        function imageBreakdowns(filtered) {
+            var qualities = {auto: 0, low: 0, medium: 0, high: 0, unknown: 0};
+            var roles = {featured: 0, content: 0, other: 0};
+            filtered.forEach(function (row) {
+                if (String(row.type || '') !== 'image') return;
+                qualities[normalizeQuality(row)] += 1;
+                roles[normalizeRole(row)] += 1;
+            });
+            renderHorizontalBars('cbia-usage-image-quality-chart', 'cbia-usage-image-quality-empty', qualities, {
+                auto: t('automatic'), low: t('low'), medium: t('medium'), high: t('high'), unknown: t('unknown')
+            });
+            renderHorizontalBars('cbia-usage-image-role-chart', 'cbia-usage-image-role-empty', roles, {
+                featured: t('featured'), content: t('internal'), other: t('other')
+            });
+        }
+
+        function monthlySeries() {
+            var provider = controls.provider ? String(controls.provider.value || '') : '';
+            var model = controls.model ? String(controls.model.value || '') : '';
+            var emptySeries = (Array.isArray(payload.monthlySeries) ? payload.monthlySeries : []).map(function (item) {
+                return {month: item.month, text_cost_eur: 0, image_cost_eur: 0, seo_cost_eur: 0, cost_eur: 0};
+            });
+            if (provider && model) {
+                return payload.monthlySeriesByProviderModel && payload.monthlySeriesByProviderModel[provider] && payload.monthlySeriesByProviderModel[provider][model]
+                    ? payload.monthlySeriesByProviderModel[provider][model]
+                    : emptySeries;
+            }
+            if (provider) {
+                return payload.monthlySeriesByProvider && payload.monthlySeriesByProvider[provider]
+                    ? payload.monthlySeriesByProvider[provider]
+                    : emptySeries;
+            }
+            if (model) {
+                return summariesByModel[model] && Array.isArray(summariesByModel[model].monthlySeries)
+                    ? summariesByModel[model].monthlySeries
+                    : emptySeries;
+            }
+            return Array.isArray(payload.monthlySeries) ? payload.monthlySeries : [];
+        }
+
+        function monthlyValue(item, key) {
+            if (hasNumericValue(item[key])) return Number(item[key]);
+            var camel = key.replace(/_([a-z])/g, function (_match, letter) { return letter.toUpperCase(); });
+            return Number(item[camel] || 0);
+        }
+
+        function renderMonthly() {
+            var canvas = document.getElementById('cbia-usage-monthly-chart');
+            var empty = document.getElementById('cbia-usage-monthly-empty');
+            var accessible = document.getElementById('cbia-usage-monthly-data');
+            if (!canvas || !canViewCosts) return;
+            var series = monthlySeries();
+            var totals = series.map(function (item) {
+                return monthlyValue(item, 'text_cost_eur') + monthlyValue(item, 'image_cost_eur') + monthlyValue(item, 'seo_cost_eur');
+            });
+            var max = Math.max.apply(null, totals.concat([0]));
+            canvas.hidden = max <= 0;
+            if (max <= 0 && canvas.parentElement) {
+                var staleMonthlyTooltip = canvas.parentElement.querySelector('.cbia-usage-chart-tooltip');
+                if (staleMonthlyTooltip) staleMonthlyTooltip.hidden = true;
+            }
+            if (empty) empty.hidden = max > 0;
+            if (accessible) {
+                accessible.innerHTML = series.map(function (item, index) {
+                    return '<li>' + escapeHtml(formatMonth(item.month) + ': ' + t('text') + ' ' + currencyFormat(monthlyValue(item, 'text_cost_eur')) + '; ' + t('image') + ' ' + currencyFormat(monthlyValue(item, 'image_cost_eur')) + '; ' + t('seo') + ' ' + currencyFormat(monthlyValue(item, 'seo_cost_eur')) + '; ' + t('total') + ' ' + currencyFormat(totals[index])) + '</li>';
+                }).join('');
+            }
+            canvas.setAttribute('aria-label', t('rollingCostChart'));
+            if (max <= 0) return;
+            var frame = setupCanvas(canvas, responsiveChartHeight(300));
+            if (!frame) return;
+            var box = drawAxes(frame, max, currencyFormat);
+            var slot = (box.right - box.left) / Math.max(1, series.length);
+            var barWidth = Math.max(6, Math.min(34, slot * 0.62));
+            var ctx = frame.ctx;
+            series.forEach(function (item, index) {
+                var parts = [
+                    {value: monthlyValue(item, 'text_cost_eur'), color: '#2563eb'},
+                    {value: monthlyValue(item, 'image_cost_eur'), color: '#8b5cf6'},
+                    {value: monthlyValue(item, 'seo_cost_eur'), color: '#14b8a6'}
+                ];
+                var cursor = box.bottom;
+                parts.forEach(function (part) {
+                    var height = (box.bottom - box.top) * part.value / max;
+                    ctx.fillStyle = part.color;
+                    ctx.fillRect(box.left + slot * index + (slot - barWidth) / 2, cursor - height, barWidth, height);
+                    cursor -= height;
+                });
+                ctx.fillStyle = '#64748b';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(formatMonth(item.month), box.left + slot * (index + 0.5), box.bottom + 10);
+            });
+            setChartTooltip(canvas, series, box, slot, function (item, index) {
+                return [
+                    formatMonth(item.month),
+                    t('text') + ': ' + currencyFormat(monthlyValue(item, 'text_cost_eur')),
+                    t('image') + ': ' + currencyFormat(monthlyValue(item, 'image_cost_eur')),
+                    t('seo') + ': ' + currencyFormat(monthlyValue(item, 'seo_cost_eur')),
+                    t('total') + ': ' + currencyFormat(totals[index])
+                ];
+            });
+        }
+
+        function comparison(current, previous) {
+            var currentValue = Number(current || 0);
+            var previousValue = Number(previous || 0);
+            if (!isFinite(currentValue) || !isFinite(previousValue)) return {text: t('noComparison'), status: 'none'};
+            if (previousValue === 0) {
+                return currentValue > 0 ? {text: '▲ ' + t('newActivity'), status: 'up'} : {text: t('noComparison'), status: 'none'};
+            }
+            var percent = 100 * (currentValue - previousValue) / Math.abs(previousValue);
+            if (!isFinite(percent)) return {text: t('noComparison'), status: 'none'};
+            var status = Math.abs(percent) < 0.05 ? 'same' : (percent > 0 ? 'up' : 'down');
+            var arrow = status === 'up' ? '▲' : (status === 'down' ? '▼' : '●');
+            var word = status === 'up' ? t('increased') : (status === 'down' ? t('decreased') : t('unchanged'));
+            return {text: arrow + ' ' + numberFormat(Math.abs(percent), 1) + '% ' + word + ' ' + t('vsPreviousPeriod'), status: status};
+        }
+
+        function updateKpi(id, value, current, previous, comparable) {
+            var valueNode = document.getElementById('cbia-usage-kpi-' + id);
+            var compareNode = document.getElementById('cbia-usage-kpi-' + id + '-comparison');
+            if (valueNode) valueNode.textContent = value;
+            if (!compareNode) return;
+            var result = comparable ? comparison(current, previous) : {text: t('noComparison'), status: 'none'};
+            compareNode.textContent = result.text;
+            compareNode.className = 'cbia-usage-kpi-comparison is-' + result.status;
+        }
+
+        function renderKpis(summary) {
+            var previous = previousSummary();
+            var comparable = !!previous;
+            var types = summary.typeCounts || {};
+            var previousTypes = previous && previous.typeCounts ? previous.typeCounts : {};
+            var calls = Number(summary.totalCalls || 0);
+            var known = Number(summary.knownCostEvents || 0);
+            var unknown = Number(summary.unknownCostEvents || Math.max(0, calls - known));
+            var coverage = calls ? Number(summary.costCoveragePercent || (100 * known / calls)) : 0;
+            var previousCoverage = previous ? Number(previous.costCoveragePercent || 0) : 0;
+            var costUnavailable = canViewCosts && known === 0 && unknown > 0;
+            updateKpi('posts', numberFormat(summary.uniquePosts), summary.uniquePosts, previous && previous.uniquePosts, comparable);
+            updateKpi('calls', numberFormat(calls), calls, previous && previous.totalCalls, comparable);
+            updateKpi('images', numberFormat(types.image || 0), types.image, previousTypes.image, comparable);
+            updateKpi('cost-total', costUnavailable ? t('costUnavailable') : currencyFormat(summary.totalCost), summary.totalCost, previous && previous.totalCost, comparable);
+            updateKpi('cost-blog', costUnavailable ? t('costUnavailable') : currencyFormat(summary.avgCostPerPost), summary.avgCostPerPost, previous && previous.avgCostPerPost, comparable);
+            updateKpi('coverage', numberFormat(coverage, 1) + '%', coverage, previousCoverage, comparable);
+            var users = document.getElementById('cbia-usage-kpi-users');
+            var avg = document.getElementById('cbia-usage-kpi-avg');
+            if (users) users.textContent = numberFormat(summary.uniqueUsers);
+            if (avg) avg.textContent = numberFormat(summary.avgTokens);
+            var donut = document.getElementById('cbia-usage-coverage-donut');
+            var badge = document.getElementById('cbia-usage-cost-coverage-badge');
+            var coverageText = document.getElementById('cbia-usage-cost-coverage');
+            if (donut) {
+                donut.style.setProperty('--cbia-coverage', Math.max(0, Math.min(100, coverage)) + '%');
+                donut.setAttribute('aria-label', t('costCoverage') + ': ' + numberFormat(coverage, 1) + '%. ' + numberFormat(known) + ' ' + t('knownEvents') + ', ' + numberFormat(unknown) + ' ' + t('unknownEvents') + '.');
+            }
+            if (badge) badge.textContent = numberFormat(coverage, 1) + '%';
+            if (coverageText) coverageText.textContent = numberFormat(known) + ' ' + t('knownEvents') + ' · ' + numberFormat(unknown) + ' ' + t('unknownEvents');
+        }
+
+        function updateCostControl(filtered, summary) {
+            var drawer = document.getElementById('cbia-usage-cost-drawer');
+            if (!drawer || !canViewCosts) return;
+            var totals = {text: 0, image: 0, seo: 0};
+            filtered.forEach(function (row) {
+                var type = String(row.type || '');
+                if (Object.prototype.hasOwnProperty.call(totals, type) && hasNumericValue(row.cost_eur)) totals[type] += Number(row.cost_eur);
+            });
+            var driver = Object.keys(totals).sort(function (a, b) { return totals[b] - totals[a]; })[0];
+            var driverValue = totals[driver] || 0;
+            var label = document.getElementById('cbia-usage-cost-driver-label');
+            var value = document.getElementById('cbia-usage-cost-driver-value');
+            if (label) label.textContent = driverValue > 0 ? (driver === 'image' ? t('imageGeneration') : (driver === 'text' ? t('textGeneration') : t('seo'))) : t('noKnownCostDriver');
+            if (value) value.textContent = driverValue > 0 ? currencyFormat(driverValue) : '';
+            var config = payload.costControl || {};
+            var configNode = document.getElementById('cbia-usage-cost-config');
+            if (configNode) {
+                configNode.innerHTML = '<h4>' + escapeHtml(t('currentConfiguration')) + '</h4><dl>'
+                    + '<div><dt>' + escapeHtml(t('text')) + '</dt><dd>' + escapeHtml([config.textProvider, config.textModel].filter(Boolean).join(' · ')) + '</dd></div>'
+                    + '<div><dt>' + escapeHtml(t('image')) + '</dt><dd>' + escapeHtml([config.imageProvider, config.imageModel].filter(Boolean).join(' · ')) + '</dd></div>'
+                    + '<div><dt>' + escapeHtml(t('defaultImageQuality')) + '</dt><dd>' + escapeHtml(String(config.defaultImageQuality || '') === 'auto' ? t('automatic') : (config.defaultImageQuality || t('automatic'))) + '</dd></div>'
+                    + '<div><dt>' + escapeHtml(t('internalImages')) + '</dt><dd>' + escapeHtml(numberFormat(config.internalImageCount || 0)) + '</dd></div>'
+                    + '</dl>';
+            }
+            var recs = [];
+            if (Number(summary.unknownCostEvents || 0) > 0) recs.push(t('unknownCostPriority'));
+            if (driver === 'image' && driverValue > 0) recs.push(t('imageCostPriority'));
+            if (driver === 'text' && driverValue > 0) recs.push(t('textCostPriority'));
+            if (String(config.defaultImageQuality || '') === 'auto') recs.push(t('automaticQualityNote'));
+            if (Number(config.internalImageCount || 0) > 1) recs.push(t('multipleImagesNote'));
+            if (!recs.length) recs.push(t('balancedCostPriority'));
+            var list = document.getElementById('cbia-usage-cost-recommendations');
+            if (list) list.innerHTML = recs.map(function (rec) { return '<li>' + escapeHtml(rec) + '</li>'; }).join('');
+        }
+
+        function renderDetail(row, filtered) {
+            var panel = document.getElementById('cbia-usage-detail');
+            if (!panel) return;
             if (!row) {
-                detailPanel.innerHTML = '<div class="cbia-usage-detail-empty">No detail available for the current selection.</div>';
+                panel.innerHTML = '<div class="cbia-usage-detail-empty">' + escapeHtml(t('selectEvent')) + '</div>';
                 return;
             }
-
-            var summary = aggregatePostSummary(row, filteredRows);
-            var actions = '';
-            if (summary && summary.post_edit_url) {
-                actions = '<div class="cbia-usage-detail-actions"><a class="button button-secondary" href="' + escapeHtml(summary.post_edit_url) + '">Open post</a></div>';
+            var postRows = filtered.filter(function (candidate) {
+                return Number(candidate.post_id || 0) > 0 && Number(candidate.post_id) === Number(row.post_id);
+            });
+            if (!postRows.length) postRows = [row];
+            var tokensIn = 0;
+            var tokensOut = 0;
+            var totalTokens = 0;
+            var knownCost = 0;
+            var knownCostEvents = 0;
+            var failed = 0;
+            var types = {};
+            var models = {};
+            postRows.forEach(function (item) {
+                tokensIn += Number(item.tokens_in || item.input_tokens || 0);
+                tokensOut += Number(item.tokens_out || item.output_tokens || 0);
+                totalTokens += Number(item.tokens_total || 0);
+                if (hasNumericValue(item.cost_eur)) {
+                    knownCost += Number(item.cost_eur);
+                    knownCostEvents += 1;
+                }
+                if (!item.ok) failed += 1;
+                if (item.type_label || item.type) types[String(item.type_label || item.type)] = true;
+                if (item.model) models[String(item.model)] = true;
+            });
+            var latestActivity = postRows.reduce(function (latest, item) {
+                var value = String(item.ts || '');
+                return value > latest ? value : latest;
+            }, '');
+            var title = row.post_title || ('#' + String(row.post_id || 0));
+            var editUrl = safeAdminUrl(row.post_edit_url || row.edit_url || '');
+            var editAction = editUrl ? '<a class="button" href="' + escapeHtml(editUrl) + '">' + escapeHtml(t('openPost')) + '</a>' : '';
+            var eventCost = hasNumericValue(row.cost_eur) ? currencyFormat(row.cost_eur) : t('unknownCost');
+            var tokenValue = Number(row.tokens_total || 0) > 0 ? numberFormat(row.tokens_total) : t('tokensNotApplicable');
+            var requestStatusKey = String(row.status || (row.ok ? 'success' : 'error'));
+            var requestStatusLabel = row.status_label || t(requestStatusKey) || requestStatusKey;
+            var costStatusKey = String(row.cost_status || 'unknown');
+            var costStatusLabel = costStatusKey === 'official_reconciled' ? t('officialReconciled') : (t(costStatusKey) || costStatusKey);
+            var detailRows = [
+                [t('date'), formatDateTime(row.ts)],
+                [t('user'), row.user_name || '-'],
+                [t('provider'), row.provider_label || row.provider || '-'],
+                [t('model'), row.model || '-'],
+                [t('type'), row.type_label || row.type || '-'],
+                [t('section'), row.section_detail || row.section_label || row.section || '-'],
+                [t('totalTokens'), tokenValue],
+                [t('eventCost'), canViewCosts ? eventCost : ''],
+                [t('costStatus'), canViewCosts ? costStatusLabel : ''],
+                [t('status'), requestStatusLabel],
+                [t('request'), ['HTTP ' + String(row.http_code || '-'), String(row.elapsed_ms || 0) + ' ms', row.request_id || '-'].join(' · ')],
+                [t('batchFallback'), [row.batch_id || '-', row.fallback_from || '-'].join(' · ')],
+                [t('summary'), row.message_preview || '-']
+            ].filter(function (pair) { return pair[1] !== ''; });
+            if (String(row.type || '') === 'image') {
+                detailRows.splice(5, 0, [t('imageQuality'), row.effective_quality_label || row.quality_label || normalizeQuality(row)]);
+                detailRows.splice(6, 0, [t('imageRole'), normalizeRole(row) === 'content' ? t('internal') : t(normalizeRole(row))]);
             }
-
-            var summaryTokenApplicable = !!(summary && summary.token_events > 0);
-            var summaryTokenIn = summaryTokenApplicable ? numberFormat(summary.token_in) : 'N/A';
-            var summaryTokenOut = summaryTokenApplicable ? numberFormat(summary.token_out) : 'N/A';
-            var summaryTokenTotal = summaryTokenApplicable ? numberFormat(summary.token_total) : 'N/A';
-            var summaryTypes = summary && summary.types.length
-                ? summary.types.map(function (type) {
-                    return type === 'image' ? 'Image' : (type === 'seo' ? 'SEO' : 'Text');
-                }).join(', ')
-                : '-';
-            var imageSummary = summary
-                ? (summary.image_calls > 0
-                    ? (numberFormat(summary.image_calls) + ' (' + numberFormat(summary.featured_images) + ' featured + ' + numberFormat(summary.internal_images) + ' internal)')
-                    : '0')
-                : '0';
-            var modelSummary = summary && summary.models.length
-                ? summary.models.map(function (model) {
-                    return '<code>' + escapeHtml(model) + '</code>';
-                }).join(', ')
-                : '-';
-
-            var isImageEvent = String(row.type || '') === 'image';
-            var hasImageTokenUsage = isImageEvent && Number(row.tokens_total || 0) > 0;
-            var tokenMetricsApplicable = (!isImageEvent && row.token_metrics_applicable !== false) || hasImageTokenUsage;
-            var tokenInText = tokenMetricsApplicable ? numberFormat(row.tokens_in) : 'N/A';
-            var tokenOutText = tokenMetricsApplicable ? numberFormat(row.tokens_out) : 'N/A';
-            var tokenTotalText = tokenMetricsApplicable ? numberFormat(row.tokens_total) : 'N/A';
-
-            var applicabilityNote = isImageEvent
-                ? '<div class="cbia-usage-detail-note">' + escapeHtml(hasImageTokenUsage
-                    ? t('imageTokenUsageAvailable', 'Exact image token usage returned by the API is shown when available. Output price also depends on the effective quality and size.')
-                    : t('imageTokenUsageUnavailable', 'This image response did not include a complete token breakdown. Quality, size and locally known cost remain available.')) + '</div>'
-                : '';
-
-            var summaryCostStat = canViewCosts
-                ? ('<div class="cbia-usage-detail-stat"><span>Total cost</span><strong>' + (summary ? currencyFormat(eurToUsd(summary.total_cost)) : '-') + '</strong></div>')
-                : '';
-            var eventCostStat = canViewCosts
-                ? ('<div class="cbia-usage-detail-stat"><span>Event cost</span><strong>' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : t('unknownCost', 'Unknown')) + '</strong></div>')
-                : '';
-            var billableFailuresRow = canViewCosts
-                ? ('<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Billable failures</div><div class="cbia-usage-detail-value">' + numberFormat(summary.billable_fail_count) + '</div></div>')
-                : '';
-            var imageResponseRows = String(row.type || '') === 'image'
-                ? ('<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('requestedQuality', 'Requested quality')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.requested_quality_label || row.requested_quality || '-') + '</div></div>'
-                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('effectiveQuality', 'Effective quality')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.effective_quality_label || row.effective_quality || t('notReturned', 'Not returned')) + '</div></div>'
-                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('requestedSize', 'Requested size')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.requested_size || '-') + '</div></div>'
-                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('effectiveSize', 'Effective size')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.effective_size || t('notReturned', 'Not returned')) + '</div></div>'
-                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('outputFormat', 'Output format')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.output_format || t('notReturned', 'Not returned')) + '</div></div>'
-                    + '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('background', 'Background')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.background || t('notReturned', 'Not returned')) + '</div></div>')
-                : '';
-
-            detailPanel.innerHTML = ''
-                + '<div class="cbia-usage-detail-card">'
-                + '  <div>'
-                + '    <h3>' + escapeHtml((summary && summary.post_title) || row.post_title || 'Post summary') + '</h3>'
-                + '    <div class="cbia-usage-detail-subtitle">Real post summary for the current filter. Aggregates text, images, and billable failures.</div>'
-                + '  </div>'
-                + '  <div class="cbia-usage-detail-stats">'
-                + '    <div class="cbia-usage-detail-stat"><span>Input</span><strong>' + summaryTokenIn + '</strong></div>'
-                + '    <div class="cbia-usage-detail-stat"><span>Output</span><strong>' + summaryTokenOut + '</strong></div>'
-                + '    <div class="cbia-usage-detail-stat"><span>Total</span><strong>' + summaryTokenTotal + '</strong></div>'
-                +      summaryCostStat
-                + '  </div>'
-                + '  <div class="cbia-usage-detail-meta">'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Last activity</div><div class="cbia-usage-detail-value">' + escapeHtml(formatDateTime((summary && summary.latest_ts) || row.ts)) + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">User</div><div class="cbia-usage-detail-value">' + escapeHtml((summary && summary.latest_user_name) || row.user_name) + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Types</div><div class="cbia-usage-detail-value">' + escapeHtml(summaryTypes) + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Models used</div><div class="cbia-usage-detail-value">' + modelSummary + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Images</div><div class="cbia-usage-detail-value">' + escapeHtml(imageSummary) + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Events</div><div class="cbia-usage-detail-value">' + numberFormat(summary.call_count) + ' total · ' + numberFormat(summary.ok_count) + ' OK · ' + numberFormat(summary.fail_count) + ' failed</div></div>'
-                +      billableFailuresRow
-                + '  </div>'
-                + '  <div class="cbia-usage-detail-separator"></div>'
-                + '  <div class="cbia-usage-detail-subtitle">Selected event</div>'
-                + '  <div class="cbia-usage-detail-stats">'
-                + '    <div class="cbia-usage-detail-stat"><span>Input</span><strong>' + tokenInText + '</strong></div>'
-                + '    <div class="cbia-usage-detail-stat"><span>Output</span><strong>' + tokenOutText + '</strong></div>'
-                + '    <div class="cbia-usage-detail-stat"><span>Total</span><strong>' + tokenTotalText + '</strong></div>'
-                +      eventCostStat
-                + '  </div>'
-                + '  <div class="cbia-usage-detail-meta">'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Date</div><div class="cbia-usage-detail-value">' + escapeHtml(formatDateTime(row.ts)) + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Model</div><div class="cbia-usage-detail-value"><code>' + escapeHtml(row.model) + '</code>' + (row.quality_label || row.quality ? ' · ' + escapeHtml(row.quality_label || row.quality) : '') + (row.size ? ' · ' + escapeHtml(row.size) : '') + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('provider', 'Provider')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.provider || '-') + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('requestedModel', 'Requested model')) + '</div><div class="cbia-usage-detail-value"><code>' + escapeHtml(row.model_requested || '-') + '</code></div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('effectiveModel', 'Effective model')) + '</div><div class="cbia-usage-detail-value"><code>' + escapeHtml(row.model_effective || row.model || '-') + '</code></div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('thinking', 'Reasoning mode')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.thinking || '-') + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('reasoningEffort', 'Reasoning effort')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.reasoning_effort || '-') + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('cacheTokens', 'Cache hit / miss tokens')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.cache_hit_tokens || 0) + ' / ' + escapeHtml(row.cache_miss_tokens || 0) + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('reasoningTokens', 'Reasoning tokens')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.reasoning_tokens || 0) + '</div></div>'
-                +      imageResponseRows
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('costStatus', 'Cost status')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.cost_status || 'unknown') + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('costSource', 'Cost source')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(row.cost_source || 'unavailable') + ' · ' + escapeHtml(row.pricing_version || '-') + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(t('costReason', 'Cost reason')) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(costReasonText(row.cost_reason)) + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Request</div><div class="cbia-usage-detail-value">HTTP ' + escapeHtml(row.http_code || '-') + ' · attempt ' + escapeHtml(row.attempt || 1) + ' · ' + escapeHtml(row.elapsed_ms || 0) + ' ms · ' + escapeHtml(row.request_id || '-') + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Batch / fallback</div><div class="cbia-usage-detail-value">' + escapeHtml(row.batch_id || '-') + ' · ' + escapeHtml(row.fallback_from || '-') + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Type</div><div class="cbia-usage-detail-value"><span class="cbia-usage-type-badge type-' + escapeHtml(row.type) + '">' + escapeHtml(row.type_label) + '</span></div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Section</div><div class="cbia-usage-detail-value">' + escapeHtml(row.section_detail || row.section_label || '-') + '</div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Status</div><div class="cbia-usage-detail-value"><span class="cbia-usage-status-badge status-' + (row.ok ? 'ok' : 'error') + '">' + escapeHtml(row.status_label) + '</span></div></div>'
-                + '    <div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">Summary</div><div class="cbia-usage-detail-value">' + escapeHtml(row.message_preview || '-') + '</div></div>'
-                + '  </div>'
-                + applicabilityNote
-                + actions
+            panel.innerHTML = '<div class="cbia-usage-detail-content">'
+                + '<span class="cbia-usage-detail-eyebrow">' + escapeHtml(t('selectedEvent')) + '</span>'
+                + '<h3>' + escapeHtml(title) + '</h3>'
+                + '<p class="description">' + escapeHtml(t('realPostSummary')) + '</p>'
+                + '<div class="cbia-usage-post-summary"><h4>' + escapeHtml(t('postSummary')) + '</h4><dl>'
+                + '<div><dt>' + escapeHtml(t('calls')) + '</dt><dd>' + numberFormat(postRows.length) + '</dd></div>'
+                + '<div><dt>' + escapeHtml(t('inputTokens')) + '</dt><dd>' + numberFormat(tokensIn) + '</dd></div>'
+                + '<div><dt>' + escapeHtml(t('outputTokens')) + '</dt><dd>' + numberFormat(tokensOut) + '</dd></div>'
+                + '<div><dt>' + escapeHtml(t('totalTokens')) + '</dt><dd>' + numberFormat(totalTokens) + '</dd></div>'
+                + (canViewCosts ? '<div><dt>' + escapeHtml(t('totalCost')) + '</dt><dd>' + escapeHtml(knownCostEvents > 0 ? currencyFormat(knownCost) : t('costUnavailable')) + '</dd></div>' : '')
+                + '<div><dt>' + escapeHtml(t('failed')) + '</dt><dd>' + numberFormat(failed) + '</dd></div>'
+                + '<div><dt>' + escapeHtml(t('lastActivity')) + '</dt><dd>' + escapeHtml(formatDateTime(latestActivity)) + '</dd></div>'
+                + '<div><dt>' + escapeHtml(t('types')) + '</dt><dd>' + escapeHtml(Object.keys(types).join(', ') || '-') + '</dd></div>'
+                + '<div><dt>' + escapeHtml(t('modelsUsed')) + '</dt><dd>' + escapeHtml(Object.keys(models).join(', ') || '-') + '</dd></div>'
+                + '</dl></div>'
+                + '<div class="cbia-usage-detail-rows">' + detailRows.map(function (pair) {
+                    return '<div class="cbia-usage-detail-row"><div class="cbia-usage-detail-label">' + escapeHtml(pair[0]) + '</div><div class="cbia-usage-detail-value">' + escapeHtml(pair[1]) + '</div></div>';
+                }).join('') + '</div>'
+                + '<div class="cbia-usage-detail-actions">' + editAction + '</div>'
                 + '</div>';
         }
 
         function renderTable(filtered) {
-            if (!tableBody) return;
-            var periodInfo = getPeriodInfo();
-            var periodLabel = periodInfo.label;
-
-            if (tableMeta) {
-                if (rowsLimited) {
-                    tableMeta.textContent = periodLabel + ' · Quick table: showing the ' + numberFormat(Math.min(rows.length, recentRowsLimit)) + ' most recent events out of ' + numberFormat(totalRows) + '. KPIs and charts still use the full current period.';
-                } else {
-                    tableMeta.textContent = periodLabel + ' · Showing ' + numberFormat(filtered.length) + ' event(s) in the current period.';
-                }
+            var body = document.getElementById('cbia-usage-table-body');
+            var meta = document.getElementById('cbia-usage-table-meta');
+            if (!body) return;
+            var visible = filtered.slice(0, 50);
+            if (meta) {
+                meta.textContent = rowsLimited
+                    ? formatTemplate(t('quickTable'), [numberFormat(visible.length), numberFormat(filtered.length), numberFormat(Math.min(rows.length, recentRowsLimit)), numberFormat(totalRows)])
+                    : formatTemplate(t('showingEvents'), [numberFormat(visible.length), numberFormat(filtered.length)]);
             }
-
-            if (!filtered.length) {
-                allFilteredRows = [];
-                tableBody.innerHTML = '<tr><td colspan="' + (canViewCosts ? '7' : '6') + '" class="cbia-usage-table-placeholder">No logs found for this filter.</td></tr>';
-                renderDetail(null, []);
+            if (!visible.length) {
+                body.innerHTML = '<tr><td colspan="' + (canViewCosts ? '7' : '6') + '" class="cbia-usage-table-placeholder">' + escapeHtml(t('noLogs')) + '</td></tr>';
+                selectedKey = '';
+                renderDetail(null, filtered);
                 return;
             }
-
-            var displayRows = filtered.slice();
-            allFilteredRows = filtered.slice();
-            tableBody.innerHTML = displayRows.map(function (row) {
-                var activeClass = rowKey(row) === selectedKey ? ' is-active' : '';
-                var isImageEvent = String(row.type || '') === 'image';
-                var tokenMetricsApplicable = (!isImageEvent && row.token_metrics_applicable !== false)
-                    || (isImageEvent && Number(row.tokens_total || 0) > 0);
-                var typeLabel = String(row.type_label || '');
-                if (row.section_detail || row.section_label) {
-                    typeLabel += ' · ' + String(row.section_detail || row.section_label || '');
-                }
-                typeLabel = String(typeLabel || '').replace(/\s*Â·\s*/g, ' · ').replace(/\s*·\s*/g, ' · ');
-                var imageMeta = isImageEvent
-                    ? '<span class="cbia-usage-image-meta"><span class="quality-' + escapeHtml(normalizeImageQuality(row)) + '">' + escapeHtml(row.effective_quality_label || row.quality_label || t(normalizeImageQuality(row), normalizeImageQuality(row))) + '</span><span>' + escapeHtml(normalizeImageRole(row) === 'content' ? t('internal', 'Internal') : t(normalizeImageRole(row), normalizeImageRole(row))) + '</span></span>'
-                    : '';
-                return ''
-                    + '<tr class="' + activeClass + '" data-row-key="' + escapeHtml(rowKey(row)) + '" tabindex="0" role="button" aria-label="' + escapeHtml(typeLabel + ': ' + (row.post_title || '-')) + '">'
-                    + '  <td><span class="cbia-usage-date">' + escapeHtml(formatDateTime(row.ts)) + '</span></td>'
-                    + '  <td>' + escapeHtml(row.user_name || '-') + '</td>'
-                    + '  <td><div class="cbia-usage-source"><span class="cbia-usage-source-title">' + escapeHtml(row.post_title || '-') + '</span><span class="cbia-usage-source-meta">#' + escapeHtml(String(row.post_id || 0)) + '</span></div></td>'
-                    + '  <td><span class="cbia-usage-type-badge type-' + escapeHtml(row.type) + '">' + escapeHtml(typeLabel) + '</span>' + imageMeta + '</td>'
-                    + '  <td><span class="cbia-usage-metric">' + (tokenMetricsApplicable ? numberFormat(row.tokens_total) : 'N/A') + '</span></td>'
-                    + (canViewCosts ? ('  <td><span class="cbia-usage-cost">' + (hasNumericValue(row.cost_eur) ? currencyFormat(eurToUsd(row.cost_eur)) : t('unknownCost', 'Unknown')) + '</span></td>') : '')
-                    + '  <td><code class="cbia-usage-model-code">' + escapeHtml(row.model || '-') + '</code>' + (row.quality_label || row.quality ? '<small class="cbia-usage-source-meta">' + escapeHtml(row.quality_label || row.quality) + (row.size ? ' · ' + escapeHtml(row.size) : '') + '</small>' : '') + '</td>'
+            body.innerHTML = visible.map(function (row) {
+                var typeLabel = row.type_label || row.type || '-';
+                var post = '<span class="cbia-usage-source-title">' + escapeHtml(row.post_title || '-') + '</span><small class="cbia-usage-source-meta">#' + escapeHtml(row.post_id || 0) + (row.user_name ? ' · ' + escapeHtml(row.user_name) : '') + '</small>';
+                var tokens = Number(row.tokens_total || 0) > 0 ? numberFormat(row.tokens_total) : t('tokensNotApplicable');
+                var cost = hasNumericValue(row.cost_eur) ? currencyFormat(row.cost_eur) : t('unknownCost');
+                var statusKey = String(row.status || (row.ok ? 'success' : 'error'));
+                var status = row.status_label || t(statusKey) || statusKey;
+                return '<tr data-row-key="' + escapeHtml(rowKey(row)) + '" tabindex="0" role="button" aria-label="' + escapeHtml(typeLabel + ': ' + (row.post_title || '-')) + '">'
+                    + '<td><span class="cbia-usage-date">' + escapeHtml(formatDateTime(row.ts)) + '</span></td>'
+                    + '<td><div class="cbia-usage-source">' + post + '</div></td>'
+                    + '<td><span class="cbia-usage-type-badge type-' + escapeHtml(row.type || '') + '">' + escapeHtml(typeLabel) + '</span></td>'
+                    + '<td><code class="cbia-usage-model-code">' + escapeHtml(row.model || '-') + '</code></td>'
+                    + '<td><span class="cbia-usage-metric">' + escapeHtml(tokens) + '</span></td>'
+                    + (canViewCosts ? '<td><span class="cbia-usage-cost">' + escapeHtml(cost) + '</span></td>' : '')
+                    + '<td><span class="cbia-usage-status-badge status-' + (row.ok ? 'ok' : 'error') + '">' + escapeHtml(status) + '</span></td>'
                     + '</tr>';
             }).join('');
-
-            if (!selectedKey || !displayRows.some(function (row) { return rowKey(row) === selectedKey; })) {
-                selectedKey = rowKey(displayRows[0]);
-            }
-
-            Array.prototype.slice.call(tableBody.querySelectorAll('tr[data-row-key]')).forEach(function (tr) {
-                function selectRow() {
-                    selectedKey = tr.getAttribute('data-row-key') || '';
-                    Array.prototype.slice.call(tableBody.querySelectorAll('tr[data-row-key]')).forEach(function (node) {
-                        node.classList.toggle('is-active', node === tr);
+            if (!selectedKey || !visible.some(function (row) { return rowKey(row) === selectedKey; })) selectedKey = rowKey(visible[0]);
+            Array.prototype.slice.call(body.querySelectorAll('tr[data-row-key]')).forEach(function (node) {
+                function select() {
+                    selectedKey = node.getAttribute('data-row-key') || '';
+                    Array.prototype.slice.call(body.querySelectorAll('tr[data-row-key]')).forEach(function (candidate) {
+                        candidate.classList.toggle('is-active', candidate === node);
                     });
-                    var selected = allFilteredRows.find(function (row) {
-                        return rowKey(row) === selectedKey;
-                    }) || null;
-                    renderDetail(selected, allFilteredRows);
+                    var selected = visible.find(function (row) { return rowKey(row) === selectedKey; }) || visible[0];
+                    renderDetail(selected, filtered);
                 }
-                tr.addEventListener('click', selectRow);
-                tr.addEventListener('keydown', function (event) {
+                node.addEventListener('click', select);
+                node.addEventListener('keydown', function (event) {
                     if (event.key !== 'Enter' && event.key !== ' ') return;
                     event.preventDefault();
-                    selectRow();
+                    select();
                 });
+                node.classList.toggle('is-active', node.getAttribute('data-row-key') === selectedKey);
             });
+            renderDetail(visible.find(function (row) { return rowKey(row) === selectedKey; }) || visible[0], filtered);
+        }
 
-            var selectedRow = allFilteredRows.find(function (row) {
-                return rowKey(row) === selectedKey;
-            }) || displayRows[0];
+        function updateFilterUi(filtered) {
+            var count = secondaryFilterCount();
+            var countNode = document.getElementById('cbia-usage-more-count');
+            var details = document.getElementById('cbia-usage-more-filters');
+            var summary = document.getElementById('cbia-usage-filter-summary');
+            if (countNode) countNode.textContent = numberFormat(count);
+            if (details && count > 0) details.open = true;
+            if (summary) summary.textContent = numberFormat(filtered.length) + ' ' + t('events') + (count ? ' · ' + numberFormat(count) + ' ' + t('activeFilters') : ' · ' + t('noActiveFilters'));
+        }
 
-            Array.prototype.slice.call(tableBody.querySelectorAll('tr[data-row-key]')).forEach(function (node) {
-                node.classList.toggle('is-active', node.getAttribute('data-row-key') === rowKey(selectedRow));
+        function updateExport() {
+            var button = document.getElementById('cbia-usage-export');
+            var model = controls.model ? controls.model.value : '';
+            if (button) {
+                try {
+                    var url = new URL(button.href, window.location.origin);
+                    url.searchParams.set('usage_model', model);
+                    button.href = url.toString();
+                } catch (_error) {}
+            }
+            Array.prototype.slice.call(root.querySelectorAll('a.cbia-usage-range-button')).forEach(function (link) {
+                try {
+                    var url = new URL(link.href, window.location.origin);
+                    url.searchParams.set('usage_model', model);
+                    link.href = url.toString();
+                } catch (_error) {}
             });
-            renderDetail(selectedRow, allFilteredRows);
+            var customModel = document.querySelector('#cbia-usage-custom-range input[name="usage_model"]');
+            if (customModel) customModel.value = model;
+            try {
+                var pageUrl = new URL(window.location.href);
+                if (model) pageUrl.searchParams.set('usage_model', model); else pageUrl.searchParams.delete('usage_model');
+                window.history.replaceState(window.history.state, '', pageUrl.toString());
+            } catch (_error) {}
         }
 
         function refresh() {
-            updateExportLink();
-            updateChartHints();
-            var filtered = getFilteredRows();
-            renderKpis(filtered);
-            updateFilterSummary(filtered);
-            renderActivityChart(filtered);
-            renderTypeChart(filtered);
-            renderImageQualityChart(filtered);
-            renderImageRoleChart(filtered);
-            renderMonthlyChart();
+            var filtered = filteredRows();
+            var summary = activeSummary(filtered);
+            lastFilteredRows = filtered;
+            updateExport();
+            updateFilterUi(filtered);
+            renderKpis(summary);
+            renderActivity(filtered, summary);
+            renderType(summary);
+            imageBreakdowns(filtered);
+            renderMonthly();
+            updateCostControl(filtered, summary);
             renderTable(filtered);
         }
 
-        if (modelSelect) {
-            modelSelect.addEventListener('change', function () {
-                refresh();
+        function bindCostDrawer() {
+            var drawer = document.getElementById('cbia-usage-cost-drawer');
+            var backdrop = document.getElementById('cbia-usage-cost-drawer-backdrop');
+            var openButton = document.getElementById('cbia-usage-open-cost-drawer');
+            var closeButton = document.getElementById('cbia-usage-close-cost-drawer');
+            if (!drawer || !openButton) return;
+            var previousFocus = null;
+            function setOpen(open) {
+                drawer.hidden = !open;
+                drawer.classList.toggle('is-open', open);
+                if (backdrop) backdrop.hidden = !open;
+                if (backdrop) backdrop.classList.toggle('is-open', open);
+                document.body.classList.toggle('cbia-usage-drawer-open', open);
+                openButton.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (open) {
+                    previousFocus = document.activeElement;
+                    if (closeButton) closeButton.focus();
+                } else if (previousFocus && previousFocus.focus) {
+                    previousFocus.focus();
+                }
+            }
+            openButton.addEventListener('click', function () { setOpen(true); });
+            if (closeButton) closeButton.addEventListener('click', function () { setOpen(false); });
+            if (backdrop) backdrop.addEventListener('click', function () { setOpen(false); });
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !drawer.hidden) setOpen(false);
+                if (event.key !== 'Tab' || drawer.hidden) return;
+                var focusable = drawer.querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled])');
+                if (!focusable.length) return;
+                var first = focusable[0];
+                var last = focusable[focusable.length - 1];
+                if (event.shiftKey && document.activeElement === first) {
+                    event.preventDefault();
+                    last.focus();
+                } else if (!event.shiftKey && document.activeElement === last) {
+                    event.preventDefault();
+                    first.focus();
+                }
+            });
+            var unknownButtons = [
+                document.getElementById('cbia-usage-show-unknown-costs'),
+                document.getElementById('cbia-usage-drawer-show-unknown')
+            ];
+            unknownButtons.forEach(function (button) {
+                if (!button) return;
+                button.addEventListener('click', function () {
+                    if (controls.costStatus) controls.costStatus.value = 'unknown';
+                    setOpen(false);
+                    refresh();
+                    var table = document.getElementById('cbia-usage-events-title');
+                    if (table) table.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+                });
             });
         }
 
-        if (typeSelect) {
-            typeSelect.addEventListener('change', refresh);
-        }
-        [providerSelect, statusSelect, requestStatusSelect, qualitySelect, imageRoleSelect, fromInput, toInput].forEach(function (control) {
-            if (control) control.addEventListener('change', refresh);
+        Object.keys(controls).forEach(function (key) {
+            var control = controls[key];
+            if (!control) return;
+            control.addEventListener(key === 'search' ? 'input' : 'change', refresh);
         });
 
-        if (searchInput) {
-            searchInput.addEventListener('input', refresh);
-        }
-
-        if (clearFiltersBtn) {
-            clearFiltersBtn.addEventListener('click', function () {
-                [modelSelect, typeSelect, providerSelect, statusSelect, requestStatusSelect, qualitySelect, imageRoleSelect, fromInput, toInput, searchInput].forEach(function (control) {
-                    if (control) control.value = '';
-                });
-                refresh();
-                if (modelSelect) modelSelect.focus();
+        var clear = document.getElementById('cbia-usage-clear-filters');
+        if (clear) clear.addEventListener('click', function () {
+            Object.keys(controls).forEach(function (key) {
+                if (controls[key]) controls[key].value = '';
             });
-        }
+            refresh();
+            if (controls.model) controls.model.focus();
+        });
 
-        function runHistoricalRecalculation(apply) {
-            var resultNode = document.getElementById('cbia-usage-recalc-result');
-            if (apply && !window.confirm(t('recalcConfirm', 'Apply recalculation to stored usage rows? A backup option will be created first.'))) return;
-            var body = new URLSearchParams();
-            body.set('action', 'cbia_usage_recalculate_history');
-            body.set('_ajax_nonce', ajaxNonce);
-            body.set('apply', apply ? '1' : '0');
-            if (apply) body.set('confirm', 'RECALCULATE');
-            if (resultNode) resultNode.textContent = t('recalcRunning', 'Calculating...');
-            fetch(ajaxUrl, { method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'}, body: body.toString() })
-                .then(function (response) { return response.json(); })
-                .then(function (json) {
-                    if (!json || !json.success) throw new Error((json && json.data && json.data.message) || 'Recalculation failed');
-                    var d = json.data || {};
-                    if (resultNode) resultNode.textContent = 'Rows: ' + Number(d.rows_scanned || 0) + ' · exact: ' + Number(d.exact || 0) + ' · estimated: ' + Number(d.estimated || 0) + ' · unknown: ' + Number(d.unknown || 0) + (d.backup_option ? ' · backup: ' + d.backup_option : '');
-                    if (apply) window.location.reload();
-                }).catch(function (error) { if (resultNode) resultNode.textContent = error.message || 'Recalculation failed'; });
-        }
-        var recalcDryRun = document.getElementById('cbia-usage-recalc-dry-run');
-        var recalcApply = document.getElementById('cbia-usage-recalc-apply');
-        if (recalcDryRun) recalcDryRun.addEventListener('click', function () { runHistoricalRecalculation(false); });
-        if (recalcApply) recalcApply.addEventListener('click', function () { runHistoricalRecalculation(true); });
-
-        if (daysSelect && periodForm) {
-            daysSelect.addEventListener('change', function () {
-                updateExportLink();
-                periodForm.submit();
-            });
-        }
-
-        window.addEventListener('resize', function () {
-            if (!loadingRemote) {
-                refresh();
+        var customToggle = document.getElementById('cbia-usage-custom-toggle');
+        var customRange = document.getElementById('cbia-usage-custom-range');
+        if (customToggle && customRange) customToggle.addEventListener('click', function () {
+            var willOpen = customRange.hidden;
+            customRange.hidden = !willOpen;
+            customToggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            if (willOpen) {
+                var input = customRange.querySelector('input[type="date"]');
+                if (input) input.focus();
             }
         });
 
-        populateModelOptions(modelOptions);
-        updateExportLink();
-        if (lazyLoad) {
-            setDashboardLoading(true, t('loadingData', 'Loading real usage data...'), t('loadingHint', 'Charts and table will fill in automatically in a few seconds.'));
-            loadUsageData();
-        } else {
-            setDashboardLoading(false);
-            refresh();
+        Array.prototype.slice.call(root.querySelectorAll('[data-usage-metric]')).forEach(function (button) {
+            if (button.getAttribute('data-usage-metric') === 'cost' && !canViewCosts) {
+                button.hidden = true;
+                return;
+            }
+            button.classList.toggle('is-active', button.getAttribute('data-usage-metric') === currentMetric);
+            button.setAttribute('aria-pressed', button.getAttribute('data-usage-metric') === currentMetric ? 'true' : 'false');
+            button.addEventListener('click', function () {
+                currentMetric = button.getAttribute('data-usage-metric') || 'calls';
+                Array.prototype.slice.call(root.querySelectorAll('[data-usage-metric]')).forEach(function (candidate) {
+                    var active = candidate === button;
+                    candidate.classList.toggle('is-active', active);
+                    candidate.setAttribute('aria-pressed', active ? 'true' : 'false');
+                });
+                renderActivity(lastFilteredRows, activeSummary(lastFilteredRows));
+            });
+        });
+
+        Array.prototype.slice.call(root.querySelectorAll('.cbia-usage-info-toggle')).forEach(function (button) {
+            button.addEventListener('click', function () {
+                var target = document.getElementById(button.getAttribute('aria-controls'));
+                if (!target) return;
+                target.hidden = !target.hidden;
+                button.setAttribute('aria-expanded', target.hidden ? 'false' : 'true');
+            });
+        });
+
+        Array.prototype.slice.call(root.querySelectorAll('.cbia-usage-change-period')).forEach(function (button) {
+            button.addEventListener('click', function () {
+                var ranges = root.querySelector('.cbia-usage-quick-ranges');
+                if (!ranges) return;
+                ranges.scrollIntoView({behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center'});
+                var active = ranges.querySelector('.is-active') || ranges.querySelector('button, a');
+                if (active) active.focus();
+            });
+        });
+
+        window.addEventListener('resize', function () {
+            if (resizeFrame) window.cancelAnimationFrame(resizeFrame);
+            resizeFrame = window.requestAnimationFrame(function () {
+                resizeFrame = 0;
+                var summary = activeSummary(lastFilteredRows);
+                renderActivity(lastFilteredRows, summary);
+                renderMonthly();
+            });
+        });
+
+        populateModels();
+        bindCostDrawer();
+        root.classList.remove('is-loading');
+        root.setAttribute('aria-busy', 'false');
+        var loading = document.getElementById('cbia-usage-loading-banner');
+        if (loading) loading.hidden = true;
+        refresh();
+    }
+
+    function initUsageRecalculationActions() {
+        var section = document.querySelector('.cbia-usage-recalculation-actions');
+        if (!section || section.getAttribute('data-cbia-recalc-bound') === '1') return;
+        section.setAttribute('data-cbia-recalc-bound', '1');
+        var ajaxUrl = String(section.getAttribute('data-ajax-url') || '');
+        var nonce = String(section.getAttribute('data-nonce') || '');
+        var result = document.getElementById('cbia-usage-recalc-result');
+        var dryRun = document.getElementById('cbia-usage-recalc-dry-run');
+        var applyButton = document.getElementById('cbia-usage-recalc-apply');
+        function run(apply) {
+            if (apply && !window.confirm(section.getAttribute('data-confirm') || '')) return;
+            var body = new URLSearchParams();
+            body.set('action', 'cbia_usage_recalculate_history');
+            body.set('_ajax_nonce', nonce);
+            body.set('apply', apply ? '1' : '0');
+            if (apply) body.set('confirm', 'RECALCULATE');
+            if (result) result.textContent = section.getAttribute('data-running') || '';
+            [dryRun, applyButton].forEach(function (button) { if (button) button.disabled = true; });
+            fetch(ajaxUrl, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8'},
+                body: body.toString()
+            }).then(function (response) {
+                return response.json();
+            }).then(function (json) {
+                if (!json || !json.success) throw new Error(json && json.data && json.data.message ? json.data.message : section.getAttribute('data-failed'));
+                var data = json.data || {};
+                var template = section.getAttribute('data-result') || '';
+                var message = template
+                    .replace('%1$s', String(Number(data.rows_scanned || 0)))
+                    .replace('%2$s', String(Number(data.exact || 0)))
+                    .replace('%3$s', String(Number(data.estimated || 0)))
+                    .replace('%4$s', String(Number(data.unknown || 0)));
+                if (data.backup_option) message += ' · ' + (section.getAttribute('data-backup') || '') + ': ' + data.backup_option;
+                if (result) result.textContent = message;
+                if (apply) window.location.reload();
+            }).catch(function (error) {
+                if (result) result.textContent = error.message || section.getAttribute('data-failed') || '';
+            }).finally(function () {
+                [dryRun, applyButton].forEach(function (button) { if (button) button.disabled = false; });
+            });
         }
+        if (dryRun) dryRun.addEventListener('click', function () { run(false); });
+        if (applyButton) applyButton.addEventListener('click', function () { run(true); });
     }
 
     function initAiComposer() {
@@ -6125,6 +5720,7 @@
             safeInit(initAbbSelects);
             safeInit(initUsageModelSync);
             safeInit(initUsageDashboard);
+            safeInit(initUsageRecalculationActions);
             safeInit(initAiComposer);
         });
     } else {
@@ -6135,6 +5731,7 @@
         safeInit(initAbbSelects);
         safeInit(initUsageModelSync);
         safeInit(initUsageDashboard);
+        safeInit(initUsageRecalculationActions);
         safeInit(initAiComposer);
     }
 })();
