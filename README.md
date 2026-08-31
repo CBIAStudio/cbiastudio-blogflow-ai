@@ -9,6 +9,20 @@ CBIAStudio BlogFlow with AI provides a controlled AI workflow for WordPress post
 - live logs and STOP controls
 - optional Yoast SEO sync
 
+## What's New in 2.3.1
+
+- Redesigned the Usage dashboard around a clearer 30-day operational overview, comparable KPI cards, progressive filters and a focused event-detail panel.
+- Preserved the fixed rolling 12-month chart while improving its visual hierarchy and keeping it independent from the general reporting range.
+- Reorganized Usage breakdowns into a balanced responsive grid: three columns on desktop, two on tablet and one on mobile.
+- Improved trend, distribution and table accessibility without changing event counts, cost calculations, filters or CSV semantics.
+- Completed the Spanish localization of the Usage screen and rebuilt the POT, PO and MO catalogs.
+
+## Comparative: 2.3.1 vs 2.3.0
+
+2.3.1 improves the Usage dashboard's clarity, responsive layout and Spanish localization while preserving the accounting, filtering, export and rolling-month behavior introduced in 2.3.0.
+
+## Previous: 2.3.0
+
 ## What's New in 2.3.0
 
 - Improved automatic category selection when several categories match, with stronger weighting for central title entities and deterministic configured-priority resolution.

@@ -146,6 +146,12 @@ The content sent depends on the selected action. Connection tests use authentica
 
 Older entries are retained as release history. Current free-plugin availability is described above; historical references to gated or Pro-compatible code do not make those capabilities available in the free plugin.
 
+= 2.3.1 =
+* Redesigned the Usage dashboard around a clearer 30-day operational overview and comparable KPI cards.
+* Reorganized Usage breakdowns into a responsive three-, two- and one-column grid for desktop, tablet and mobile.
+* Improved filters, trend hierarchy, event details and accessibility while preserving Usage calculations, costs, CSV export and the fixed rolling 12-month chart.
+* Completed the Spanish localization of the Usage screen and rebuilt its translation catalogs.
+
 = 2.3.0 =
 * Improved the relevance of automatic category selection using configured rules and title/content signals.
 * Improved Usage filter placement and range defaults, with Last year selected by default and Last 2 years still available.
@@ -351,6 +357,9 @@ Fixes persistence of the default, featured, and content OpenAI image quality sel
 * Improved preview/create flows by returning real preview URLs for scheduled drafts and stabilizing admin-side usage rendering.
 
 == Upgrade Notice ==
+
+= 2.3.1 =
+Improves the Usage dashboard layout, responsive behavior and Spanish localization without changing Usage accounting or costs. Updating is recommended.
 
 = 2.3.0 =
 Improves category selection and Usage reporting, including a rolling 12-month view, while retaining WordPress 7.1 compatibility and security hardening. Updating is recommended.
